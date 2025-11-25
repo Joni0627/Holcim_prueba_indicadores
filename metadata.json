@@ -1,0 +1,5 @@
+{
+  "name": "OEE & Downtime Analyzer",
+  "description": "Dashboard de análisis industrial para monitorización de OEE, ranking de paros y tendencias de producción con asistencia de IA Gemini.",
+  "requestFramePermissions": []
+}
