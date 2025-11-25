@@ -26,6 +26,8 @@ export interface DowntimeEvent {
   shift: string; // TURNO
   hac: string; // HAC
   hacDetail: string; // DETALLE HAC
+  downtimeType?: string; // TIPO PARO (Interno/Externo)
+  sapCause?: string; // Mapped from 'CAUSA SAP'
   
   timestamp: string; // ISO String for internal use
 }

@@ -6,6 +6,33 @@ import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric } from '../../types';
 import { DateFilter } from '../DateFilter';
 
+// Helper for hh:mm format
+const formatMinutes = (mins: number) => {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 border border-slate-100 shadow-lg rounded-lg z-50">
+          <p className="font-semibold text-slate-800 text-sm mb-1">{data.reason}</p>
+          <div className="text-xs text-slate-500 mb-2">
+             <span className="font-mono bg-slate-100 px-1 rounded">{data.hac || 'N/A'}</span>
+          </div>
+          <p className="text-slate-600 text-sm">
+            Duración: <span className="font-bold text-slate-900">{formatMinutes(data.durationMinutes)}</span> 
+            <span className="text-xs text-slate-400 ml-1">({data.durationMinutes} min)</span>
+          </p>
+          <p className="text-xs text-slate-400 mt-1 capitalize">{data.sapCause}</p>
+        </div>
+      );
+    }
+    return null;
+};
+
 export const SummaryView: React.FC = () => {
   const [downtimes, setDowntimes] = useState<DowntimeEvent[]>([]);
   const [shiftData, setShiftData] = useState<any[]>([]);
@@ -160,13 +187,13 @@ export const SummaryView: React.FC = () => {
                 </div>
                 <div>
                     <h3 className="text-lg font-bold text-slate-800">Top 10 Paros (Por Duración)</h3>
-                    <p className="text-sm text-slate-500">Ranking basado en 'Texto de Causa' en el período seleccionado.</p>
+                    <p className="text-sm text-slate-500">Ranking por duración mostrando Motivo y Equipo (HAC).</p>
                 </div>
              </div>
              {loading && <Loader2 className="animate-spin text-slate-400" size={20} />}
           </div>
 
-          <div className="h-[350px]">
+          <div className="h-[400px]">
              {downtimes.length > 0 ? (
                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart
@@ -175,21 +202,23 @@ export const SummaryView: React.FC = () => {
                         margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                        <XAxis type="number" stroke="#64748b" fontSize={12} unit=" min" />
+                        <XAxis type="number" stroke="#64748b" fontSize={12} tickFormatter={formatMinutes} />
                         <YAxis
                             type="category"
                             dataKey="reason"
                             stroke="#475569"
-                            fontSize={12}
-                            width={180}
+                            fontSize={11}
+                            width={220}
                             tick={{ fill: '#334155', fontWeight: 500 }}
-                            tickFormatter={(val) => val.length > 25 ? `${val.substring(0,25)}...` : val}
+                            tickFormatter={(val, index) => {
+                                const item = downtimes[index];
+                                const hacShort = item?.hac ? ` - [${item.hac}]` : '';
+                                const fullLabel = `${val}${hacShort}`;
+                                return fullLabel.length > 35 ? `${fullLabel.substring(0,35)}...` : fullLabel;
+                            }}
                         />
-                        <Tooltip 
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                            cursor={{fill: '#f8fafc'}}
-                        />
-                        <Bar dataKey="durationMinutes" name="Duración (min)" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20}>
+                        <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
+                        <Bar dataKey="durationMinutes" name="Duración" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20}>
                             {downtimes.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={index < 3 ? '#ef4444' : '#f87171'} />
                             ))}

@@ -104,6 +104,7 @@ export async function GET(req: Request) {
         hacDetail: r.get("DETALLE HAC"),
         reason: r.get("TEXTO DE CAUSA"),
         sapCause: r.get("CAUSA SAP"),
+        downtimeType: r.get("TIPO PARO"), // Nuevo campo
         // Metadata extra
         rawDuration: durHMS,
         id: r.get("IDPARO") || Math.random().toString(36).substr(2, 9)
