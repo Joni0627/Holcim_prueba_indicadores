@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DowntimeEvent, OEEData, ProductionMetrics } from "../../types";
+import { DowntimeEvent, OEEData, ProductionMetrics } from "../../../types";
 
 export async function POST(req: Request) {
   try {
