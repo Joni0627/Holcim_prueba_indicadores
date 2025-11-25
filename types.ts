@@ -63,12 +63,18 @@ export interface BreakageStats {
   totalProduced: number;
   totalBroken: number;
   globalRate: number; // Percentage
-  bySector: { name: string; value: number }[]; // Breakdown by location (Ensacadora, etc)
+  bySector: { name: string; value: number; percentage: number }[]; // Added percentage relative to total broken
   byProvider: { 
     name: string; 
     produced: number; 
     broken: number; 
     rate: number; // Percentage
+  }[];
+  byMaterial: {
+    name: string;
+    produced: number;
+    broken: number;
+    rate: number;
   }[];
 }
 

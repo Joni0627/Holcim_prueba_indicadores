@@ -87,12 +87,14 @@ export async function GET(req: Request) {
     let sumVentocheck = 0;
     let sumTransporte = 0;
 
-    // Provider Grouping
+    // Aggregation Maps
     const providerStats: Record<string, { produced: number, broken: number }> = {};
+    const materialStats: Record<string, { produced: number, broken: number }> = {};
 
     filteredRows.forEach(row => {
         const produced = parseNumber(row.get("BOLSAS PRODUCIDAS"));
         const provider = row.get("DESCRIPCION_PROVEEDOR") || "Sin Proveedor";
+        const material = row.get("DESCRIPCION_MATERIAL") || "Desconocido";
 
         // Breakage Columns
         const brkEnsacadora = parseNumber(row.get("BOLSAS DESCARTADAS_ENSACADORA"));
@@ -115,6 +117,13 @@ export async function GET(req: Request) {
         }
         providerStats[provider].produced += produced;
         providerStats[provider].broken += rowTotalBroken;
+
+        // Material Logic
+        if (!materialStats[material]) {
+            materialStats[material] = { produced: 0, broken: 0 };
+        }
+        materialStats[material].produced += produced;
+        materialStats[material].broken += rowTotalBroken;
     });
 
     const totalBroken = sumEnsacadora + sumNoEmboquillada + sumVentocheck + sumTransporte;
@@ -125,17 +134,23 @@ export async function GET(req: Request) {
         totalBroken,
         globalRate: totalProduced > 0 ? (totalBroken / totalProduced) * 100 : 0,
         bySector: [
-            { name: "Ensacadora", value: sumEnsacadora },
-            { name: "No Emboquillada", value: sumNoEmboquillada },
-            { name: "Ventocheck", value: sumVentocheck },
-            { name: "Transporte", value: sumTransporte },
+            { name: "Ensacadora", value: sumEnsacadora, percentage: totalBroken > 0 ? (sumEnsacadora / totalBroken) * 100 : 0 },
+            { name: "No Emboquillada", value: sumNoEmboquillada, percentage: totalBroken > 0 ? (sumNoEmboquillada / totalBroken) * 100 : 0 },
+            { name: "Ventocheck", value: sumVentocheck, percentage: totalBroken > 0 ? (sumVentocheck / totalBroken) * 100 : 0 },
+            { name: "Transporte", value: sumTransporte, percentage: totalBroken > 0 ? (sumTransporte / totalBroken) * 100 : 0 },
         ].filter(s => s.value > 0), // Only show sectors with errors
         byProvider: Object.entries(providerStats).map(([name, stats]) => ({
             name,
             produced: stats.produced,
             broken: stats.broken,
             rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0
-        })).sort((a,b) => b.rate - a.rate) // Sort by highest breakage rate
+        })).sort((a,b) => b.rate - a.rate),
+        byMaterial: Object.entries(materialStats).map(([name, stats]) => ({
+            name,
+            produced: stats.produced,
+            broken: stats.broken,
+            rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0
+        })).sort((a,b) => b.rate - a.rate)
     };
 
     // 2. SET CACHE
