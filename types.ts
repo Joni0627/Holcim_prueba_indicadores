@@ -1,3 +1,4 @@
+
 export interface Machine {
   id: string;
   name: string;
@@ -43,11 +44,18 @@ export interface OEEData {
 export interface ShiftMetric {
   machineId: string;
   machineName: string;
-  shift: 'Mañana' | 'Tarde' | 'Noche' | 'Noche Fin';
+  shift: string; // Changed from literal union to string to accept API values
   availability: number;
   performance: number;
   quality: number;
   oee: number;
+}
+
+export interface ProductionStats {
+  totalBags: number;
+  byShift: { name: string; value: number; target: number }[];
+  byMachine: { name: string; value: number }[];
+  details: ShiftMetric[];
 }
 
 export interface StockItem {

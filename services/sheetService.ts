@@ -1,4 +1,5 @@
-import { DowntimeEvent } from "../types";
+
+import { DowntimeEvent, ProductionStats } from "../types";
 
 export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEvent[]> => {
   try {
@@ -42,4 +43,21 @@ export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEv
     console.error("Failed to fetch downtimes from sheet:", error);
     return [];
   }
+};
+
+export const fetchProductionStats = async (start: Date, end: Date): Promise<ProductionStats | null> => {
+    try {
+        const startStr = start.toISOString().split('T')[0];
+        const endStr = end.toISOString().split('T')[0];
+
+        const res = await fetch(`/api/production?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return data as ProductionStats;
+    } catch (error) {
+        console.error("Failed to fetch production stats:", error);
+        return null;
+    }
 };
