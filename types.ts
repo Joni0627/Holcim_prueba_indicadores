@@ -16,12 +16,18 @@ export interface ProductionMetrics {
 
 export interface DowntimeEvent {
   id: string;
-  reason: string;
+  reason: string; // Mapped from 'TEXTO DE CAUSA'
   durationMinutes: number;
-  machineId: string;
-  // Allow string for raw data from sheets, though we try to normalize
-  category: 'technical' | 'organizational' | 'quality' | 'maintenance' | string;
-  timestamp: string;
+  machineId: string; // Mapped from 'MÁQUINA AFECTADA'
+  category: string; // Mapped from 'CAUSA SAP'
+  
+  // New specific SAP fields
+  date: string; // FECHA
+  shift: string; // TURNO
+  hac: string; // HAC
+  hacDetail: string; // DETALLE HAC
+  
+  timestamp: string; // ISO String for internal use
 }
 
 export interface OEEData {

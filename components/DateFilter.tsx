@@ -1,22 +1,29 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar, ChevronDown, X, Check } from 'lucide-react';
 
+interface DateRange {
+  start: Date;
+  end: Date;
+}
+
 interface DateFilterProps {
-  onFilterChange?: (date: Date, type: 'today' | 'yesterday' | 'week' | 'custom') => void;
+  onFilterChange?: (range: DateRange, type: 'today' | 'yesterday' | 'week' | 'custom') => void;
 }
 
 export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
   const [activeFilter, setActiveFilter] = useState<'today' | 'yesterday' | 'week' | 'custom'>('today');
   const [showCustomRange, setShowCustomRange] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  // Internal state for strings to bind to input
+  const [customRange, setCustomRange] = useState({ start: '', end: '' });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Initialize with Today
   useEffect(() => {
     if (onFilterChange) {
-       onFilterChange(new Date(), 'today');
+       const today = new Date();
+       onFilterChange({ start: today, end: today }, 'today');
     }
-  }, []); // Run once on mount
+  }, []);
 
   // Cerrar el menú si se hace clic fuera
   useEffect(() => {
@@ -35,35 +42,37 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
       setActiveFilter(type);
       setShowCustomRange(false);
       
-      const date = new Date();
+      const end = new Date();
+      const start = new Date();
+
       if (type === 'yesterday') {
-          date.setDate(date.getDate() - 1);
+          start.setDate(start.getDate() - 1);
+          end.setDate(end.getDate() - 1);
+      } else if (type === 'week') {
+          start.setDate(start.getDate() - 7);
+          // end remains today
       }
-      // For 'week', we currently pass Today's date as reference point, 
-      // the parent logic will handle fetching the range if supported by backend,
-      // or just fetch today for now given the strict backend endpoint.
       
-      if (onFilterChange) onFilterChange(date, type);
+      if (onFilterChange) onFilterChange({ start, end }, type);
   };
 
   const handleApplyRange = () => {
-    if (dateRange.start) {
+    if (customRange.start && customRange.end) {
       setActiveFilter('custom');
       setShowCustomRange(false);
-      // Pass the start date for the API filter
-      // Note: Backend currently only accepts ONE date. We send the start date.
-      const date = new Date(dateRange.start);
-      // Correct timezone offset issue for pure dates
-      const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-      const correctedDate = new Date(date.getTime() + userTimezoneOffset);
+      
+      const start = new Date(customRange.start + 'T12:00:00'); // Add time to avoid timezone shifts
+      const end = new Date(customRange.end + 'T12:00:00');
 
-      if (onFilterChange) onFilterChange(correctedDate, 'custom');
+      if (onFilterChange) onFilterChange({ start, end }, 'custom');
     }
   };
 
   const formatDateDisplay = () => {
-    if (activeFilter === 'custom' && dateRange.start) {
-      return `${new Date(dateRange.start).toLocaleDateString(undefined, {month:'numeric', day:'numeric'})}`;
+    if (activeFilter === 'custom' && customRange.start && customRange.end) {
+        const s = new Date(customRange.start + 'T12:00:00');
+        const e = new Date(customRange.end + 'T12:00:00');
+        return `${s.getDate()}/${s.getMonth()+1} - ${e.getDate()}/${e.getMonth()+1}`;
     }
     return 'Rango';
   };
@@ -130,18 +139,27 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
           
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Fecha</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Desde</label>
               <input 
                 type="date" 
                 className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-900"
-                value={dateRange.start}
-                onChange={(e) => setDateRange({...dateRange, start: e.target.value, end: e.target.value})}
+                value={customRange.start}
+                onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Hasta</label>
+              <input 
+                type="date" 
+                className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-900"
+                value={customRange.end}
+                onChange={(e) => setCustomRange({...customRange, end: e.target.value})}
               />
             </div>
             
             <button 
               onClick={handleApplyRange}
-              disabled={!dateRange.start}
+              disabled={!customRange.start || !customRange.end}
               className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
             >
               <Check size={16} />

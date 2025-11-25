@@ -20,11 +20,11 @@ export const SummaryView: React.FC = () => {
     setDetailedMetrics(getMachineShiftDetails());
   }, []);
 
-  const handleDateChange = async (date: Date) => {
+  const handleFilterChange = async (range: { start: Date, end: Date }) => {
     setLoading(true);
     try {
-        const result = await fetchDowntimes(date);
-        // Only take top 10 for summary
+        const result = await fetchDowntimes(range.start, range.end);
+        // Take top 10 for summary
         setDowntimes(result.slice(0, 10));
     } catch (e) {
         console.error("Error loading summary data", e);
@@ -55,7 +55,7 @@ export const SummaryView: React.FC = () => {
             <p className="text-slate-500 mt-1">Resumen ejecutivo y métricas clave en tiempo real.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-           <DateFilter onFilterChange={handleDateChange} />
+           <DateFilter onFilterChange={handleFilterChange} />
         </div>
       </div>
 
@@ -159,8 +159,8 @@ export const SummaryView: React.FC = () => {
                     <AlertTriangle size={20} />
                 </div>
                 <div>
-                    <h3 className="text-lg font-bold text-slate-800">Top 10 Paros del Día</h3>
-                    <p className="text-sm text-slate-500">Ranking por duración acumulada en minutos.</p>
+                    <h3 className="text-lg font-bold text-slate-800">Top 10 Paros (Por Duración)</h3>
+                    <p className="text-sm text-slate-500">Ranking basado en 'Texto de Causa' en el período seleccionado.</p>
                 </div>
              </div>
              {loading && <Loader2 className="animate-spin text-slate-400" size={20} />}
@@ -183,6 +183,7 @@ export const SummaryView: React.FC = () => {
                             fontSize={12}
                             width={180}
                             tick={{ fill: '#334155', fontWeight: 500 }}
+                            tickFormatter={(val) => val.length > 25 ? `${val.substring(0,25)}...` : val}
                         />
                         <Tooltip 
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}

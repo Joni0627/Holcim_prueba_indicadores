@@ -84,13 +84,20 @@ export const getDowntimeRanking = (machineId: string | 'all'): DowntimeEvent[] =
     { reason: 'Atasco Transportador', category: 'technical' as const, base: 40 },
   ];
 
+  const now = new Date();
+
   return reasons.map((r, idx) => ({
     id: `evt-${idx}`,
     reason: r.reason,
     category: r.category,
     durationMinutes: Math.floor(r.base * (0.8 + Math.random() * 0.4)),
     machineId: machineId === 'all' ? 'M01' : machineId,
-    timestamp: new Date().toISOString()
+    timestamp: now.toISOString(),
+    // New fields required by DowntimeEvent interface
+    date: now.toLocaleDateString(),
+    shift: 'Mañana',
+    hac: 'HAC-MOCK',
+    hacDetail: 'Detalle simulado'
   })).sort((a, b) => b.durationMinutes - a.durationMinutes);
 };
 

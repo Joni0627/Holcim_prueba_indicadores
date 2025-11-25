@@ -15,21 +15,34 @@ function hmsToSeconds(hms: string | null | undefined) {
   return h * 3600 + m * 60 + s;
 }
 
+/**
+ * Parsea una fecha en formato "DD/MM/YYYY" a un objeto Date (ignorando hora)
+ */
+function parseSheetDate(dateStr: string): Date | null {
+  if (!dateStr || typeof dateStr !== "string") return null;
+  const parts = dateStr.trim().split("/");
+  if (parts.length !== 3) return null;
+  const [day, month, year] = parts.map(Number);
+  // Crear fecha en UTC o local consistente
+  return new Date(year, month - 1, day);
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const fechaParam = searchParams.get("fecha");
+    const startParam = searchParams.get("start"); // YYYY-MM-DD
+    const endParam = searchParams.get("end");     // YYYY-MM-DD
 
-    if (!fechaParam) {
+    if (!startParam || !endParam) {
       return NextResponse.json(
-        { error: "Debe enviar ?fecha=YYYY-MM-DD" },
+        { error: "Debe enviar ?start=YYYY-MM-DD&end=YYYY-MM-DD" },
         { status: 400 }
       );
     }
 
-    // Formato del sheet: DD/MM/YYYY
-    const [year, month, day] = fechaParam.split("-");
-    const fechaSheets = `${day}/${month}/${year}`;
+    // Convertir params a Dates (inicio del día start, final del día end)
+    const startDate = new Date(startParam + "T00:00:00");
+    const endDate = new Date(endParam + "T23:59:59");
 
     // Variables de entorno
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -37,7 +50,6 @@ export async function GET(req: Request) {
     const sheetId = process.env.GOOGLE_SHEET_ID;
 
     if (!email || !key || !sheetId) {
-      // Fallback para desarrollo local si no hay credenciales, devolver array vacío o mock para no romper el front
       console.warn("Faltan variables de entorno para Google Sheets.");
       return NextResponse.json([]); 
     }
@@ -66,33 +78,40 @@ export async function GET(req: Request) {
 
     const rows = await sheet.getRows();
 
-    // Filtrar por fecha exacta
+    // Filtrar por RANGO de fechas
     const filtrado = rows.filter((r) => {
       const fechaCell = r.get("FECHA");
-      return String(fechaCell).trim() === fechaSheets;
+      const rowDate = parseSheetDate(String(fechaCell));
+      if (!rowDate) return false;
+
+      // Comparación simple de timestamps
+      return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() <= endDate.getTime();
     });
 
     if (filtrado.length === 0) return NextResponse.json([]);
 
-    // Convertir cada fila en un objeto con TODOS los campos
+    // Mapeo de columnas específicas solicitadas
     const resultados = filtrado.map((r) => {
-      // trae todas las columnas dinámicamente
-      const valores = Object.fromEntries(
-        sheet.headerValues.map((header) => [header, r.get(header)])
-      );
-
-      // agregamos duración en segundos
-      const durHMS = valores["DURACIÓN"] ?? "0:00:00";
+      const durHMS = r.get("DURACIÓN") ?? "0:00:00";
+      const seconds = hmsToSeconds(durHMS);
 
       return {
-        ...valores,
-        duracion: hmsToSeconds(durHMS),
-        duracion_hms: durHMS,
+        date: r.get("FECHA"),
+        machineId: r.get("MÁQUINA AFECTADA"),
+        shift: r.get("TURNO"),
+        durationMinutes: Math.round(seconds / 60),
+        hac: r.get("HAC"),
+        hacDetail: r.get("DETALLE HAC"),
+        reason: r.get("TEXTO DE CAUSA"),
+        sapCause: r.get("CAUSA SAP"),
+        // Metadata extra
+        rawDuration: durHMS,
+        id: r.get("IDPARO") || Math.random().toString(36).substr(2, 9)
       };
     });
 
     // Ordenar por mayor duración
-    resultados.sort((a, b) => b.duracion - a.duracion);
+    resultados.sort((a, b) => b.durationMinutes - a.durationMinutes);
 
     return NextResponse.json(resultados);
   } catch (err: any) {
