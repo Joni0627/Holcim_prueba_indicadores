@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 
+// --- CONFIGURACIÓN DE CACHÉ ---
+// Caché en memoria para instancias calientes de Lambda
+const CACHE_TTL = 60 * 1000; // 60 segundos
+const cache = new Map<string, { data: any; timestamp: number }>();
+
 /**
  * Convierte "0:15:00" → 900
  */
@@ -38,6 +43,21 @@ export async function GET(req: Request) {
         { error: "Debe enviar ?start=YYYY-MM-DD&end=YYYY-MM-DD" },
         { status: 400 }
       );
+    }
+
+    // 1. VERIFICAR CACHÉ EN MEMORIA
+    const cacheKey = `paros-${startParam}-${endParam}`;
+    const cachedEntry = cache.get(cacheKey);
+    const now = Date.now();
+
+    if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL)) {
+       // Retornar caché con cabeceras para el Edge Cache
+       return NextResponse.json(cachedEntry.data, {
+           headers: {
+               'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+               'X-Cache': 'HIT-MEMORY'
+           }
+       });
     }
 
     // Convertir params a Dates (inicio del día start, final del día end)
@@ -104,7 +124,7 @@ export async function GET(req: Request) {
         hacDetail: r.get("DETALLE HAC"),
         reason: r.get("TEXTO DE CAUSA"),
         sapCause: r.get("CAUSA SAP"),
-        downtimeType: r.get("TIPO PARO"), // Nuevo campo
+        downtimeType: r.get("TIPO PARO"),
         // Metadata extra
         rawDuration: durHMS,
         id: r.get("IDPARO") || Math.random().toString(36).substr(2, 9)
@@ -114,7 +134,17 @@ export async function GET(req: Request) {
     // Ordenar por mayor duración
     resultados.sort((a, b) => b.durationMinutes - a.durationMinutes);
 
-    return NextResponse.json(resultados);
+    // 2. ACTUALIZAR CACHÉ EN MEMORIA
+    cache.set(cacheKey, { data: resultados, timestamp: now });
+
+    // 3. RETORNAR CON CABECERAS DE CACHÉ (CDN)
+    return NextResponse.json(resultados, {
+        headers: {
+            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+            'X-Cache': 'MISS'
+        }
+    });
+
   } catch (err: any) {
     console.error("API Error:", err);
     return NextResponse.json(

@@ -1,7 +1,10 @@
-
 import { NextResponse } from "next/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
+
+// --- CONFIGURACIÓN DE CACHÉ ---
+const CACHE_TTL = 60 * 1000; // 60 segundos
+const cache = new Map<string, { data: any; timestamp: number }>();
 
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
@@ -32,6 +35,20 @@ export async function GET(req: Request) {
 
     if (!startParam || !endParam) {
       return NextResponse.json({ error: "Missing date params" }, { status: 400 });
+    }
+
+    // 1. VERIFICAR CACHÉ
+    const cacheKey = `prod-${startParam}-${endParam}`;
+    const cachedEntry = cache.get(cacheKey);
+    const now = Date.now();
+
+    if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL)) {
+       return NextResponse.json(cachedEntry.data, {
+           headers: {
+               'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+               'X-Cache': 'HIT-MEMORY'
+           }
+       });
     }
 
     const startDate = new Date(startParam + "T00:00:00");
@@ -188,12 +205,23 @@ export async function GET(req: Request) {
         };
     });
 
-    return NextResponse.json({
+    const result = {
         totalBags,
         totalTn,
         byShift,
         byMachine,
         details
+    };
+
+    // 2. ACTUALIZAR CACHÉ
+    cache.set(cacheKey, { data: result, timestamp: now });
+
+    // 3. RETORNAR CON CABECERAS (CDN)
+    return NextResponse.json(result, {
+        headers: {
+            'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
+            'X-Cache': 'MISS'
+        }
     });
 
   } catch (error: any) {
