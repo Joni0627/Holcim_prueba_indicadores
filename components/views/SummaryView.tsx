@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed } from 'lucide-react';
+import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { getDowntimeRanking, getProductionByShift, getProductionByPalletizer, getMachineShiftDetails, machines } from '../../services/mockData';
+import { getProductionByShift, getProductionByPalletizer, getMachineShiftDetails, machines } from '../../services/mockData';
+import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric } from '../../types';
 import { DateFilter } from '../DateFilter';
 
@@ -10,16 +11,27 @@ export const SummaryView: React.FC = () => {
   const [shiftData, setShiftData] = useState<any[]>([]);
   const [machineData, setMachineData] = useState<any[]>([]);
   const [detailedMetrics, setDetailedMetrics] = useState<ShiftMetric[]>([]);
+  const [loading, setLoading] = useState(false);
   
+  // Initial Mock Data Load for production stats
   useEffect(() => {
-    // Get Top 10 downtimes
-    const allDowntimes = getDowntimeRanking('all');
-    setDowntimes(allDowntimes.slice(0, 10));
-    
     setShiftData(getProductionByShift());
     setMachineData(getProductionByPalletizer());
     setDetailedMetrics(getMachineShiftDetails());
   }, []);
+
+  const handleDateChange = async (date: Date) => {
+    setLoading(true);
+    try {
+        const result = await fetchDowntimes(date);
+        // Only take top 10 for summary
+        setDowntimes(result.slice(0, 10));
+    } catch (e) {
+        console.error("Error loading summary data", e);
+    } finally {
+        setLoading(false);
+    }
+  };
 
   // Calculate Total Bags Today
   const totalBags = machineData.reduce((acc, curr) => acc + curr.value, 0);
@@ -43,7 +55,7 @@ export const SummaryView: React.FC = () => {
             <p className="text-slate-500 mt-1">Resumen ejecutivo y métricas clave en tiempo real.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-           <DateFilter />
+           <DateFilter onFilterChange={handleDateChange} />
         </div>
       </div>
 
@@ -141,44 +153,53 @@ export const SummaryView: React.FC = () => {
 
       {/* Top 10 Downtime Ranking */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-2 mb-6">
-             <div className="p-2 bg-red-50 rounded-lg text-red-600">
-                <AlertTriangle size={20} />
+          <div className="flex items-center justify-between mb-6">
+             <div className="flex items-center gap-2">
+                <div className="p-2 bg-red-50 rounded-lg text-red-600">
+                    <AlertTriangle size={20} />
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold text-slate-800">Top 10 Paros del Día</h3>
+                    <p className="text-sm text-slate-500">Ranking por duración acumulada en minutos.</p>
+                </div>
              </div>
-             <div>
-                <h3 className="text-lg font-bold text-slate-800">Top 10 Paros del Día</h3>
-                <p className="text-sm text-slate-500">Ranking por duración acumulada en minutos.</p>
-             </div>
+             {loading && <Loader2 className="animate-spin text-slate-400" size={20} />}
           </div>
 
           <div className="h-[350px]">
-             <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                    data={downtimes}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                    <XAxis type="number" stroke="#64748b" fontSize={12} unit=" min" />
-                    <YAxis
-                        type="category"
-                        dataKey="reason"
-                        stroke="#475569"
-                        fontSize={12}
-                        width={180}
-                        tick={{ fill: '#334155', fontWeight: 500 }}
-                    />
-                    <Tooltip 
-                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        cursor={{fill: '#f8fafc'}}
-                    />
-                    <Bar dataKey="durationMinutes" name="Duración (min)" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20}>
-                        {downtimes.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={index < 3 ? '#ef4444' : '#f87171'} />
-                        ))}
-                    </Bar>
-                </BarChart>
-             </ResponsiveContainer>
+             {downtimes.length > 0 ? (
+                 <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                        data={downtimes}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                        <XAxis type="number" stroke="#64748b" fontSize={12} unit=" min" />
+                        <YAxis
+                            type="category"
+                            dataKey="reason"
+                            stroke="#475569"
+                            fontSize={12}
+                            width={180}
+                            tick={{ fill: '#334155', fontWeight: 500 }}
+                        />
+                        <Tooltip 
+                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                            cursor={{fill: '#f8fafc'}}
+                        />
+                        <Bar dataKey="durationMinutes" name="Duración (min)" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20}>
+                            {downtimes.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={index < 3 ? '#ef4444' : '#f87171'} />
+                            ))}
+                        </Bar>
+                    </BarChart>
+                 </ResponsiveContainer>
+             ) : (
+                 <div className="h-full flex items-center justify-center text-slate-400">
+                    {loading ? 'Cargando datos...' : 'No hay registros de paros para la fecha seleccionada.'}
+                 </div>
+             )}
           </div>
       </div>
 

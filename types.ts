@@ -19,7 +19,8 @@ export interface DowntimeEvent {
   reason: string;
   durationMinutes: number;
   machineId: string;
-  category: 'technical' | 'organizational' | 'quality' | 'maintenance';
+  // Allow string for raw data from sheets, though we try to normalize
+  category: 'technical' | 'organizational' | 'quality' | 'maintenance' | string;
   timestamp: string;
 }
 
