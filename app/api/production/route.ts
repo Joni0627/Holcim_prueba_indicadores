@@ -5,7 +5,6 @@ import { JWT } from "google-auth-library";
 
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
-  // Intenta parsear DD/MM/YYYY
   const parts = dateStr.trim().split("/");
   if (parts.length === 3) {
       const [day, month, year] = parts.map(Number);
@@ -17,13 +16,11 @@ function parseSheetDate(dateStr: string): Date | null {
 function parseNumber(val: any): number {
     if (typeof val === 'number') return val;
     if (!val) return 0;
-    // Maneja strings como "0,85", "85%", "1.200"
     let str = String(val).trim();
     if (str.includes('%')) {
         str = str.replace('%', '');
         return parseFloat(str.replace(',', '.')) / 100;
     }
-    // Reemplazar coma decimal por punto si no es separador de miles (simple heuristic)
     return parseFloat(str.replace(',', '.'));
 }
 
@@ -75,84 +72,125 @@ export async function GET(req: Request) {
 
     // 3. Estructuras de Agregación
     let totalBags = 0;
+    let totalTn = 0;
     const shiftTotals: Record<string, number> = {};
-    const machineTotals: Record<string, number> = {};
+    const machineStats: Record<string, { bags: number, tn: number }> = {};
     
-    // Mapa para agrupar detalles (Máquina + Turno) -> Métricas
+    // Mapa para agrupar detalles para OEE
     const detailsMap: Record<string, { 
-        oeeSum: number, 
-        dispSum: number, 
-        perfSum: number, 
+        tnSum: number,
+        hsMarchaSum: number,
+        hsParoExtSum: number,
+        duracionSum: number,
+        bdpSum: number,
         count: number,
         machineName: string,
         shift: string
     }> = {};
 
-    // Procesar Lista para Sumatorias de Bolsas
+    // --- PROCESAR CABECERA (KPIs y Toneladas) ---
+    // Agrupamos por Descripción Paletizadora, no por ID
+    cabecerasFiltradas.forEach(row => {
+        const maquinaDesc = row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida";
+        const turno = row.get("turno");
+        const key = `${maquinaDesc}-${turno}`;
+
+        // Valores numéricos para fórmulas
+        const tn = parseNumber(row.get("tn_totales_turno"));
+        const hsMarcha = parseNumber(row.get("hs_marcha"));
+        const hsParoExt = parseNumber(row.get("hs_paro_externo_decimal"));
+        const duracion = parseNumber(row.get("duracion_turno"));
+        const bdp = parseNumber(row.get("bdp_ponderado"));
+        
+        // Acumular Totales Generales (Tn se saca de cabecera)
+        totalTn += tn;
+
+        // Acumular Totales por Máquina (Tn)
+        if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
+        machineStats[maquinaDesc].tn += tn;
+
+        // Acumular para OEE
+        if (!detailsMap[key]) {
+            detailsMap[key] = { 
+                tnSum: 0, hsMarchaSum: 0, hsParoExtSum: 0, duracionSum: 0, bdpSum: 0, count: 0,
+                machineName: maquinaDesc, shift: turno 
+            };
+        }
+        detailsMap[key].tnSum += tn;
+        detailsMap[key].hsMarchaSum += hsMarcha;
+        detailsMap[key].hsParoExtSum += hsParoExt;
+        detailsMap[key].duracionSum += duracion;
+        detailsMap[key].bdpSum += bdp;
+        detailsMap[key].count += 1;
+    });
+
+    // --- PROCESAR LISTA (Bolsas) ---
+    // Debemos cruzar con cabecera para saber la "descripcion_paletizadora" correcta
     listaFiltrada.forEach(row => {
         const idCab = row.get("ID_CABECERA");
         const bags = parseNumber(row.get("BOLSAS PRODUCIDAS"));
         
-        // Buscar datos de la cabecera correspondiente
         const cabecera = cabecerasFiltradas.find(c => c.get("id_produccion") === idCab);
         if (!cabecera) return;
 
         const turno = cabecera.get("turno") || "Sin Turno";
-        const maquina = cabecera.get("paletizadora") || "Desconocida"; // Usamos la de cabecera
+        const maquinaDesc = cabecera.get("descripcion_paletizadora") || cabecera.get("paletizadora") || "Desconocida";
 
         totalBags += bags;
 
         if (!shiftTotals[turno]) shiftTotals[turno] = 0;
         shiftTotals[turno] += bags;
 
-        if (!machineTotals[maquina]) machineTotals[maquina] = 0;
-        machineTotals[maquina] += bags;
+        if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
+        machineStats[maquinaDesc].bags += bags;
     });
 
-    // Procesar Cabecera para Métricas (Promedios ponderados por simple conteo por ahora)
-    cabecerasFiltradas.forEach(row => {
-        const maquina = row.get("paletizadora");
-        const turno = row.get("turno");
-        const key = `${maquina}-${turno}`;
 
-        // Asumimos que los valores vienen en formato decimal (ej: 0.85) o porcentual
-        const oee = parseNumber(row.get("oee"));
-        const disp = parseNumber(row.get("disponibilidad"));
-        const rend = parseNumber(row.get("rendimiento"));
+    // --- CONSTRUIR RESPUESTA ---
 
-        if (!detailsMap[key]) {
-            detailsMap[key] = { 
-                oeeSum: 0, dispSum: 0, perfSum: 0, count: 0, 
-                machineName: maquina, shift: turno 
-            };
-        }
-        detailsMap[key].oeeSum += oee;
-        detailsMap[key].dispSum += disp;
-        detailsMap[key].perfSum += rend;
-        detailsMap[key].count += 1;
-    });
-
-    // Construir respuesta final
     const byShift = Object.entries(shiftTotals).map(([name, value]) => ({
-        name, value, target: 12000 // Target fijo por ahora o calcular proporcional
+        name, value, target: 0 // Target removed
     }));
 
-    const byMachine = Object.entries(machineTotals).map(([name, value]) => ({
-        name, value
+    const byMachine = Object.entries(machineStats).map(([name, stats]) => ({
+        name, 
+        value: stats.bags,
+        valueTn: stats.tn
     }));
 
-    const details = Object.values(detailsMap).map(d => ({
-        machineId: d.machineName, // Usamos nombre como ID por simplicidad
-        machineName: d.machineName,
-        shift: d.shift,
-        availability: d.dispSum / d.count,
-        performance: d.perfSum / d.count,
-        quality: 1, // Asumimos 100% si no hay datos de calidad en cabecera
-        oee: d.oeeSum / d.count
-    }));
+    const details = Object.values(detailsMap).map(d => {
+        // Fórmulas del Usuario:
+        
+        // 1. Disponibilidad = (hs_paro_externo_decimal + hs_marcha) / duracion_turno
+        // Evitar división por cero
+        const disponibilidad = d.duracionSum > 0 
+            ? (d.hsParoExtSum + d.hsMarchaSum) / d.duracionSum 
+            : 0;
+
+        // 2. Rendimiento = (tn_totales_turno / hs_marcha) / bdp_ponderado
+        // Primero calculamos velocidad real promedio
+        const avgBdp = d.count > 0 ? d.bdpSum / d.count : 0;
+        const realSpeed = d.hsMarchaSum > 0 ? d.tnSum / d.hsMarchaSum : 0;
+        
+        const rendimiento = avgBdp > 0 ? realSpeed / avgBdp : 0;
+
+        // 3. OEE = Disponibilidad * Rendimiento
+        const oee = disponibilidad * rendimiento;
+
+        return {
+            machineId: d.machineName,
+            machineName: d.machineName,
+            shift: d.shift,
+            availability: disponibilidad,
+            performance: rendimiento,
+            quality: 1, // No medido
+            oee: oee
+        };
+    });
 
     return NextResponse.json({
         totalBags,
+        totalTn,
         byShift,
         byMachine,
         details

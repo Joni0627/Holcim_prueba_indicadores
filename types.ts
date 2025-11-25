@@ -53,8 +53,9 @@ export interface ShiftMetric {
 
 export interface ProductionStats {
   totalBags: number;
+  totalTn: number; // New field for Total Tons
   byShift: { name: string; value: number; target: number }[];
-  byMachine: { name: string; value: number }[];
+  byMachine: { name: string; value: number; valueTn: number }[]; // Added valueTn
   details: ShiftMetric[];
 }
 

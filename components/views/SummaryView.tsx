@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2 } from 'lucide-react';
+import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { fetchDowntimes, fetchProductionStats } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric } from '../../types';
@@ -39,6 +39,7 @@ export const SummaryView: React.FC = () => {
   const [machineData, setMachineData] = useState<any[]>([]);
   const [detailedMetrics, setDetailedMetrics] = useState<ShiftMetric[]>([]);
   const [totalBags, setTotalBags] = useState(0);
+  const [totalTn, setTotalTn] = useState(0);
   const [loading, setLoading] = useState(false);
   
   const handleFilterChange = async (range: { start: Date, end: Date }) => {
@@ -56,12 +57,13 @@ export const SummaryView: React.FC = () => {
         // Set Production Data
         if (prodResult) {
             setTotalBags(prodResult.totalBags);
+            setTotalTn(prodResult.totalTn);
             setShiftData(prodResult.byShift);
             setMachineData(prodResult.byMachine);
             setDetailedMetrics(prodResult.details);
         } else {
-             // Reset if error or empty
              setTotalBags(0);
+             setTotalTn(0);
              setShiftData([]);
              setMachineData([]);
              setDetailedMetrics([]);
@@ -111,23 +113,25 @@ export const SummaryView: React.FC = () => {
           </div>
       ) : (
         <>
-            {/* Main KPI: Total Bags */}
-            <div className="bg-indigo-600 text-white p-6 rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-indigo-600 text-white p-6 rounded-xl shadow-lg shadow-indigo-200 flex items-center gap-6">
                     <div className="p-4 bg-white/20 rounded-xl">
                         <PackageCheck size={40} />
                     </div>
                     <div>
-                        <p className="text-indigo-100 font-medium uppercase tracking-wider text-sm">Producción Total</p>
-                        <h2 className="text-5xl font-bold mt-1">{totalBags.toLocaleString()} <span className="text-2xl font-normal opacity-70">bolsas</span></h2>
+                        <p className="text-indigo-100 font-medium uppercase tracking-wider text-sm">Bolsas Totales</p>
+                        <h2 className="text-5xl font-bold mt-1">{totalBags.toLocaleString()}</h2>
                     </div>
                 </div>
-                {/* Target mock visuals (can be updated later with real targets) */}
-                <div className="hidden md:block text-right">
-                    <div className="text-indigo-200 text-sm">Objetivo Estimado</div>
-                    <div className="text-2xl font-semibold">41,000</div>
-                    <div className="w-32 bg-indigo-900/50 h-2 rounded-full mt-1">
-                        <div className="bg-emerald-400 h-2 rounded-full" style={{width: `${Math.min((totalBags/41000)*100, 100)}%`}}></div>
+
+                <div className="bg-white text-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-6">
+                    <div className="p-4 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <Weight size={40} />
+                    </div>
+                    <div>
+                        <p className="text-slate-500 font-medium uppercase tracking-wider text-sm">Toneladas Totales</p>
+                        <h2 className="text-5xl font-bold mt-1">{totalTn.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-2xl font-normal text-slate-400">Tn</span></h2>
                     </div>
                 </div>
             </div>
@@ -167,48 +171,73 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Production by Palletizer */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[400px]">
+                {/* Production by Palletizer (Split Layout) */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[400px]">
                     <div className="flex justify-between items-center mb-6">
                         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                             <TrendingUp className="text-emerald-500" size={20} />
                             Producción por Paletizadora
                         </h3>
                     </div>
-                    <div className="flex-grow">
-                         {machineData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={machineData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={100}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {machineData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                    <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                                </PieChart>
-                            </ResponsiveContainer>
-                         ) : (
-                              <div className="h-full flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
-                         )}
-                        {/* Custom Legend Values */}
-                        <div className="grid grid-cols-3 gap-2 mt-2">
-                            {machineData.map((m, i) => (
-                                <div key={m.name} className="text-center">
-                                    <p className="text-xs text-slate-500">{m.name}</p>
-                                    <p className="font-bold text-slate-800" style={{color: COLORS[i % COLORS.length]}}>{m.value.toLocaleString()}</p>
+                    
+                    {machineData.length > 0 ? (
+                        <div className="flex flex-col md:flex-row h-full gap-4">
+                            {/* Left: Chart */}
+                            <div className="flex-1 min-h-[250px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={machineData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={50}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {machineData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            
+                            {/* Right: Summary Table */}
+                            <div className="flex-1 flex flex-col justify-center">
+                                <div className="overflow-hidden rounded-lg border border-slate-100">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-slate-50 text-slate-500 font-semibold">
+                                            <tr>
+                                                <th className="px-3 py-2 text-left">Máquina</th>
+                                                <th className="px-3 py-2 text-right">Bolsas</th>
+                                                <th className="px-3 py-2 text-right">Tn</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {machineData.map((m, i) => (
+                                                <tr key={m.name}>
+                                                    <td className="px-3 py-2 flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i % COLORS.length]}}></span>
+                                                        <span className="font-medium text-slate-700">{m.name}</span>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right font-bold text-slate-800">
+                                                        {m.value.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right text-slate-500">
+                                                        {m.valueTn.toLocaleString(undefined, {maximumFractionDigits: 1})}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                         <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
+                    )}
                 </div>
             </div>
 
