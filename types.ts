@@ -59,6 +59,19 @@ export interface ProductionStats {
   details: ShiftMetric[];
 }
 
+export interface BreakageStats {
+  totalProduced: number;
+  totalBroken: number;
+  globalRate: number; // Percentage
+  bySector: { name: string; value: number }[]; // Breakdown by location (Ensacadora, etc)
+  byProvider: { 
+    name: string; 
+    produced: number; 
+    broken: number; 
+    rate: number; // Percentage
+  }[];
+}
+
 export interface StockItem {
   id: string;
   materialName: string;

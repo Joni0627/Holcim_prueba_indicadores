@@ -1,121 +1,155 @@
-import React from 'react';
-import { getBreakageData } from '../../services/mockData';
+import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { Ban, AlertOctagon } from 'lucide-react';
+import { Ban, AlertOctagon, Loader2, Factory, TrendingDown } from 'lucide-react';
 import { DateFilter } from '../DateFilter';
+import { fetchBreakageStats } from '../../services/sheetService';
+import { BreakageStats } from '../../types';
 
 export const BreakageView: React.FC = () => {
-  const rawData = getBreakageData();
-  
-  // Aggregate by type for Pie Chart
-  const byType = rawData.reduce((acc, curr) => {
-      const existing = acc.find(i => i.name === curr.type);
-      if (existing) {
-          existing.value += curr.count;
-      } else {
-          acc.push({ name: curr.type, value: curr.count });
+  const [data, setData] = useState<BreakageStats | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleFilterChange = async (range: { start: Date, end: Date }) => {
+      setLoading(true);
+      try {
+          const result = await fetchBreakageStats(range.start, range.end);
+          setData(result);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setLoading(false);
       }
-      return acc;
-  }, [] as {name: string, value: number}[]);
+  };
 
-  const COLORS = ['#f87171', '#fb923c', '#60a5fa', '#a78bfa'];
-
-  // Format for trend chart (chronological)
-  const trendData = [...rawData]
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    .map(d => ({
-        time: new Date(d.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-        count: d.count,
-        type: d.type
-    }));
-
-  const totalBreakage = rawData.reduce((acc, curr) => acc + curr.count, 0);
+  const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6'];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
+       
+       {/* Header */}
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Análisis Roturas de Sacos</h2>
-          <p className="text-slate-500 text-sm mt-1">Monitoreo de mermas por defectos de empaque.</p>
+          <p className="text-slate-500 text-sm mt-1">Análisis de mermas por sector y proveedor.</p>
         </div>
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-4">
-           <DateFilter />
-           <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 rounded-lg text-red-700">
-                <Ban size={20} />
-                <span className="font-bold text-lg">{totalBreakage}</span>
-                <span className="text-sm font-normal opacity-80">Sacos Rotos (Turno)</span>
-            </div>
-        </div>
+        <DateFilter onFilterChange={handleFilterChange} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Trend Chart */}
-          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px]">
-              <h3 className="font-semibold text-slate-800 mb-4">Tendencia Temporal de Roturas</h3>
-              <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                        <linearGradient id="colorBreak" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                        </linearGradient>
-                    </defs>
-                    <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} />
-                    <YAxis stroke="#94a3b8" />
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="count" stroke="#ef4444" fillOpacity={1} fill="url(#colorBreak)" name="Roturas" />
-                  </AreaChart>
-              </ResponsiveContainer>
+      {loading ? (
+           <div className="h-64 flex flex-col items-center justify-center text-slate-400">
+              <Loader2 className="animate-spin mb-2" size={32} />
+              <p>Procesando datos de roturas...</p>
           </div>
+      ) : !data ? (
+           <div className="h-64 flex items-center justify-center text-slate-400 border border-dashed border-slate-300 rounded-xl">
+               Seleccione un rango de fecha para ver el análisis.
+           </div>
+      ) : (
+          <>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Factory size={20} /></div>
+                        <span className="text-sm font-medium text-slate-500">Total Producido</span>
+                    </div>
+                    <p className="text-3xl font-bold text-slate-800">{data.totalProduced.toLocaleString()}</p>
+                    <p className="text-xs text-slate-400 mt-1">Bolsas Totales</p>
+                </div>
 
-          {/* Type Breakdown */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px]">
-              <h3 className="font-semibold text-slate-800 mb-4">Causas Raíz</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                    <Pie
-                        data={byType}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                    >
-                        {byType.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend verticalAlign="bottom" />
-                </PieChart>
-              </ResponsiveContainer>
-              
-              <div className="mt-4 space-y-2">
-                  {byType.sort((a, b) => b.value - a.value).map((item, i) => (
-                       <div key={i} className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded">
-                           <span className="flex items-center gap-2 text-slate-600 capitalize">
-                               <div className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i % COLORS.length]}}></div>
-                               {item.name.replace('_', ' ')}
-                           </span>
-                           <span className="font-bold text-slate-800">{item.value}</span>
-                       </div>
-                  ))}
-              </div>
-          </div>
-      </div>
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-red-50 text-red-600 rounded-lg"><Ban size={20} /></div>
+                        <span className="text-sm font-medium text-slate-500">Total Roturas</span>
+                    </div>
+                    <p className="text-3xl font-bold text-slate-800">{data.totalBroken.toLocaleString()}</p>
+                    <p className="text-xs text-slate-400 mt-1">Sacos Descartados</p>
+                </div>
 
-       <div className="bg-indigo-900 text-white p-6 rounded-xl flex items-start gap-4">
-            <AlertOctagon className="shrink-0 text-yellow-400" size={24} />
-            <div>
-                <h4 className="font-bold text-lg">Insight de Calidad</h4>
-                <p className="text-indigo-100 mt-1">
-                    El 60% de las roturas actuales provienen de <strong>Fallas de Sellado</strong> en la Ensacadora M03. 
-                    Se recomienda verificar la temperatura de las mordazas de sellado inmediatamente.
-                </p>
+                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><TrendingDown size={20} /></div>
+                        <span className="text-sm font-medium text-slate-500">% Merma Global</span>
+                    </div>
+                    <p className="text-3xl font-bold text-slate-800">{data.globalRate.toFixed(2)}%</p>
+                    <p className="text-xs text-slate-400 mt-1">Tasa de falla</p>
+                </div>
             </div>
-       </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Sector Breakdown Pie Chart */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
+                    <h3 className="font-bold text-slate-800 mb-4">Distribución por Sector</h3>
+                    {data.bySector.length > 0 ? (
+                        <div className="flex-grow">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={data.bySector}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={80}
+                                        outerRadius={120}
+                                        paddingAngle={2}
+                                        dataKey="value"
+                                    >
+                                        {data.bySector.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                                    <Legend verticalAlign="bottom" />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-slate-400">Sin datos de roturas</div>
+                    )}
+                </div>
+
+                {/* Provider Ranking Table */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
+                    <h3 className="font-bold text-slate-800 mb-4">Análisis por Proveedor</h3>
+                    <div className="flex-grow overflow-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50 text-slate-500 font-semibold sticky top-0">
+                                <tr>
+                                    <th className="px-3 py-2">Proveedor</th>
+                                    <th className="px-3 py-2 text-right">Prod.</th>
+                                    <th className="px-3 py-2 text-right">Rotas</th>
+                                    <th className="px-3 py-2 text-right">% Falla</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {data.byProvider.map((prov) => (
+                                    <tr key={prov.name} className="hover:bg-slate-50">
+                                        <td className="px-3 py-2 font-medium text-slate-700">{prov.name}</td>
+                                        <td className="px-3 py-2 text-right text-slate-500">{prov.produced.toLocaleString()}</td>
+                                        <td className="px-3 py-2 text-right font-medium text-slate-800">{prov.broken}</td>
+                                        <td className="px-3 py-2 text-right">
+                                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                                prov.rate > 0.5 ? 'bg-red-100 text-red-700' : 
+                                                prov.rate > 0.2 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                            }`}>
+                                                {prov.rate.toFixed(2)}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {data.byProvider.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="text-center py-8 text-slate-400">Sin datos</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+          </>
+      )}
     </div>
   );
 };
