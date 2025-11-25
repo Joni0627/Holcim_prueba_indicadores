@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI, Type } from "@google/genai";
 import { DowntimeEvent, OEEData, ProductionMetrics } from "../../types";
 
 export async function POST(req: Request) {
@@ -18,8 +17,6 @@ export async function POST(req: Request) {
       downtimes: DowntimeEvent[];
       production: ProductionMetrics[];
     };
-
-    const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
       Actúa como un Ingeniero de Planta Senior experto en Lean Manufacturing y TPM.
@@ -47,27 +44,48 @@ export async function POST(req: Request) {
       Enfócate en identificar si el problema es técnico, organizacional o de calidad y sugiere acciones de mejora inmediata.
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-                insight: { type: Type.STRING },
+    // Call Gemini API via REST directly to avoid dependency issues
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                insight: { type: "STRING" },
                 recommendations: {
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
+                  type: "ARRAY",
+                  items: { type: "STRING" },
                 },
-                priority: { type: Type.STRING, enum: ['high', 'medium', 'low'] }
-            }
-        }
+                priority: {
+                  type: "STRING",
+                  enum: ["high", "medium", "low"],
+                },
+              },
+            },
+          },
+        }),
       }
-    });
+    );
 
-    if (response.text) {
-      const result = JSON.parse(response.text);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API Error:", errorText);
+      throw new Error(`Gemini API responded with ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (textResponse) {
+      const result = JSON.parse(textResponse);
       return NextResponse.json(result);
     }
 
@@ -77,7 +95,7 @@ export async function POST(req: Request) {
     );
 
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
+    console.error("Analysis Error:", error);
     return NextResponse.json(
       { error: error.message || "Internal Server Error" },
       { status: 500 }
