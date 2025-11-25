@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
-import { DowntimeEvent, OEEData, ProductionMetrics } from "@/types";
+import { DowntimeEvent, OEEData, ProductionMetrics } from "../../types";
 
 export async function POST(req: Request) {
   try {
