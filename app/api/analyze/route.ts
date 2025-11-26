@@ -2,11 +2,18 @@
 import { NextResponse } from "next/server";
 import { DowntimeEvent, OEEData, ProductionMetrics } from "../../../types";
 
-// Helper to clean Markdown code blocks from JSON string
+// Helper robusto para limpiar JSON
 function cleanJsonString(str: string): string {
   if (!str) return "";
-  // Remove ```json and ``` wrap
-  return str.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "").trim();
+  const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (match && match[1]) return match[1].trim();
+  
+  const firstOpen = str.indexOf('{');
+  const lastClose = str.lastIndexOf('}');
+  if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
+      return str.substring(firstOpen, lastClose + 1);
+  }
+  return str.trim();
 }
 
 export async function POST(req: Request) {
@@ -14,7 +21,7 @@ export async function POST(req: Request) {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "API_KEY not configured on server" },
+        { error: "API_KEY no configurada en Vercel" },
         { status: 500 }
       );
     }
@@ -27,91 +34,54 @@ export async function POST(req: Request) {
     };
 
     const prompt = `
-      Actúa como un Ingeniero de Planta Senior experto en Lean Manufacturing y TPM.
-      Analiza los siguientes datos de producción de las últimas 8 horas y proporciona un diagnóstico breve.
-
-      Datos OEE:
-      - Disponibilidad: ${(oee?.availability * 100).toFixed(1)}%
-      - Rendimiento: ${(oee?.performance * 100).toFixed(1)}%
-      - Calidad: ${(oee?.quality * 100).toFixed(1)}%
-      - OEE Global: ${(oee?.oee * 100).toFixed(1)}%
-
-      Top 3 Paros de Máquina (Downtime):
-      ${downtimes?.slice(0, 3).map(d => `- ${d.reason}: ${d.durationMinutes} mins (${d.category})`).join('\n')}
-
-      Tendencia de Producción:
-      El promedio de producción por hora es ${production?.length ? Math.round(production.reduce((acc, curr) => acc + curr.producedUnits, 0) / production.length) : 0} unidades.
-      El objetivo es ${production?.[0]?.targetUnits || 0} unidades.
-
-      Genera una respuesta en formato JSON con la siguiente estructura:
+      Actúa como Ingeniero de Planta. Analiza estos datos (últimas 8h):
+      
+      OEE Global: ${(oee?.oee * 100).toFixed(1)}% (Disp: ${(oee?.availability * 100).toFixed(1)}%, Rend: ${(oee?.performance * 100).toFixed(1)}%)
+      Top Paros: ${downtimes?.slice(0, 3).map(d => `${d.reason} (${d.durationMinutes}m)`).join(', ') || 'Ninguno'}
+      
+      Responde SOLO JSON válido:
       {
-        "insight": "Un resumen ejecutivo de 1-2 frases sobre el estado crítico actual.",
-        "recommendations": ["Acción concreta 1", "Acción concreta 2", "Acción concreta 3"],
+        "insight": "Resumen ejecutivo (1 frase).",
+        "recommendations": ["Acción 1", "Acción 2"],
         "priority": "high" | "medium" | "low"
       }
-      Enfócate en identificar si el problema es técnico, organizacional o de calidad y sugiere acciones de mejora inmediata.
     `;
 
-    // Use stable model gemini-1.5-flash
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                insight: { type: "STRING" },
-                recommendations: {
-                  type: "ARRAY",
-                  items: { type: "STRING" },
-                },
-                priority: {
-                  type: "STRING",
-                  enum: ["high", "medium", "low"],
-                },
-              },
-            },
-          },
+          generationConfig: { responseMimeType: "application/json" },
         }),
       }
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API Error:", errorText);
-      throw new Error(`Gemini API responded with ${response.status}: ${errorText}`);
+        const errText = await response.text();
+        throw new Error(`Gemini Error (${response.status}): ${errText}`);
     }
 
     const data = await response.json();
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (textResponse) {
-      const cleanedJson = cleanJsonString(textResponse);
       try {
-        const result = JSON.parse(cleanedJson);
+        const result = JSON.parse(cleanJsonString(textResponse));
         return NextResponse.json(result);
       } catch (e) {
-        console.error("JSON Parse failed:", e);
-        throw new Error("Failed to parse Gemini response");
+        throw new Error("Error parseando respuesta de IA");
       }
     }
 
-    return NextResponse.json(
-      { error: "No response text from Gemini" },
-      { status: 500 }
-    );
+    throw new Error("Sin respuesta de IA");
 
   } catch (error: any) {
     console.error("Analysis Error:", error);
     return NextResponse.json(
-      { error: error.message || "Internal Server Error" },
+      { error: error.message },
       { status: 500 }
     );
   }

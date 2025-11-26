@@ -16,14 +16,14 @@ export const analyzePlantData = async (
 
     if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || response.statusText);
+        throw new Error(err.error || `Error ${response.status}: ${response.statusText}`);
     }
     return await response.json();
-  } catch (error) {
-    console.error("Error calling Gemini API proxy:", error);
+  } catch (error: any) {
+    console.error("Error calling Gemini API:", error);
     return {
-      insight: "No se pudo conectar con el asistente de IA.",
-      recommendations: ["Verificar conexión de red o API Key"],
+      insight: `Error: ${error.message || 'Desconocido'}`,
+      recommendations: ["Verifique conexión a internet", "Verifique configuración API Key"],
       priority: "low"
     };
   }
@@ -39,14 +39,14 @@ export const analyzeBreakageData = async (stats: BreakageStats): Promise<AIAnaly
 
         if (!response.ok) {
              const err = await response.json().catch(() => ({}));
-             throw new Error(err.error || response.statusText);
+             throw new Error(err.error || `Error ${response.status}: ${response.statusText}`);
         }
         return await response.json();
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error analyzing breakage:", error);
         return {
-            insight: "Análisis no disponible por el momento.",
-            recommendations: ["Revise los datos manualmente en la tabla", "Intente nuevamente en unos instantes"],
+            insight: `No se pudo generar análisis. ${error.message || ''}`,
+            recommendations: ["Revise la tabla manualmente", "Verifique API Key en Vercel"],
             priority: "low"
         };
     }
