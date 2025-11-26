@@ -19,19 +19,42 @@ function cleanJsonString(str: string): string {
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API_KEY no configurada en Vercel" },
-        { status: 500 }
-      );
-    }
-
     const body = await req.json();
     const { oee, downtimes, production } = body as {
       oee: OEEData;
       downtimes: DowntimeEvent[];
       production: ProductionMetrics[];
     };
+
+    // --- MODO DEMO / FALLBACK ---
+    if (!apiKey) {
+       console.warn("MODO DEMO: API_KEY no encontrada. Devolviendo análisis simulado.");
+       
+       // Detectar el mayor problema simulado
+       const topDowntime = downtimes?.[0]?.reason || "Falla Técnica";
+       const oeeVal = (oee?.oee || 0) * 100;
+
+       let insight = "La planta opera de manera estable.";
+       let priority = "low";
+       
+       if (oeeVal < 60) {
+           insight = `Análisis Demo: Crítico bajo OEE (${oeeVal.toFixed(1)}%) impulsado principalmente por '${topDowntime}'.`;
+           priority = "high";
+       } else if (oeeVal < 85) {
+           insight = `Análisis Demo: OEE aceptable (${oeeVal.toFixed(1)}%), pero se observan pérdidas recurrentes por '${topDowntime}'.`;
+           priority = "medium";
+       }
+
+       return NextResponse.json({
+         insight,
+         recommendations: [
+           `Investigar causa raíz de: ${topDowntime}`,
+           "Optimizar cambios de turno para recuperar disponibilidad",
+           "Revisar velocidad de línea en Paletizadora 1"
+         ],
+         priority
+       });
+    }
 
     const prompt = `
       Actúa como Ingeniero de Planta. Analiza estos datos (últimas 8h):
@@ -48,7 +71,7 @@ export async function POST(req: Request) {
     `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

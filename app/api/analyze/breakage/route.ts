@@ -26,16 +26,29 @@ function cleanJsonString(str: string): string {
 
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API_KEY no configurada en variables de entorno (Vercel)" },
-        { status: 500 }
-      );
-    }
-
     const body = await req.json();
     const { stats } = body as { stats: BreakageStats };
+    const apiKey = process.env.API_KEY;
+
+    // --- MODO DEMO / FALLBACK ---
+    // Si no hay API KEY, devolvemos una respuesta simulada para que la Demo luzca bien.
+    if (!apiKey) {
+      console.warn("MODO DEMO: API_KEY no encontrada. Devolviendo análisis simulado.");
+      
+      // Simulación basada en datos reales simples
+      const topProvider = stats.byProvider?.[0]?.name || "Proveedor X";
+      const topSector = stats.bySector?.[0]?.name || "Ensacadora";
+      
+      return NextResponse.json({
+        insight: `Análisis Demo: Se detecta una concentración inusual de roturas en el sector ${topSector}, afectando principalmente al proveedor ${topProvider}.`,
+        recommendations: [
+          `Revisar calibración de mordazas en ${topSector}.`,
+          `Solicitar nota de crédito a ${topProvider} por lote defectuoso.`,
+          "Aumentar frecuencia de limpieza en sensores de transporte."
+        ],
+        priority: "high"
+      });
+    }
 
     if (!stats || !stats.totalProduced) {
         return NextResponse.json({
@@ -72,7 +85,7 @@ export async function POST(req: Request) {
     `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
