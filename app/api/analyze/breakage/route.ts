@@ -24,6 +24,38 @@ function cleanJsonString(str: string): string {
   return str.trim();
 }
 
+async function tryGenerateWithModel(model: string, apiKey: string, prompt: string) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json"
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+        // Si es 404 (Modelo no encontrado) o 400 (Bad Request), lanzamos error específico para intentar el siguiente
+        if (response.status === 404 || response.status === 400) {
+            throw new Error(`MODEL_NOT_FOUND`);
+        }
+        // Si es 429 (Cuota), también intentamos el siguiente por si acaso tiene cuota distinta
+        if (response.status === 429) {
+             throw new Error(`QUOTA_EXCEEDED`);
+        }
+        
+        const errText = await response.text();
+        throw new Error(`API_ERROR_${response.status}: ${errText}`);
+    }
+
+    return response.json();
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -31,11 +63,9 @@ export async function POST(req: Request) {
     const apiKey = process.env.API_KEY;
 
     // --- MODO DEMO / FALLBACK ---
-    // Si no hay API KEY, devolvemos una respuesta simulada para que la Demo luzca bien.
     if (!apiKey) {
       console.warn("MODO DEMO: API_KEY no encontrada. Devolviendo análisis simulado.");
       
-      // Simulación basada en datos reales simples
       const topProvider = stats.byProvider?.[0]?.name || "Proveedor X";
       const topSector = stats.bySector?.[0]?.name || "Ensacadora";
       
@@ -84,30 +114,38 @@ export async function POST(req: Request) {
       }
     `;
 
-    // Usamos gemini-1.5-flash-002 por ser la versión pineada estable más robusta para v1beta
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json"
-          },
-        }),
-      }
-    );
+    // Lista de modelos a probar en orden de preferencia
+    const modelsToTry = [
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+        "gemini-1.0-pro"
+    ];
 
-    if (!response.ok) {
-        if (response.status === 429) {
-            throw new Error("Límite de cuota IA excedido. Intente en 1 minuto.");
+    let lastError = null;
+    let data = null;
+
+    // Estrategia de Fallback: Probar modelos uno por uno
+    for (const model of modelsToTry) {
+        try {
+            // console.log(`Trying model: ${model}...`);
+            data = await tryGenerateWithModel(model, apiKey, prompt);
+            break; // Si funciona, salimos del bucle
+        } catch (e: any) {
+            lastError = e;
+            // Si el error no es de "no encontrado" ni "cuota", probablemente sea fatal, pero igual intentamos el siguiente por robustez.
+            continue; 
         }
-        const errText = await response.text();
-        throw new Error(`Gemini Error (${response.status}): ${errText}`);
     }
 
-    const data = await response.json();
+    if (!data) {
+        // Si ninguno funcionó
+        if (lastError?.message?.includes('QUOTA_EXCEEDED')) {
+             throw new Error("Límite de cuota IA excedido en todos los modelos disponibles.");
+        }
+        throw new Error(lastError?.message || "No se pudo conectar con ningún modelo Gemini.");
+    }
+
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (textResponse) {
