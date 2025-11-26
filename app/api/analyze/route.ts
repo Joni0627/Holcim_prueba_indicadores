@@ -96,12 +96,14 @@ export async function POST(req: Request) {
       }
     `;
 
-    // Lista de modelos a probar en orden de preferencia
+    // Lista exhaustiva de modelos a probar (Fallback Strategy)
     const modelsToTry = [
         "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-002",
+        "gemini-1.5-flash-001",
         "gemini-1.5-pro",
-        "gemini-1.0-pro"
+        "gemini-pro"
     ];
 
     let lastError = null;
@@ -110,7 +112,7 @@ export async function POST(req: Request) {
     for (const model of modelsToTry) {
         try {
             data = await tryGenerateWithModel(model, apiKey, prompt);
-            break;
+            if (data) break;
         } catch (e: any) {
             lastError = e;
             continue;
@@ -119,7 +121,10 @@ export async function POST(req: Request) {
 
     if (!data) {
         if (lastError?.message?.includes('QUOTA_EXCEEDED')) {
-             throw new Error("Límite de cuota IA excedido en todos los modelos.");
+             throw new Error("Límite de cuota IA excedido.");
+        }
+        if (lastError?.message?.includes('MODEL_NOT_FOUND')) {
+             throw new Error("Ningún modelo Gemini disponible para esta API Key.");
         }
         throw new Error(lastError?.message || "No se pudo conectar con ningún modelo Gemini.");
     }
