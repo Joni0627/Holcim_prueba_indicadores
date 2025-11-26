@@ -70,8 +70,9 @@ export async function POST(req: Request) {
       }
     `;
 
+    // Usamos gemini-1.5-flash por ser la versión estable con mejor cuota gratuita.
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,6 +84,9 @@ export async function POST(req: Request) {
     );
 
     if (!response.ok) {
+        if (response.status === 429) {
+            throw new Error("Límite de cuota IA excedido. Intente en 1 minuto.");
+        }
         const errText = await response.text();
         throw new Error(`Gemini Error (${response.status}): ${errText}`);
     }
