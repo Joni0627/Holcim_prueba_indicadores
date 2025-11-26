@@ -1,5 +1,13 @@
+
 import { NextResponse } from "next/server";
 import { DowntimeEvent, OEEData, ProductionMetrics } from "../../../types";
+
+// Helper to clean Markdown code blocks from JSON string
+function cleanJsonString(str: string): string {
+  if (!str) return "";
+  // Remove ```json and ``` wrap
+  return str.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "").trim();
+}
 
 export async function POST(req: Request) {
   try {
@@ -85,8 +93,14 @@ export async function POST(req: Request) {
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (textResponse) {
-      const result = JSON.parse(textResponse);
-      return NextResponse.json(result);
+      const cleanedJson = cleanJsonString(textResponse);
+      try {
+        const result = JSON.parse(cleanedJson);
+        return NextResponse.json(result);
+      } catch (e) {
+        console.error("JSON Parse failed:", e);
+        throw new Error("Failed to parse Gemini response");
+      }
     }
 
     return NextResponse.json(

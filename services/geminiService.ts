@@ -1,3 +1,4 @@
+
 import { DowntimeEvent, OEEData, ProductionMetrics, AIAnalysisResult, BreakageStats } from "../types";
 
 // Client-side service that calls our Next.js API Route
@@ -13,13 +14,16 @@ export const analyzePlantData = async (
       body: JSON.stringify({ oee, downtimes, production }),
     });
 
-    if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || response.statusText);
+    }
     return await response.json();
   } catch (error) {
     console.error("Error calling Gemini API proxy:", error);
     return {
       insight: "No se pudo conectar con el asistente de IA.",
-      recommendations: ["Verificar conexión"],
+      recommendations: ["Verificar conexión de red o API Key"],
       priority: "low"
     };
   }
@@ -33,13 +37,16 @@ export const analyzeBreakageData = async (stats: BreakageStats): Promise<AIAnaly
             body: JSON.stringify({ stats }),
         });
 
-        if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+        if (!response.ok) {
+             const err = await response.json().catch(() => ({}));
+             throw new Error(err.error || response.statusText);
+        }
         return await response.json();
     } catch (error) {
         console.error("Error analyzing breakage:", error);
         return {
             insight: "Análisis no disponible por el momento.",
-            recommendations: ["Revise los datos manualmente en la tabla"],
+            recommendations: ["Revise los datos manualmente en la tabla", "Intente nuevamente en unos instantes"],
             priority: "low"
         };
     }

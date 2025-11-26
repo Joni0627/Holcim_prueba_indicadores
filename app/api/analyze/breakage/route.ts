@@ -2,6 +2,13 @@
 import { NextResponse } from "next/server";
 import { BreakageStats } from "../../../../types";
 
+// Helper to clean Markdown code blocks from JSON string
+function cleanJsonString(str: string): string {
+  if (!str) return "";
+  // Remove ```json and ``` wrap
+  return str.replace(/^```json\s*/, "").replace(/^```\s*/, "").replace(/\s*```$/, "").trim();
+}
+
 export async function POST(req: Request) {
   try {
     const apiKey = process.env.API_KEY;
@@ -15,10 +22,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { stats } = body as { stats: BreakageStats };
 
-    if (!stats) {
+    if (!stats || !stats.totalProduced) {
         return NextResponse.json({
-            insight: "No hay datos disponibles para el análisis.",
-            recommendations: ["Verifique la conexión."],
+            insight: "No hay suficientes datos para realizar un análisis de calidad.",
+            recommendations: ["Seleccione un rango de fecha con producción."],
             priority: "low"
         });
     }
@@ -68,7 +75,13 @@ export async function POST(req: Request) {
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (textResponse) {
-      return NextResponse.json(JSON.parse(textResponse));
+      const cleanedJson = cleanJsonString(textResponse);
+      try {
+        return NextResponse.json(JSON.parse(cleanedJson));
+      } catch (e) {
+        console.error("JSON Parse Error:", e, "Raw Text:", textResponse);
+        throw new Error("Failed to parse AI response");
+      }
     }
     
     throw new Error("No content generated");
