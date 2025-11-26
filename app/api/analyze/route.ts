@@ -2,18 +2,53 @@
 import { NextResponse } from "next/server";
 import { DowntimeEvent, OEEData, ProductionMetrics } from "../../../types";
 
-// Helper robusto para limpiar JSON
 function cleanJsonString(str: string): string {
   if (!str) return "";
   const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (match && match[1]) return match[1].trim();
-  
   const firstOpen = str.indexOf('{');
   const lastClose = str.lastIndexOf('}');
   if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
       return str.substring(firstOpen, lastClose + 1);
   }
   return str.trim();
+}
+
+// --- MOTOR DE REGLAS DE RESPALDO (FALLBACK) ---
+function generateFallbackAnalysis(oee: OEEData, downtimes: DowntimeEvent[]) {
+    const oeeVal = (oee?.oee || 0) * 100;
+    const topDowntime = downtimes?.[0];
+    
+    let insight = "";
+    let priority: 'high' | 'medium' | 'low' = 'low';
+    const recommendations: string[] = [];
+
+    if (oeeVal < 65) {
+        priority = 'high';
+        insight = `CRÍTICO: Eficiencia global baja (${oeeVal.toFixed(1)}%). `;
+        if (topDowntime) insight += `Impacto severo por '${topDowntime.reason}' (${topDowntime.durationMinutes}m).`;
+    } else if (oeeVal < 85) {
+        priority = 'medium';
+        insight = `ATENCIÓN: OEE del ${oeeVal.toFixed(1)}% con oportunidades de mejora. `;
+        if (topDowntime) insight += `Foco principal: '${topDowntime.reason}'.`;
+    } else {
+        priority = 'low';
+        insight = `ÓPTIMO: Planta operando con alta eficiencia (${oeeVal.toFixed(1)}%). Mantener estándares.`;
+    }
+
+    if (topDowntime) {
+        recommendations.push(`Analizar causa raíz de: ${topDowntime.reason}.`);
+        recommendations.push(`Verificar frecuencia de: ${topDowntime.category}.`);
+    } else {
+        recommendations.push("Mantener ritmo de producción actual.");
+    }
+    recommendations.push("Revisar balance de línea para optimizar velocidad.");
+
+    return {
+        insight: `[Respaldo] ${insight}`,
+        recommendations: recommendations.slice(0, 3),
+        priority
+    };
 }
 
 async function tryGenerateWithModel(model: string, apiKey: string, prompt: string) {
@@ -31,20 +66,13 @@ async function tryGenerateWithModel(model: string, apiKey: string, prompt: strin
     if (!response.ok) {
         const status = response.status;
         const errText = await response.text();
-
-        if (status === 404) {
-            throw new Error(`MODEL_NOT_FOUND`);
-        }
-        if (status === 429) {
-             throw new Error(`QUOTA_EXCEEDED`);
-        }
+        if (status === 404) throw new Error(`MODEL_NOT_FOUND`);
+        if (status === 429) throw new Error(`QUOTA_EXCEEDED`);
         if (status === 400 && (errText.includes('API key not valid') || errText.includes('API_KEY_INVALID'))) {
              throw new Error(`API_KEY_INVALID`);
         }
-        
         throw new Error(`GOOGLE_ERROR_${status}: ${errText}`);
     }
-
     return response.json();
 }
 
@@ -58,38 +86,14 @@ export async function POST(req: Request) {
       production: ProductionMetrics[];
     };
 
-    // --- MODO DEMO / FALLBACK ---
+    // Sin API Key -> Fallback inmediato
     if (!apiKey) {
-       console.warn("MODO DEMO: API_KEY no encontrada. Devolviendo análisis simulado.");
-       
-       const topDowntime = downtimes?.[0]?.reason || "Falla Técnica";
-       const oeeVal = (oee?.oee || 0) * 100;
-
-       let insight = "La planta opera de manera estable.";
-       let priority = "low";
-       
-       if (oeeVal < 60) {
-           insight = `Análisis Demo: Crítico bajo OEE (${oeeVal.toFixed(1)}%) impulsado principalmente por '${topDowntime}'.`;
-           priority = "high";
-       } else if (oeeVal < 85) {
-           insight = `Análisis Demo: OEE aceptable (${oeeVal.toFixed(1)}%), pero se observan pérdidas recurrentes por '${topDowntime}'.`;
-           priority = "medium";
-       }
-
-       return NextResponse.json({
-         insight,
-         recommendations: [
-           `Investigar causa raíz de: ${topDowntime}`,
-           "Optimizar cambios de turno para recuperar disponibilidad",
-           "Revisar velocidad de línea en Paletizadora 1"
-         ],
-         priority
-       });
+       console.warn("API_KEY faltante. Usando Fallback.");
+       return NextResponse.json(generateFallbackAnalysis(oee, downtimes));
     }
 
     const prompt = `
       Actúa como Ingeniero de Planta. Analiza estos datos (últimas 8h):
-      
       OEE Global: ${(oee?.oee * 100).toFixed(1)}% (Disp: ${(oee?.availability * 100).toFixed(1)}%, Rend: ${(oee?.performance * 100).toFixed(1)}%)
       Top Paros: ${downtimes?.slice(0, 3).map(d => `${d.reason} (${d.durationMinutes}m)`).join(', ') || 'Ninguno'}
       
@@ -111,8 +115,6 @@ export async function POST(req: Request) {
         "gemini-pro"
     ];
 
-    let lastError = null;
-    let quotaError = null;
     let data = null;
 
     for (const model of modelsToTry) {
@@ -120,45 +122,32 @@ export async function POST(req: Request) {
             data = await tryGenerateWithModel(model, apiKey, prompt);
             if (data) break;
         } catch (e: any) {
-            lastError = e;
-            if (e.message.includes('API_KEY_INVALID')) {
-                throw new Error("API Key inválida. Verifique configuración en Vercel.");
-            }
-            if (e.message.includes('QUOTA_EXCEEDED')) {
-                quotaError = e;
-            }
+            if (e.message.includes('API_KEY_INVALID')) break;
             continue;
         }
     }
 
-    if (!data) {
-        if (quotaError) {
-             throw new Error("Límite de cuota IA excedido (Error 429).");
+    if (data) {
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textResponse) {
+            try {
+                return NextResponse.json(JSON.parse(cleanJsonString(textResponse)));
+            } catch (e) {
+                console.error("Error parseando IA, usando fallback");
+            }
         }
-        if (lastError?.message?.includes('MODEL_NOT_FOUND')) {
-             throw new Error("Ningún modelo Gemini disponible para esta API Key.");
-        }
-        throw new Error(lastError?.message || "No se pudo conectar con ningún modelo Gemini.");
     }
 
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (textResponse) {
-      try {
-        const result = JSON.parse(cleanJsonString(textResponse));
-        return NextResponse.json(result);
-      } catch (e) {
-        throw new Error("Error parseando respuesta de IA");
-      }
-    }
-
-    throw new Error("Sin respuesta de IA");
+    // --- FALLBACK FINAL ---
+    return NextResponse.json(generateFallbackAnalysis(oee, downtimes));
 
   } catch (error: any) {
     console.error("Analysis Error:", error);
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    // Fallback de emergencia
+    return NextResponse.json({
+         insight: "Sistema de análisis en modo seguro.",
+         recommendations: ["Revise los datos manualmente"],
+         priority: "low"
+    });
   }
 }

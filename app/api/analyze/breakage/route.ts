@@ -5,23 +5,61 @@ import { BreakageStats } from "../../../../types";
 // Helper robusto para limpiar JSON
 function cleanJsonString(str: string): string {
   if (!str) return "";
-  
-  // 1. Intentar extraer de bloque de código markdown
   const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (match && match[1]) {
-      return match[1].trim();
-  }
+  if (match && match[1]) return match[1].trim();
   
-  // 2. Intentar buscar el primer '{' y el último '}'
   const firstOpen = str.indexOf('{');
   const lastClose = str.lastIndexOf('}');
-  
   if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
       return str.substring(firstOpen, lastClose + 1);
   }
-  
-  // 3. Retornar tal cual (backup)
   return str.trim();
+}
+
+// --- MOTOR DE REGLAS DE RESPALDO (FALLBACK) ---
+// Se ejecuta si la IA falla o no tiene cuota.
+function generateFallbackAnalysis(stats: BreakageStats) {
+    const topSector = stats.bySector?.[0];
+    const topProvider = stats.byProvider?.[0];
+    const topMaterial = stats.byMaterial?.[0];
+    const rate = stats.globalRate || 0;
+
+    let insight = "";
+    let priority: 'high' | 'medium' | 'low' = 'low';
+    const recommendations: string[] = [];
+
+    // Lógica de Diagnóstico
+    if (rate > 2.0) {
+        priority = 'high';
+        insight = `CRÍTICO: Tasa de rotura global del ${rate.toFixed(2)}% excede el límite aceptable. `;
+        if (topSector) insight += `El sector '${topSector.name}' concentra la mayoría de fallas.`;
+    } else if (rate > 0.8) {
+        priority = 'medium';
+        insight = `ALERTA: Tasa de rotura elevada (${rate.toFixed(2)}%). `;
+        if (topMaterial) insight += `Revisar material '${topMaterial.name}' que presenta alta incidencia.`;
+    } else {
+        priority = 'low';
+        insight = `ESTABLE: La tasa de rotura (${rate.toFixed(2)}%) se encuentra dentro de parámetros normales de operación.`;
+    }
+
+    // Generación de Recomendaciones
+    if (topSector) {
+        recommendations.push(`Realizar mantenimiento preventivo en sector: ${topSector.name}.`);
+    }
+    if (topProvider && topProvider.rate > 1.5) {
+        recommendations.push(`Gestionar reclamo de calidad al proveedor ${topProvider.name} (${topProvider.rate.toFixed(1)}% falla).`);
+    } else {
+        recommendations.push("Monitorear variables de proceso en turno noche.");
+    }
+    if (topMaterial) {
+        recommendations.push(`Verificar especificaciones técnicas del material: ${topMaterial.name}.`);
+    }
+
+    return {
+        insight: `[Respaldo] ${insight}`, // Marcamos que es respaldo
+        recommendations: recommendations.slice(0, 3),
+        priority
+    };
 }
 
 async function tryGenerateWithModel(model: string, apiKey: string, prompt: string) {
@@ -40,22 +78,11 @@ async function tryGenerateWithModel(model: string, apiKey: string, prompt: strin
         const status = response.status;
         const errText = await response.text();
 
-        // Si es 404, es el único caso donde asumimos que el MODELO no existe para esa key
-        if (status === 404) {
-            throw new Error(`MODEL_NOT_FOUND`);
-        }
-        
-        // Si es 429, es cuota excedida
-        if (status === 429) {
-             throw new Error(`QUOTA_EXCEEDED`);
-        }
-        
-        // Si es 400 y menciona API Key, fallamos rápido
+        if (status === 404) throw new Error(`MODEL_NOT_FOUND`);
+        if (status === 429) throw new Error(`QUOTA_EXCEEDED`);
         if (status === 400 && (errText.includes('API key not valid') || errText.includes('API_KEY_INVALID'))) {
              throw new Error(`API_KEY_INVALID`);
         }
-
-        // Otros errores: Devolvemos el texto original de Google para debug
         throw new Error(`GOOGLE_ERROR_${status}: ${errText}`);
     }
 
@@ -68,51 +95,30 @@ export async function POST(req: Request) {
     const { stats } = body as { stats: BreakageStats };
     const apiKey = process.env.API_KEY;
 
-    // --- MODO DEMO / FALLBACK ---
-    if (!apiKey) {
-      console.warn("MODO DEMO: API_KEY no encontrada. Devolviendo análisis simulado.");
-      
-      const topProvider = stats.byProvider?.[0]?.name || "Proveedor X";
-      const topSector = stats.bySector?.[0]?.name || "Ensacadora";
-      
-      return NextResponse.json({
-        insight: `Análisis Demo: Se detecta una concentración inusual de roturas en el sector ${topSector}, afectando principalmente al proveedor ${topProvider}.`,
-        recommendations: [
-          `Revisar calibración de mordazas en ${topSector}.`,
-          `Solicitar nota de crédito a ${topProvider} por lote defectuoso.`,
-          "Aumentar frecuencia de limpieza en sensores de transporte."
-        ],
-        priority: "high"
-      });
-    }
-
+    // Validación básica de datos
     if (!stats || !stats.totalProduced) {
         return NextResponse.json({
-            insight: "No hay suficientes datos de producción para realizar un análisis de calidad.",
+            insight: "Datos insuficientes para análisis.",
             recommendations: ["Seleccione un rango de fecha con producción."],
             priority: "low"
         });
     }
 
+    // Si no hay API Key, usamos Fallback directo
+    if (!apiKey) {
+      console.warn("API_KEY faltante. Usando Fallback.");
+      return NextResponse.json(generateFallbackAnalysis(stats));
+    }
+
     const prompt = `
       Actúa como un Ingeniero de Calidad experto. Analiza estos datos de merma de sacos:
-
-      DATOS:
       - Producción: ${stats.totalProduced.toLocaleString()}
       - Roturas: ${stats.totalBroken.toLocaleString()}
       - Tasa Falla: ${(stats.globalRate || 0).toFixed(2)}%
-
-      SECTORES (Fallas):
-      ${stats.bySector?.map(s => `- ${s.name}: ${s.value}`).join('\n') || 'N/A'}
-
-      PROVEEDORES (Peores):
-      ${stats.byProvider?.slice(0, 3).map(p => `- ${p.name}: ${p.rate.toFixed(2)}%`).join('\n') || 'N/A'}
-
-      MATERIALES (Peores):
-      ${stats.byMaterial?.slice(0, 3).map(m => `- ${m.name}: ${m.rate.toFixed(2)}%`).join('\n') || 'N/A'}
-
-      IMPORTANTE: Responde SOLO con un objeto JSON válido. NO uses markdown. NO agregues texto antes ni después.
-      Estructura:
+      SECTORES (Fallas): ${stats.bySector?.map(s => `- ${s.name}: ${s.value}`).join('\n') || 'N/A'}
+      PROVEEDORES (Peores): ${stats.byProvider?.slice(0, 3).map(p => `- ${p.name}: ${p.rate.toFixed(2)}%`).join('\n') || 'N/A'}
+      
+      Responde SOLO JSON válido:
       {
         "insight": "Diagnóstico breve (máx 150 caracteres).",
         "recommendations": ["Acción 1", "Acción 2", "Acción 3"],
@@ -120,8 +126,7 @@ export async function POST(req: Request) {
       }
     `;
 
-    // Lista exhaustiva de modelos a probar (Fallback Strategy)
-    // Priorizamos 2.0 (experimental pero potente) y luego los estables
+    // Lista de modelos a probar
     const modelsToTry = [
         "gemini-2.0-flash-exp",
         "gemini-1.5-flash",
@@ -132,63 +137,47 @@ export async function POST(req: Request) {
         "gemini-pro"
     ];
 
-    let lastError = null;
-    let quotaError = null;
     let data = null;
 
-    // Estrategia de Fallback: Probar modelos uno por uno
+    // Intentar conectar con IA
     for (const model of modelsToTry) {
         try {
             data = await tryGenerateWithModel(model, apiKey, prompt);
-            if (data) break; // Si funciona, salimos del bucle
+            if (data) break;
         } catch (e: any) {
-            lastError = e;
-            
-            // Si la API Key es inválida, abortamos todo
+            // Si la llave es inválida, no seguimos probando, vamos directo al fallback
             if (e.message.includes('API_KEY_INVALID')) {
-                throw new Error("API Key inválida. Verifique que la clave copiada en Vercel sea correcta.");
+                console.error("API Key Inválida detectada.");
+                break;
             }
-            
-            // Si es error de cuota, lo guardamos pero seguimos intentando con modelos más ligeros
-            if (e.message.includes('QUOTA_EXCEEDED')) {
-                quotaError = e;
-            }
-            
             continue; 
         }
     }
 
-    // Si salimos del bucle sin data, decidimos qué error mostrar
-    if (!data) {
-        if (quotaError) {
-             throw new Error("Límite de cuota IA excedido (Error 429). Intente nuevamente en unos minutos.");
+    // Si la IA respondió
+    if (data) {
+        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textResponse) {
+            try {
+                return NextResponse.json(JSON.parse(cleanJsonString(textResponse)));
+            } catch (e) {
+                console.error("Error parseando JSON de IA, usando fallback.");
+            }
         }
-        if (lastError?.message?.includes('MODEL_NOT_FOUND')) {
-             throw new Error("Ningún modelo Gemini disponible para esta API Key.");
-        }
-        // Mostrar el error original de Google si es otra cosa
-        throw new Error(lastError?.message || "No se pudo conectar con ningún modelo Gemini.");
     }
 
-    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (textResponse) {
-      const cleanedJson = cleanJsonString(textResponse);
-      try {
-        return NextResponse.json(JSON.parse(cleanedJson));
-      } catch (e) {
-        console.error("JSON Parse Error:", e);
-        throw new Error("La IA devolvió un formato inválido.");
-      }
-    }
-    
-    throw new Error("La IA no generó contenido.");
+    // --- FALLBACK FINAL ---
+    // Si llegamos aquí (por cuota, error 404, o parse error), usamos el motor de reglas
+    console.warn("Usando sistema de respaldo (Fallback) para análisis.");
+    return NextResponse.json(generateFallbackAnalysis(stats));
 
   } catch (error: any) {
-    console.error("AI Breakage Analysis Error:", error);
-    return NextResponse.json(
-        { error: error.message || "Error interno del servidor" }, 
-        { status: 500 }
-    );
+    console.error("Critical Error:", error);
+    // Incluso en error crítico, intentamos devolver un JSON válido
+    return NextResponse.json({
+        insight: "Error en servicio de análisis. Se requiere revisión manual.",
+        recommendations: ["Verificar logs del servidor", "Revisar datos de entrada"],
+        priority: "low"
+    });
   }
 }
