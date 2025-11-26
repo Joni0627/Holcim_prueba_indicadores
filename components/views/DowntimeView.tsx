@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { Clock, ClipboardCheck, Loader2, Filter, Table, ArrowDownCircle } from 'lucide-react';
+import { Clock, ClipboardCheck, Loader2, Filter, Table, ArrowDownCircle, BarChart2 } from 'lucide-react';
 import { DateFilter } from '../DateFilter';
 import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent } from '../../types';
@@ -36,6 +37,40 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
+// Tooltip para el gráfico apilado
+const StackedTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        // Calcular total de la barra actual
+        const total = payload.reduce((acc: number, curr: any) => acc + (curr.value || 0), 0);
+        
+        return (
+            <div className="bg-white p-3 border border-slate-100 shadow-lg rounded-lg z-50 max-h-64 overflow-y-auto">
+                <p className="font-bold text-slate-800 text-sm mb-2 border-b border-slate-100 pb-1">{label} (HAC)</p>
+                <div className="space-y-1">
+                    {payload.map((entry: any, idx: number) => (
+                         entry.value > 0 && (
+                            <div key={idx} className="flex justify-between items-center gap-4 text-xs">
+                                <span className="flex items-center gap-1.5 text-slate-600 max-w-[150px] truncate" title={entry.name}>
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{backgroundColor: entry.color}}></span>
+                                    {entry.name}
+                                </span>
+                                <span className="font-mono font-medium text-slate-800 shrink-0">
+                                    {formatMinutes(entry.value)}
+                                </span>
+                            </div>
+                         )
+                    ))}
+                </div>
+                <div className="mt-2 pt-1 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-900">
+                    <span>Total</span>
+                    <span>{formatMinutes(total)}</span>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
+
 export const DowntimeView: React.FC = () => {
   const [downtimes, setDowntimes] = useState<DowntimeEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,26 +97,56 @@ export const DowntimeView: React.FC = () => {
 
   const totalDowntime = filteredDowntimes.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   
-  // Aggregate by SAP CAUSE for Pie Chart
-  const bySapCause = filteredDowntimes.reduce((acc, curr) => {
-      const cause = curr.sapCause || 'Sin Clasificar';
-      const existing = acc.find(c => c.name === cause);
+  // Aggregate by REASON (Texto de Causa) for Pie Chart
+  const byReason = filteredDowntimes.reduce((acc, curr) => {
+      const reason = curr.reason || 'Sin Motivo';
+      const existing = acc.find(c => c.name === reason);
       if (existing) {
           existing.value += curr.durationMinutes;
       } else {
-          acc.push({ name: cause, value: curr.durationMinutes });
+          acc.push({ name: reason, value: curr.durationMinutes });
       }
       return acc;
   }, [] as { name: string, value: number }[]).sort((a,b) => b.value - a.value);
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'];
+  // --- LOGIC FOR STACKED BAR CHART (HAC vs REASON/TEXTO DE CAUSA) ---
+  const stackedDataMap = filteredDowntimes.reduce((acc, curr) => {
+      const machine = curr.hac || 'Sin HAC';
+      // CHANGED: Use reason (Texto de Causa) instead of sapCause for stacking
+      const cause = curr.reason || 'Sin Motivo';
+      
+      if (!acc[machine]) {
+          acc[machine] = { name: machine, totalDuration: 0 };
+      }
+      
+      // Sumar al acumulador específico de esa causa
+      acc[machine][cause] = (acc[machine][cause] || 0) + curr.durationMinutes;
+      // Sumar al total de la máquina para ordenamiento
+      acc[machine].totalDuration += curr.durationMinutes;
+      
+      return acc;
+  }, {} as Record<string, any>);
+
+  // Convertir mapa a array y ordenar por duración total (Pareto de Máquinas)
+  const stackedData = Object.values(stackedDataMap).sort((a: any, b: any) => b.totalDuration - a.totalDuration);
+
+  // Obtener todas las claves únicas de MOTIVOS (Reasons) para las barras apiladas
+  // CHANGED: Source from reason instead of sapCause
+  const stackKeys = Array.from(new Set(filteredDowntimes.map(d => d.reason || 'Sin Motivo')));
+
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#06b6d4', '#84cc16'];
+  // Expanded palette for reasons since there might be many
+  const STACK_COLORS = [
+      '#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#f43f5e', '#84cc16', 
+      '#3b82f6', '#ef4444', '#14b8a6', '#d946ef', '#f97316', '#a855f7', '#0ea5e9', '#22c55e'
+  ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Análisis Detallado de Paros</h2>
-          <p className="text-slate-500 text-sm mt-1">Ranking de motivos y distribución por Causas SAP.</p>
+          <p className="text-slate-500 text-sm mt-1">Ranking de motivos y distribución por Causas.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 items-center">
             {/* Downtime Type Filter */}
@@ -142,6 +207,51 @@ export const DowntimeView: React.FC = () => {
                     </div>
                 </div>
             </div>
+            
+            {/* NEW STACKED BAR CHART (HAC vs REASON) */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[500px]">
+                <div className="flex items-center gap-2 mb-1">
+                     <BarChart2 size={20} className="text-indigo-500" />
+                     <h3 className="font-bold text-slate-800">Impacto por Equipo (HAC) y Motivo</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-6">Visualización de qué equipos paran más y sus motivos específicos (Texto de Causa).</p>
+
+                {stackedData.length > 0 ? (
+                    <div className="flex-grow w-full h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stackedData} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                <XAxis 
+                                    dataKey="name" 
+                                    stroke="#64748b" 
+                                    fontSize={12} 
+                                    tick={{fill: '#334155'}}
+                                    interval={0}
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={60}
+                                />
+                                <YAxis stroke="#94a3b8" fontSize={12} tickFormatter={formatMinutes} />
+                                <Tooltip content={<StackedTooltip />} cursor={{fill: '#f8fafc'}} />
+                                {/* Removed Legend for Clarity as Reasons can be many */}
+                                {stackKeys.map((key, index) => (
+                                    <Bar 
+                                        key={key} 
+                                        dataKey={key} 
+                                        stackId="a" 
+                                        fill={STACK_COLORS[index % STACK_COLORS.length]} 
+                                        name={key}
+                                    />
+                                ))}
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
+                        Sin datos para mostrar
+                    </div>
+                )}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Ranking by TEXTO DE CAUSA (Reason) */}
@@ -180,14 +290,14 @@ export const DowntimeView: React.FC = () => {
                     )}
                 </div>
 
-                {/* Pie Chart by CAUSA SAP */}
+                {/* Pie Chart by TEXTO DE CAUSA (Reason) */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[550px] flex flex-col">
-                    <h3 className="font-semibold text-slate-800 mb-4">Distribución por Grupo (Causa SAP)</h3>
-                    {bySapCause.length > 0 ? (
+                    <h3 className="font-semibold text-slate-800 mb-4">Distribución por Motivo (Texto de Causa)</h3>
+                    {byReason.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
-                                    data={bySapCause}
+                                    data={byReason}
                                     cx="50%"
                                     cy="50%"
                                     innerRadius={80}
@@ -195,7 +305,7 @@ export const DowntimeView: React.FC = () => {
                                     paddingAngle={2}
                                     dataKey="value"
                                 >
-                                    {bySapCause.map((entry, index) => (
+                                    {byReason.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
