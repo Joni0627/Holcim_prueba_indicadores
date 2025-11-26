@@ -70,9 +70,9 @@ export async function POST(req: Request) {
       }
     `;
 
-    // Usamos gemini-1.5-flash-latest por ser la versión estable con mejor cuota gratuita y resolución de alias.
+    // Usamos gemini-1.5-flash-002 por ser la versión pineada estable más robusta para v1beta
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-002:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
