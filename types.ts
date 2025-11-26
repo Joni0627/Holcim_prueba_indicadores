@@ -62,34 +62,34 @@ export interface ProductionStats {
 // Interface for Historical Evolution Chart
 export interface BreakageHistoryItem {
     date: string; // DD/MM
-    [key: string]: number | string; // Dynamic provider keys
+    [key: string]: number | string; // Dynamic provider keys (using safeIds)
 }
 
 export interface BreakageStats {
   totalProduced: number;
   totalBroken: number;
   globalRate: number; // Percentage
-  bySector: { name: string; value: number; percentage: number }[]; // Added percentage relative to total broken
+  bySector: { name: string; value: number; percentage: number }[]; 
   byProvider: { 
+    id: string; // Safe Key for Recharts
     name: string; 
     produced: number; 
     broken: number; 
     rate: number; // Percentage
   }[];
   byMaterial: {
+    id: string; // Safe Key for Recharts
     name: string;
     produced: number;
     broken: number;
     rate: number;
-    // New breakdown for Stacked Bar Chart
-    sectors: {
-        Ensacadora: number;
-        NoEmboquillada: number;
-        Ventocheck: number;
-        Transporte: number;
-    };
+    // Flattened Breakdown for Stacked Bar Chart compatibility
+    sector_Ensacadora: number;
+    sector_NoEmboquillada: number;
+    sector_Ventocheck: number;
+    sector_Transporte: number;
   }[];
-  history: BreakageHistoryItem[]; // New field for evolution chart
+  history: BreakageHistoryItem[]; 
 }
 
 export interface StockItem {

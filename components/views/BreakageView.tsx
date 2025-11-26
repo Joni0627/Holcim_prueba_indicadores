@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line, BarChart, Bar } from 'recharts';
 import { Ban, AlertOctagon, Loader2, Factory, TrendingDown, Layers, Activity, GanttChartSquare } from 'lucide-react';
@@ -147,9 +148,10 @@ export const BreakageView: React.FC = () => {
                                 <Legend wrapperStyle={{paddingTop: '10px'}} />
                                 {data.byProvider.map((prov, idx) => (
                                     <Line 
-                                        key={prov.name}
+                                        key={prov.id} // USE SAFE ID
                                         type="monotone" 
-                                        dataKey={prov.name} 
+                                        dataKey={prov.id} // USE SAFE ID to access data in history object
+                                        name={prov.name} // Display Real Name
                                         stroke={LINE_COLORS[idx % LINE_COLORS.length]} 
                                         strokeWidth={2}
                                         dot={{r: 4}}
@@ -192,10 +194,11 @@ export const BreakageView: React.FC = () => {
                                     cursor={{fill: '#f8fafc'}}
                                 />
                                 <Legend wrapperStyle={{paddingTop: '10px'}} />
-                                <Bar dataKey="sectors.Ensacadora" name="Ensacadora" stackId="a" fill={SECTOR_COLORS['Ensacadora']} />
-                                <Bar dataKey="sectors.NoEmboquillada" name="No Emboquillada" stackId="a" fill={SECTOR_COLORS['NoEmboquillada']} />
-                                <Bar dataKey="sectors.Ventocheck" name="Ventocheck" stackId="a" fill={SECTOR_COLORS['Ventocheck']} />
-                                <Bar dataKey="sectors.Transporte" name="Transporte" stackId="a" fill={SECTOR_COLORS['Transporte']} />
+                                {/* Use FLATTENED keys */}
+                                <Bar dataKey="sector_Ensacadora" name="Ensacadora" stackId="a" fill={SECTOR_COLORS['Ensacadora']} />
+                                <Bar dataKey="sector_NoEmboquillada" name="No Emboquillada" stackId="a" fill={SECTOR_COLORS['NoEmboquillada']} />
+                                <Bar dataKey="sector_Ventocheck" name="Ventocheck" stackId="a" fill={SECTOR_COLORS['Ventocheck']} />
+                                <Bar dataKey="sector_Transporte" name="Transporte" stackId="a" fill={SECTOR_COLORS['Transporte']} />
                             </BarChart>
                         </ResponsiveContainer>
                      </div>

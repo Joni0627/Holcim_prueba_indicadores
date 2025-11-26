@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
@@ -5,6 +6,9 @@ import { JWT } from "google-auth-library";
 // --- CONFIGURACIÓN DE CACHÉ ---
 const CACHE_TTL = 60 * 1000; // 60 segundos
 const cache = new Map<string, { data: any; timestamp: number }>();
+
+// Helper to generate safe keys for Recharts (replace dots, spaces, special chars)
+const toSafeKey = (str: string) => str.trim().replace(/[^a-zA-Z0-9]/g, '_');
 
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
@@ -15,7 +19,6 @@ function parseSheetDate(dateStr: string): Date | null {
       const parts = cleaned.split("/");
       if (parts.length === 3) {
           const [day, month, year] = parts.map(Number);
-          // Handle 2 digit years if necessary, though sheets usually gives 4
           const fullYear = year < 100 ? 2000 + year : year;
           return new Date(fullYear, month - 1, day);
       }
@@ -42,7 +45,6 @@ function parseNumber(val: any): number {
     if (!val) return 0;
     let str = String(val).trim();
     if (str === '') return 0;
-    // Remove % if exists and handle comma decimal
     if (str.includes('%')) {
         str = str.replace('%', '');
         return parseFloat(str.replace(',', '.')) / 100;
@@ -77,7 +79,6 @@ export async function GET(req: Request) {
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
 
-    // Env Vars
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const key = process.env.GOOGLE_SERVICE_ACCOUNT_KEY?.replace(/\\n/g, "\n");
     const sheetId = process.env.GOOGLE_SHEET_ID;
@@ -94,7 +95,6 @@ export async function GET(req: Request) {
     const rows = await sheet.getRows();
 
     // FILTER BY DATE AND PREPARE DATA
-    // We pre-process rows to avoid parsing date multiple times
     const validRows = rows.map(row => {
         const d = parseSheetDate(row.get("FECHA"));
         return { row, date: d };
@@ -114,7 +114,7 @@ export async function GET(req: Request) {
     // Aggregation Maps
     const providerStats: Record<string, { produced: number, broken: number }> = {};
     
-    // Material Stats needs sector breakdown
+    // Internal Material Stats (to be flattened later)
     const materialStats: Record<string, { 
         produced: number, 
         broken: number, 
@@ -126,13 +126,14 @@ export async function GET(req: Request) {
         }
     }> = {};
     
-    // History Map: dateString -> provider -> {produced, broken}
+    // History Map: dateString -> SAFE_PROVIDER_KEY -> {produced, broken}
     const historyMap: Record<string, Record<string, { produced: number, broken: number }>> = {};
 
     validRows.forEach(({ row, date }) => {
         const produced = parseNumber(row.get("BOLSAS PRODUCIDAS"));
         const providerRaw = row.get("DESCRIPCION_PROVEEDOR");
         const provider = providerRaw ? String(providerRaw).trim() : "Sin Proveedor";
+        const providerSafeKey = toSafeKey(provider); // SANITIZED KEY
         
         const materialRaw = row.get("DESCRIPCION_MATERIAL");
         const material = materialRaw ? String(materialRaw).trim() : "Desconocido";
@@ -180,11 +181,11 @@ export async function GET(req: Request) {
         materialStats[material].sectors.Transporte += brkTrans;
 
 
-        // History Logic
+        // History Logic (Using SAFE KEY)
         if (!historyMap[dateKey]) historyMap[dateKey] = {};
-        if (!historyMap[dateKey][provider]) historyMap[dateKey][provider] = { produced: 0, broken: 0 };
-        historyMap[dateKey][provider].produced += produced;
-        historyMap[dateKey][provider].broken += rowTotalBroken;
+        if (!historyMap[dateKey][providerSafeKey]) historyMap[dateKey][providerSafeKey] = { produced: 0, broken: 0 };
+        historyMap[dateKey][providerSafeKey].produced += produced;
+        historyMap[dateKey][providerSafeKey].broken += rowTotalBroken;
     });
 
     const totalBroken = sumEnsacadora + sumNoEmboquillada + sumVentocheck + sumTransporte;
@@ -192,9 +193,9 @@ export async function GET(req: Request) {
     // Construct History Array
     const history = Object.entries(historyMap).map(([date, providers]) => {
         const item: any = { date };
-        Object.entries(providers).forEach(([prov, stats]) => {
+        Object.entries(providers).forEach(([safeProv, stats]) => {
              const rate = stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0;
-             item[prov] = parseFloat(rate.toFixed(2));
+             item[safeProv] = parseFloat(rate.toFixed(2));
         });
         return item;
     });
@@ -207,7 +208,7 @@ export async function GET(req: Request) {
         return da - db;
     });
 
-    // Construct Response
+    // Construct Response with Safe IDs and Flattened structures
     const result = {
         totalProduced,
         totalBroken,
@@ -218,19 +219,28 @@ export async function GET(req: Request) {
             { name: "Ventocheck", value: sumVentocheck, percentage: totalBroken > 0 ? (sumVentocheck / totalBroken) * 100 : 0 },
             { name: "Transporte", value: sumTransporte, percentage: totalBroken > 0 ? (sumTransporte / totalBroken) * 100 : 0 },
         ].filter(s => s.value > 0), 
+        
         byProvider: Object.entries(providerStats).map(([name, stats]) => ({
+            id: toSafeKey(name), // Safe ID for charts
             name,
             produced: stats.produced,
             broken: stats.broken,
             rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0
         })).sort((a,b) => b.rate - a.rate),
+        
         byMaterial: Object.entries(materialStats).map(([name, stats]) => ({
+            id: toSafeKey(name), // Safe ID
             name,
             produced: stats.produced,
             broken: stats.broken,
             rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0,
-            sectors: stats.sectors // Include sector breakdown
+            // FLATTENED SECTORS for Stacked Bar Chart compatibility
+            sector_Ensacadora: stats.sectors.Ensacadora,
+            sector_NoEmboquillada: stats.sectors.NoEmboquillada,
+            sector_Ventocheck: stats.sectors.Ventocheck,
+            sector_Transporte: stats.sectors.Transporte
         })).sort((a,b) => b.rate - a.rate),
+        
         history 
     };
 

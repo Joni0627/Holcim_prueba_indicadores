@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { BreakageStats } from "../../../../types";
 
@@ -14,8 +15,6 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { stats } = body as { stats: BreakageStats };
 
-    // GUARD CLAUSE: Relaxed to allow analysis even if production is 0 but we have records
-    // Only fail if we have literally no object
     if (!stats) {
         return NextResponse.json({
             insight: "No hay datos disponibles para el análisis.",
@@ -24,6 +23,7 @@ export async function POST(req: Request) {
         });
     }
 
+    // Ensure we use the readable 'name' and not the 'id' (safeKey)
     const prompt = `
       Actúa como un Ingeniero de Calidad experto en procesos de envasado industrial.
       Analiza los siguientes datos de merma/rotura de sacos.
@@ -75,7 +75,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("AI Breakage Analysis Error:", error);
-    // Return graceful error instead of 500 to UI
     return NextResponse.json({ 
         insight: "No se pudo generar el análisis automático en este momento.",
         recommendations: ["Revise la tabla manualmente."],
