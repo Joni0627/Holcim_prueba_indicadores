@@ -97,14 +97,14 @@ export const DowntimeView: React.FC = () => {
 
   const totalDowntime = filteredDowntimes.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   
-  // Aggregate by REASON (Texto de Causa) for Pie Chart
-  const byReason = filteredDowntimes.reduce((acc, curr) => {
-      const reason = curr.reason || 'Sin Motivo';
-      const existing = acc.find(c => c.name === reason);
+  // Aggregate by SAP CAUSE (Categoría) for Pie Chart
+  const byCategory = filteredDowntimes.reduce((acc, curr) => {
+      const category = curr.sapCause || 'Sin Categoría';
+      const existing = acc.find(c => c.name === category);
       if (existing) {
           existing.value += curr.durationMinutes;
       } else {
-          acc.push({ name: reason, value: curr.durationMinutes });
+          acc.push({ name: category, value: curr.durationMinutes });
       }
       return acc;
   }, [] as { name: string, value: number }[]).sort((a,b) => b.value - a.value);
@@ -112,7 +112,7 @@ export const DowntimeView: React.FC = () => {
   // --- LOGIC FOR STACKED BAR CHART (HAC vs REASON/TEXTO DE CAUSA) ---
   const stackedDataMap = filteredDowntimes.reduce((acc, curr) => {
       const machine = curr.hac || 'Sin HAC';
-      // CHANGED: Use reason (Texto de Causa) instead of sapCause for stacking
+      // Use reason (Texto de Causa) for stacking
       const cause = curr.reason || 'Sin Motivo';
       
       if (!acc[machine]) {
@@ -131,7 +131,6 @@ export const DowntimeView: React.FC = () => {
   const stackedData = Object.values(stackedDataMap).sort((a: any, b: any) => b.totalDuration - a.totalDuration);
 
   // Obtener todas las claves únicas de MOTIVOS (Reasons) para las barras apiladas
-  // CHANGED: Source from reason instead of sapCause
   const stackKeys = Array.from(new Set(filteredDowntimes.map(d => d.reason || 'Sin Motivo')));
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#06b6d4', '#84cc16'];
@@ -208,7 +207,7 @@ export const DowntimeView: React.FC = () => {
                 </div>
             </div>
             
-            {/* NEW STACKED BAR CHART (HAC vs REASON) */}
+            {/* STACKED BAR CHART (HAC vs REASON) */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[500px]">
                 <div className="flex items-center gap-2 mb-1">
                      <BarChart2 size={20} className="text-indigo-500" />
@@ -233,7 +232,6 @@ export const DowntimeView: React.FC = () => {
                                 />
                                 <YAxis stroke="#94a3b8" fontSize={12} tickFormatter={formatMinutes} />
                                 <Tooltip content={<StackedTooltip />} cursor={{fill: '#f8fafc'}} />
-                                {/* Removed Legend for Clarity as Reasons can be many */}
                                 {stackKeys.map((key, index) => (
                                     <Bar 
                                         key={key} 
@@ -290,14 +288,14 @@ export const DowntimeView: React.FC = () => {
                     )}
                 </div>
 
-                {/* Pie Chart by TEXTO DE CAUSA (Reason) */}
+                {/* Pie Chart by SAP CAUSE (Category) */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[550px] flex flex-col">
-                    <h3 className="font-semibold text-slate-800 mb-4">Distribución por Motivo (Texto de Causa)</h3>
-                    {byReason.length > 0 ? (
+                    <h3 className="font-semibold text-slate-800 mb-4">Distribución por Grupo (Causa SAP)</h3>
+                    {byCategory.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
-                                    data={byReason}
+                                    data={byCategory}
                                     cx="50%"
                                     cy="50%"
                                     innerRadius={80}
@@ -305,7 +303,7 @@ export const DowntimeView: React.FC = () => {
                                     paddingAngle={2}
                                     dataKey="value"
                                 >
-                                    {byReason.map((entry, index) => (
+                                    {byCategory.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
