@@ -55,8 +55,8 @@ async function tryGenerateWithModel(model: string, apiKey: string, prompt: strin
              throw new Error(`API_KEY_INVALID`);
         }
 
-        // Otros errores (400 genérico, 500, etc)
-        throw new Error(`API_ERROR_${status}: ${errText}`);
+        // Otros errores: Devolvemos el texto original de Google para debug
+        throw new Error(`GOOGLE_ERROR_${status}: ${errText}`);
     }
 
     return response.json();
@@ -121,7 +121,9 @@ export async function POST(req: Request) {
     `;
 
     // Lista exhaustiva de modelos a probar (Fallback Strategy)
+    // Priorizamos 2.0 (experimental pero potente) y luego los estables
     const modelsToTry = [
+        "gemini-2.0-flash-exp",
         "gemini-1.5-flash",
         "gemini-1.5-flash-latest",
         "gemini-1.5-flash-002",
@@ -131,6 +133,7 @@ export async function POST(req: Request) {
     ];
 
     let lastError = null;
+    let quotaError = null;
     let data = null;
 
     // Estrategia de Fallback: Probar modelos uno por uno
@@ -140,21 +143,30 @@ export async function POST(req: Request) {
             if (data) break; // Si funciona, salimos del bucle
         } catch (e: any) {
             lastError = e;
-            // Si la API Key es inválida, no tiene sentido probar los otros modelos
+            
+            // Si la API Key es inválida, abortamos todo
             if (e.message.includes('API_KEY_INVALID')) {
                 throw new Error("API Key inválida. Verifique que la clave copiada en Vercel sea correcta.");
             }
+            
+            // Si es error de cuota, lo guardamos pero seguimos intentando con modelos más ligeros
+            if (e.message.includes('QUOTA_EXCEEDED')) {
+                quotaError = e;
+            }
+            
             continue; 
         }
     }
 
+    // Si salimos del bucle sin data, decidimos qué error mostrar
     if (!data) {
-        if (lastError?.message?.includes('QUOTA_EXCEEDED')) {
-             throw new Error("Límite de cuota IA excedido (Error 429).");
+        if (quotaError) {
+             throw new Error("Límite de cuota IA excedido (Error 429). Intente nuevamente en unos minutos.");
         }
         if (lastError?.message?.includes('MODEL_NOT_FOUND')) {
              throw new Error("Ningún modelo Gemini disponible para esta API Key.");
         }
+        // Mostrar el error original de Google si es otra cosa
         throw new Error(lastError?.message || "No se pudo conectar con ningún modelo Gemini.");
     }
 

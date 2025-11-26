@@ -42,7 +42,7 @@ async function tryGenerateWithModel(model: string, apiKey: string, prompt: strin
              throw new Error(`API_KEY_INVALID`);
         }
         
-        throw new Error(`API_ERROR_${status}: ${errText}`);
+        throw new Error(`GOOGLE_ERROR_${status}: ${errText}`);
     }
 
     return response.json();
@@ -102,15 +102,17 @@ export async function POST(req: Request) {
     `;
 
     const modelsToTry = [
+        "gemini-2.0-flash-exp",
         "gemini-1.5-flash",
         "gemini-1.5-flash-latest",
         "gemini-1.5-flash-002",
-        "gemini-1.5-flash-8b",
+        "gemini-1.5-flash-8b", 
         "gemini-1.5-pro",
         "gemini-pro"
     ];
 
     let lastError = null;
+    let quotaError = null;
     let data = null;
 
     for (const model of modelsToTry) {
@@ -122,13 +124,16 @@ export async function POST(req: Request) {
             if (e.message.includes('API_KEY_INVALID')) {
                 throw new Error("API Key inválida. Verifique configuración en Vercel.");
             }
+            if (e.message.includes('QUOTA_EXCEEDED')) {
+                quotaError = e;
+            }
             continue;
         }
     }
 
     if (!data) {
-        if (lastError?.message?.includes('QUOTA_EXCEEDED')) {
-             throw new Error("Límite de cuota IA excedido.");
+        if (quotaError) {
+             throw new Error("Límite de cuota IA excedido (Error 429).");
         }
         if (lastError?.message?.includes('MODEL_NOT_FOUND')) {
              throw new Error("Ningún modelo Gemini disponible para esta API Key.");
