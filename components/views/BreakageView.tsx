@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { Ban, AlertOctagon, Loader2, Factory, TrendingDown, Layers } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line } from 'recharts';
+import { Ban, AlertOctagon, Loader2, Factory, TrendingDown, Layers, Activity } from 'lucide-react';
 import { DateFilter } from '../DateFilter';
 import { fetchBreakageStats } from '../../services/sheetService';
 import { analyzeBreakageData } from '../../services/geminiService';
@@ -40,6 +40,7 @@ export const BreakageView: React.FC = () => {
   };
 
   const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6'];
+  const LINE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -104,6 +105,48 @@ export const BreakageView: React.FC = () => {
                 </div>
             </div>
 
+            {/* Evolution Chart (History) */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
+                <div className="flex items-center gap-2 mb-1">
+                     <Activity size={20} className="text-indigo-500" />
+                     <h3 className="font-bold text-slate-800">Evolución de Falla por Proveedor</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-6">Tendencia diaria del porcentaje de rotura.</p>
+
+                {data.history && data.history.length > 0 ? (
+                     <div className="flex-grow">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={data.history} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} />
+                                <YAxis stroke="#94a3b8" fontSize={12} unit="%" />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    formatter={(value: number) => [`${value}%`, '']}
+                                />
+                                <Legend wrapperStyle={{paddingTop: '10px'}} />
+                                {data.byProvider.map((prov, idx) => (
+                                    <Line 
+                                        key={prov.name}
+                                        type="monotone" 
+                                        dataKey={prov.name} 
+                                        stroke={LINE_COLORS[idx % LINE_COLORS.length]} 
+                                        strokeWidth={2}
+                                        dot={{r: 4}}
+                                        activeDot={{r: 6}}
+                                        connectNulls
+                                    />
+                                ))}
+                            </LineChart>
+                        </ResponsiveContainer>
+                     </div>
+                ) : (
+                    <div className="flex-grow flex items-center justify-center text-slate-400">
+                        Seleccione un rango mayor a 1 día para ver evolución
+                    </div>
+                )}
+            </div>
+
             {/* Main Analysis Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
@@ -150,7 +193,7 @@ export const BreakageView: React.FC = () => {
 
                 {/* Provider Ranking Table */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
-                    <h3 className="font-bold text-slate-800 mb-1">Análisis por Proveedor</h3>
+                    <h3 className="font-bold text-slate-800 mb-1">Ranking por Proveedor</h3>
                     <p className="text-xs text-slate-500 mb-4">Ranking de tasa de falla por fabricante.</p>
                     
                     <div className="flex-grow overflow-auto">

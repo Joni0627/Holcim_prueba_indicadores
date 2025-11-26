@@ -44,9 +44,9 @@ export async function POST(req: Request) {
       Enfócate en identificar si el problema es técnico, organizacional o de calidad y sugiere acciones de mejora inmediata.
     `;
 
-    // Call Gemini API via REST directly to avoid dependency issues
+    // Use stable model gemini-1.5-flash
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {

@@ -17,10 +17,18 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // Helper to get a Date object set to Local Noon to avoid Timezone shifts when converting to ISO/UTC later
+  const getLocalNoonDate = (offsetDays = 0) => {
+      const date = new Date();
+      date.setDate(date.getDate() + offsetDays);
+      date.setHours(12, 0, 0, 0); // Force noon to be safe from UTC shifts (e.g. 22:00 ARG -> 01:00 UTC Next Day)
+      return date;
+  };
+
   // Initialize with Today
   useEffect(() => {
     if (onFilterChange) {
-       const today = new Date();
+       const today = getLocalNoonDate(0);
        onFilterChange({ start: today, end: today }, 'today');
     }
   }, []);
@@ -42,14 +50,14 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
       setActiveFilter(type);
       setShowCustomRange(false);
       
-      const end = new Date();
-      const start = new Date();
+      const end = getLocalNoonDate(0);
+      let start = getLocalNoonDate(0);
 
       if (type === 'yesterday') {
-          start.setDate(start.getDate() - 1);
-          end.setDate(end.getDate() - 1);
+          start = getLocalNoonDate(-1);
+          end.setTime(start.getTime()); // End is also yesterday
       } else if (type === 'week') {
-          start.setDate(start.getDate() - 7);
+          start = getLocalNoonDate(-7);
           // end remains today
       }
       

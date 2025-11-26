@@ -59,6 +59,12 @@ export interface ProductionStats {
   details: ShiftMetric[];
 }
 
+// Interface for Historical Evolution Chart
+export interface BreakageHistoryItem {
+    date: string; // DD/MM
+    [key: string]: number | string; // Dynamic provider keys
+}
+
 export interface BreakageStats {
   totalProduced: number;
   totalBroken: number;
@@ -76,6 +82,7 @@ export interface BreakageStats {
     broken: number;
     rate: number;
   }[];
+  history: BreakageHistoryItem[]; // New field for evolution chart
 }
 
 export interface StockItem {

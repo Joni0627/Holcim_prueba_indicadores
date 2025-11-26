@@ -41,8 +41,9 @@ export async function POST(req: Request) {
       Si la tasa global es menor al 0.5%, la prioridad es low. Si es mayor a 2%, es high.
     `;
 
+    // Use stable model gemini-1.5-flash
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

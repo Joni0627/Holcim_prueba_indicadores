@@ -90,11 +90,15 @@ export async function GET(req: Request) {
     // Aggregation Maps
     const providerStats: Record<string, { produced: number, broken: number }> = {};
     const materialStats: Record<string, { produced: number, broken: number }> = {};
+    
+    // History Map: date -> provider -> {produced, broken}
+    const historyMap: Record<string, Record<string, { produced: number, broken: number }>> = {};
 
     filteredRows.forEach(row => {
         const produced = parseNumber(row.get("BOLSAS PRODUCIDAS"));
         const provider = row.get("DESCRIPCION_PROVEEDOR") || "Sin Proveedor";
         const material = row.get("DESCRIPCION_MATERIAL") || "Desconocido";
+        const dateStr = row.get("FECHA")?.substring(0, 5) || "N/A"; // DD/MM
 
         // Breakage Columns
         const brkEnsacadora = parseNumber(row.get("BOLSAS DESCARTADAS_ENSACADORA"));
@@ -124,10 +128,34 @@ export async function GET(req: Request) {
         }
         materialStats[material].produced += produced;
         materialStats[material].broken += rowTotalBroken;
+
+        // History Logic
+        if (!historyMap[dateStr]) historyMap[dateStr] = {};
+        if (!historyMap[dateStr][provider]) historyMap[dateStr][provider] = { produced: 0, broken: 0 };
+        historyMap[dateStr][provider].produced += produced;
+        historyMap[dateStr][provider].broken += rowTotalBroken;
     });
 
     const totalBroken = sumEnsacadora + sumNoEmboquillada + sumVentocheck + sumTransporte;
     
+    // Construct History Array
+    const history = Object.entries(historyMap).map(([date, providers]) => {
+        const item: any = { date };
+        Object.entries(providers).forEach(([prov, stats]) => {
+             const rate = stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0;
+             item[prov] = parseFloat(rate.toFixed(2));
+        });
+        return item;
+    });
+
+    // Sort history by date (assuming DD/MM format for current year)
+    history.sort((a, b) => {
+        const [da, ma] = a.date.split('/').map(Number);
+        const [db, mb] = b.date.split('/').map(Number);
+        if (ma !== mb) return ma - mb;
+        return da - db;
+    });
+
     // Construct Response
     const result = {
         totalProduced,
@@ -150,7 +178,8 @@ export async function GET(req: Request) {
             produced: stats.produced,
             broken: stats.broken,
             rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0
-        })).sort((a,b) => b.rate - a.rate)
+        })).sort((a,b) => b.rate - a.rate),
+        history // Added history data
     };
 
     // 2. SET CACHE
