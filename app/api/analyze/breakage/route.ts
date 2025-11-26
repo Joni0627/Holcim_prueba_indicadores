@@ -14,11 +14,12 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { stats } = body as { stats: BreakageStats };
 
-    // GUARD CLAUSE: Handle empty data to avoid hallucination or errors
-    if (!stats || stats.totalProduced === 0) {
+    // GUARD CLAUSE: Relaxed to allow analysis even if production is 0 but we have records
+    // Only fail if we have literally no object
+    if (!stats) {
         return NextResponse.json({
-            insight: "No hay datos de producción suficientes en este período para generar un análisis.",
-            recommendations: ["Amplíe el rango de fechas.", "Verifique la carga de datos en la hoja."],
+            insight: "No hay datos disponibles para el análisis.",
+            recommendations: ["Verifique la conexión."],
             priority: "low"
         });
     }
@@ -28,21 +29,21 @@ export async function POST(req: Request) {
       Analiza los siguientes datos de merma/rotura de sacos.
 
       DATOS:
-      - Producción Total: ${stats.totalProduced.toLocaleString()} bolsas
-      - Roturas Totales: ${stats.totalBroken.toLocaleString()} bolsas
-      - Tasa Global de Falla: ${stats.globalRate.toFixed(2)}%
+      - Producción Total: ${stats.totalProduced?.toLocaleString() || 0} bolsas
+      - Roturas Totales: ${stats.totalBroken?.toLocaleString() || 0} bolsas
+      - Tasa Global de Falla: ${(stats.globalRate || 0).toFixed(2)}%
 
       Desglose por Sector (Dónde se rompen):
-      ${stats.bySector.map(s => `- ${s.name}: ${s.value} bolsas`).join('\n')}
+      ${stats.bySector?.map(s => `- ${s.name}: ${s.value} bolsas`).join('\n') || 'Sin datos de sector'}
 
       Peores Proveedores (Top 3 por Tasa de Falla):
-      ${stats.byProvider.slice(0, 3).map(p => `- ${p.name}: ${p.rate.toFixed(2)}%`).join('\n')}
+      ${stats.byProvider?.slice(0, 3).map(p => `- ${p.name}: ${p.rate.toFixed(2)}%`).join('\n') || 'Sin datos de proveedores'}
 
       Responde en formato JSON puro:
       {
         "insight": "Diagnóstico breve (1-2 frases) del principal problema.",
         "recommendations": ["3 acciones correctivas"],
-        "priority": "${stats.globalRate > 2 ? 'high' : stats.globalRate > 0.5 ? 'medium' : 'low'}"
+        "priority": "${(stats.globalRate || 0) > 2 ? 'high' : (stats.globalRate || 0) > 0.5 ? 'medium' : 'low'}"
       }
     `;
 

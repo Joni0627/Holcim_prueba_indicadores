@@ -8,11 +8,32 @@ const cache = new Map<string, { data: any; timestamp: number }>();
 
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
-  const parts = dateStr.trim().split("/");
-  if (parts.length === 3) {
-      const [day, month, year] = parts.map(Number);
-      return new Date(year, month - 1, day);
+  const cleaned = dateStr.trim();
+  
+  // Try split by slash
+  if (cleaned.includes('/')) {
+      const parts = cleaned.split("/");
+      if (parts.length === 3) {
+          const [day, month, year] = parts.map(Number);
+          // Handle 2 digit years if necessary, though sheets usually gives 4
+          const fullYear = year < 100 ? 2000 + year : year;
+          return new Date(fullYear, month - 1, day);
+      }
   }
+  
+  // Try split by dash
+  if (cleaned.includes('-')) {
+      const parts = cleaned.split("-");
+      // Check if it is YYYY-MM-DD or DD-MM-YYYY
+      if (parts[0].length === 4) {
+           return new Date(cleaned + "T12:00:00");
+      } else {
+           const [day, month, year] = parts.map(Number);
+           const fullYear = year < 100 ? 2000 + year : year;
+           return new Date(fullYear, month - 1, day);
+      }
+  }
+
   return null;
 }
 
@@ -72,10 +93,13 @@ export async function GET(req: Request) {
 
     const rows = await sheet.getRows();
 
-    // FILTER BY DATE
-    const filteredRows = rows.filter(row => {
+    // FILTER BY DATE AND PREPARE DATA
+    // We pre-process rows to avoid parsing date multiple times
+    const validRows = rows.map(row => {
         const d = parseSheetDate(row.get("FECHA"));
-        return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
+        return { row, date: d };
+    }).filter(item => {
+        return item.date && item.date.getTime() >= startDate.getTime() && item.date.getTime() <= endDate.getTime();
     });
 
     // AGGREGATION LOGIC
@@ -102,14 +126,21 @@ export async function GET(req: Request) {
         }
     }> = {};
     
-    // History Map: date -> provider -> {produced, broken}
+    // History Map: dateString -> provider -> {produced, broken}
     const historyMap: Record<string, Record<string, { produced: number, broken: number }>> = {};
 
-    filteredRows.forEach(row => {
+    validRows.forEach(({ row, date }) => {
         const produced = parseNumber(row.get("BOLSAS PRODUCIDAS"));
-        const provider = row.get("DESCRIPCION_PROVEEDOR") || "Sin Proveedor";
-        const material = row.get("DESCRIPCION_MATERIAL") || "Desconocido";
-        const dateStr = row.get("FECHA")?.substring(0, 5) || "N/A"; // DD/MM
+        const providerRaw = row.get("DESCRIPCION_PROVEEDOR");
+        const provider = providerRaw ? String(providerRaw).trim() : "Sin Proveedor";
+        
+        const materialRaw = row.get("DESCRIPCION_MATERIAL");
+        const material = materialRaw ? String(materialRaw).trim() : "Desconocido";
+
+        // Generate consistent date key DD/MM
+        const day = date!.getDate().toString().padStart(2, '0');
+        const month = (date!.getMonth() + 1).toString().padStart(2, '0');
+        const dateKey = `${day}/${month}`;
 
         // Breakage Columns
         const brkEnsacadora = parseNumber(row.get("BOLSAS DESCARTADAS_ENSACADORA"));
@@ -150,10 +181,10 @@ export async function GET(req: Request) {
 
 
         // History Logic
-        if (!historyMap[dateStr]) historyMap[dateStr] = {};
-        if (!historyMap[dateStr][provider]) historyMap[dateStr][provider] = { produced: 0, broken: 0 };
-        historyMap[dateStr][provider].produced += produced;
-        historyMap[dateStr][provider].broken += rowTotalBroken;
+        if (!historyMap[dateKey]) historyMap[dateKey] = {};
+        if (!historyMap[dateKey][provider]) historyMap[dateKey][provider] = { produced: 0, broken: 0 };
+        historyMap[dateKey][provider].produced += produced;
+        historyMap[dateKey][provider].broken += rowTotalBroken;
     });
 
     const totalBroken = sumEnsacadora + sumNoEmboquillada + sumVentocheck + sumTransporte;
@@ -168,7 +199,7 @@ export async function GET(req: Request) {
         return item;
     });
 
-    // Sort history by date
+    // Sort history by date (Day/Month)
     history.sort((a, b) => {
         const [da, ma] = a.date.split('/').map(Number);
         const [db, mb] = b.date.split('/').map(Number);

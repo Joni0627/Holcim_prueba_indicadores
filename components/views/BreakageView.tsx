@@ -50,6 +50,7 @@ export const BreakageView: React.FC = () => {
 
   const RADIAN = Math.PI / 180;
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    if (percent < 0.05) return null; // Don't show label for small slices
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -160,7 +161,7 @@ export const BreakageView: React.FC = () => {
                         </ResponsiveContainer>
                      </div>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-slate-400">
+                    <div className="flex-grow flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
                         Seleccione un rango mayor a 1 día para ver evolución
                     </div>
                 )}
@@ -199,8 +200,8 @@ export const BreakageView: React.FC = () => {
                         </ResponsiveContainer>
                      </div>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-slate-400">
-                        Sin datos de materiales
+                    <div className="flex-grow flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
+                        Sin datos de materiales en este período
                     </div>
                 )}
             </div>
@@ -247,7 +248,7 @@ export const BreakageView: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center text-slate-400">Sin datos de roturas</div>
+                        <div className="flex-1 flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">Sin datos de roturas</div>
                     )}
                 </div>
 
