@@ -89,7 +89,18 @@ export async function GET(req: Request) {
 
     // Aggregation Maps
     const providerStats: Record<string, { produced: number, broken: number }> = {};
-    const materialStats: Record<string, { produced: number, broken: number }> = {};
+    
+    // Material Stats needs sector breakdown
+    const materialStats: Record<string, { 
+        produced: number, 
+        broken: number, 
+        sectors: {
+            Ensacadora: number,
+            NoEmboquillada: number,
+            Ventocheck: number,
+            Transporte: number
+        }
+    }> = {};
     
     // History Map: date -> provider -> {produced, broken}
     const historyMap: Record<string, Record<string, { produced: number, broken: number }>> = {};
@@ -122,12 +133,21 @@ export async function GET(req: Request) {
         providerStats[provider].produced += produced;
         providerStats[provider].broken += rowTotalBroken;
 
-        // Material Logic
+        // Material Logic with Sector Breakdown
         if (!materialStats[material]) {
-            materialStats[material] = { produced: 0, broken: 0 };
+            materialStats[material] = { 
+                produced: 0, 
+                broken: 0,
+                sectors: { Ensacadora: 0, NoEmboquillada: 0, Ventocheck: 0, Transporte: 0 }
+            };
         }
         materialStats[material].produced += produced;
         materialStats[material].broken += rowTotalBroken;
+        materialStats[material].sectors.Ensacadora += brkEnsacadora;
+        materialStats[material].sectors.NoEmboquillada += brkNoEmb;
+        materialStats[material].sectors.Ventocheck += brkVento;
+        materialStats[material].sectors.Transporte += brkTrans;
+
 
         // History Logic
         if (!historyMap[dateStr]) historyMap[dateStr] = {};
@@ -148,7 +168,7 @@ export async function GET(req: Request) {
         return item;
     });
 
-    // Sort history by date (assuming DD/MM format for current year)
+    // Sort history by date
     history.sort((a, b) => {
         const [da, ma] = a.date.split('/').map(Number);
         const [db, mb] = b.date.split('/').map(Number);
@@ -166,7 +186,7 @@ export async function GET(req: Request) {
             { name: "No Emboquillada", value: sumNoEmboquillada, percentage: totalBroken > 0 ? (sumNoEmboquillada / totalBroken) * 100 : 0 },
             { name: "Ventocheck", value: sumVentocheck, percentage: totalBroken > 0 ? (sumVentocheck / totalBroken) * 100 : 0 },
             { name: "Transporte", value: sumTransporte, percentage: totalBroken > 0 ? (sumTransporte / totalBroken) * 100 : 0 },
-        ].filter(s => s.value > 0), // Only show sectors with errors
+        ].filter(s => s.value > 0), 
         byProvider: Object.entries(providerStats).map(([name, stats]) => ({
             name,
             produced: stats.produced,
@@ -177,9 +197,10 @@ export async function GET(req: Request) {
             name,
             produced: stats.produced,
             broken: stats.broken,
-            rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0
+            rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0,
+            sectors: stats.sectors // Include sector breakdown
         })).sort((a,b) => b.rate - a.rate),
-        history // Added history data
+        history 
     };
 
     // 2. SET CACHE

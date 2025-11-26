@@ -81,6 +81,13 @@ export interface BreakageStats {
     produced: number;
     broken: number;
     rate: number;
+    // New breakdown for Stacked Bar Chart
+    sectors: {
+        Ensacadora: number;
+        NoEmboquillada: number;
+        Ventocheck: number;
+        Transporte: number;
+    };
   }[];
   history: BreakageHistoryItem[]; // New field for evolution chart
 }

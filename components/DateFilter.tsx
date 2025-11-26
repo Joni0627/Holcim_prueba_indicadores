@@ -7,11 +7,12 @@ interface DateRange {
 }
 
 interface DateFilterProps {
-  onFilterChange?: (range: DateRange, type: 'today' | 'yesterday' | 'week' | 'custom') => void;
+  onFilterChange?: (range: DateRange, type: 'today' | 'yesterday' | 'week' | 'month' | 'custom') => void;
+  defaultFilter?: 'today' | 'yesterday' | 'week' | 'month';
 }
 
-export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
-  const [activeFilter, setActiveFilter] = useState<'today' | 'yesterday' | 'week' | 'custom'>('today');
+export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultFilter = 'today' }) => {
+  const [activeFilter, setActiveFilter] = useState<'today' | 'yesterday' | 'week' | 'month' | 'custom'>(defaultFilter);
   const [showCustomRange, setShowCustomRange] = useState(false);
   // Internal state for strings to bind to input
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
@@ -21,17 +22,35 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
   const getLocalNoonDate = (offsetDays = 0) => {
       const date = new Date();
       date.setDate(date.getDate() + offsetDays);
-      date.setHours(12, 0, 0, 0); // Force noon to be safe from UTC shifts (e.g. 22:00 ARG -> 01:00 UTC Next Day)
+      date.setHours(12, 0, 0, 0); // Force noon to be safe from UTC shifts
       return date;
   };
 
-  // Initialize with Today
+  const getStartOfMonth = () => {
+      const date = new Date();
+      date.setDate(1); // First day of month
+      date.setHours(12, 0, 0, 0);
+      return date;
+  };
+
+  // Initialize with Default Filter
   useEffect(() => {
     if (onFilterChange) {
-       const today = getLocalNoonDate(0);
-       onFilterChange({ start: today, end: today }, 'today');
+       let start = getLocalNoonDate(0);
+       let end = getLocalNoonDate(0);
+
+       if (defaultFilter === 'yesterday') {
+           start = getLocalNoonDate(-1);
+           end = getLocalNoonDate(-1);
+       } else if (defaultFilter === 'week') {
+           start = getLocalNoonDate(-7);
+       } else if (defaultFilter === 'month') {
+           start = getStartOfMonth();
+       }
+       
+       onFilterChange({ start, end }, defaultFilter);
     }
-  }, []);
+  }, []); // Run once on mount
 
   // Cerrar el menú si se hace clic fuera
   useEffect(() => {
@@ -46,7 +65,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
     };
   }, []);
 
-  const handlePresetClick = (type: 'today' | 'yesterday' | 'week') => {
+  const handlePresetClick = (type: 'today' | 'yesterday' | 'week' | 'month') => {
       setActiveFilter(type);
       setShowCustomRange(false);
       
@@ -58,7 +77,8 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
           end.setTime(start.getTime()); // End is also yesterday
       } else if (type === 'week') {
           start = getLocalNoonDate(-7);
-          // end remains today
+      } else if (type === 'month') {
+          start = getStartOfMonth();
       }
       
       if (onFilterChange) onFilterChange({ start, end }, type);
@@ -87,7 +107,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
 
   return (
     <div className="relative z-20" ref={wrapperRef}>
-      <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+      <div className="flex items-center gap-1 sm:gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-wrap">
         <button
           onClick={() => handlePresetClick('today')}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -118,6 +138,16 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
         >
           7 Días
         </button>
+        <button
+          onClick={() => handlePresetClick('month')}
+          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            activeFilter === 'month' 
+              ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
+              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+          }`}
+        >
+          Mes
+        </button>
         
         <div className="w-px h-5 bg-slate-200 mx-1"></div>
         
@@ -137,7 +167,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange }) => {
 
       {/* Popover de Rango Personalizado */}
       {showCustomRange && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200 z-50">
           <div className="flex justify-between items-center mb-4">
              <h4 className="font-semibold text-slate-800 text-sm">Seleccionar Fecha</h4>
              <button onClick={() => setShowCustomRange(false)} className="text-slate-400 hover:text-slate-600">

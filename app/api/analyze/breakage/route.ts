@@ -14,31 +14,36 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { stats } = body as { stats: BreakageStats };
 
+    // GUARD CLAUSE: Handle empty data to avoid hallucination or errors
+    if (!stats || stats.totalProduced === 0) {
+        return NextResponse.json({
+            insight: "No hay datos de producción suficientes en este período para generar un análisis.",
+            recommendations: ["Amplíe el rango de fechas.", "Verifique la carga de datos en la hoja."],
+            priority: "low"
+        });
+    }
+
     const prompt = `
       Actúa como un Ingeniero de Calidad experto en procesos de envasado industrial.
-      Analiza los siguientes datos de merma/rotura de sacos:
+      Analiza los siguientes datos de merma/rotura de sacos.
 
-      Totales:
-      - Producción: ${stats.totalProduced.toLocaleString()} bolsas
-      - Roturas: ${stats.totalBroken.toLocaleString()} bolsas
+      DATOS:
+      - Producción Total: ${stats.totalProduced.toLocaleString()} bolsas
+      - Roturas Totales: ${stats.totalBroken.toLocaleString()} bolsas
       - Tasa Global de Falla: ${stats.globalRate.toFixed(2)}%
 
       Desglose por Sector (Dónde se rompen):
-      ${stats.bySector.map(s => `- ${s.name}: ${s.value} bolsas (${s.percentage.toFixed(1)}% del total)`).join('\n')}
+      ${stats.bySector.map(s => `- ${s.name}: ${s.value} bolsas`).join('\n')}
 
       Peores Proveedores (Top 3 por Tasa de Falla):
-      ${stats.byProvider.slice(0, 3).map(p => `- ${p.name}: ${p.rate.toFixed(2)}% falla`).join('\n')}
+      ${stats.byProvider.slice(0, 3).map(p => `- ${p.name}: ${p.rate.toFixed(2)}%`).join('\n')}
 
-      Peores Materiales (Top 3):
-      ${stats.byMaterial.slice(0, 3).map(m => `- ${m.name}: ${m.rate.toFixed(2)}% falla`).join('\n')}
-
-      Genera una respuesta JSON breve con:
+      Responde en formato JSON puro:
       {
-        "insight": "Diagnóstico de 1 frase identificando el mayor problema (ej. Proveedor X o Sector Y).",
-        "recommendations": ["3 acciones correctivas concretas"],
-        "priority": "high" | "medium" | "low"
+        "insight": "Diagnóstico breve (1-2 frases) del principal problema.",
+        "recommendations": ["3 acciones correctivas"],
+        "priority": "${stats.globalRate > 2 ? 'high' : stats.globalRate > 0.5 ? 'medium' : 'low'}"
       }
-      Si la tasa global es menor al 0.5%, la prioridad es low. Si es mayor a 2%, es high.
     `;
 
     // Use stable model gemini-1.5-flash
@@ -50,21 +55,13 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
-              properties: {
-                insight: { type: "STRING" },
-                recommendations: { type: "ARRAY", items: { type: "STRING" } },
-                priority: { type: "STRING", enum: ["high", "medium", "low"] },
-              },
-            },
+            responseMimeType: "application/json"
           },
         }),
       }
     );
 
-    if (!response.ok) throw new Error("Gemini API Error");
+    if (!response.ok) throw new Error(`Gemini API Error: ${response.statusText}`);
 
     const data = await response.json();
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -77,6 +74,11 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("AI Breakage Analysis Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Return graceful error instead of 500 to UI
+    return NextResponse.json({ 
+        insight: "No se pudo generar el análisis automático en este momento.",
+        recommendations: ["Revise la tabla manualmente."],
+        priority: "low"
+    });
   }
 }

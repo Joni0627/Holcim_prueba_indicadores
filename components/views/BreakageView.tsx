@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line } from 'recharts';
-import { Ban, AlertOctagon, Loader2, Factory, TrendingDown, Layers, Activity } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line, BarChart, Bar } from 'recharts';
+import { Ban, AlertOctagon, Loader2, Factory, TrendingDown, Layers, Activity, GanttChartSquare } from 'lucide-react';
 import { DateFilter } from '../DateFilter';
 import { fetchBreakageStats } from '../../services/sheetService';
 import { analyzeBreakageData } from '../../services/geminiService';
@@ -40,7 +40,26 @@ export const BreakageView: React.FC = () => {
   };
 
   const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#3b82f6', '#8b5cf6'];
+  const SECTOR_COLORS = {
+      'Ensacadora': '#ef4444',
+      'NoEmboquillada': '#f97316',
+      'Ventocheck': '#f59e0b',
+      'Transporte': '#3b82f6'
+  };
   const LINE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+  const RADIAN = Math.PI / 180;
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={10} fontWeight="bold">
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -51,7 +70,7 @@ export const BreakageView: React.FC = () => {
           <h2 className="text-2xl font-bold text-slate-800">Análisis Roturas de Sacos</h2>
           <p className="text-slate-500 text-sm mt-1">Análisis de mermas por sector, material y proveedor.</p>
         </div>
-        <DateFilter onFilterChange={handleFilterChange} />
+        <DateFilter onFilterChange={handleFilterChange} defaultFilter="month" />
       </div>
 
       {loading ? (
@@ -147,27 +166,68 @@ export const BreakageView: React.FC = () => {
                 )}
             </div>
 
-            {/* Main Analysis Grid */}
+             {/* Stacked Bar Chart: Materials by Sector */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[450px] flex flex-col">
+                <div className="flex items-center gap-2 mb-1">
+                     <GanttChartSquare size={20} className="text-emerald-500" />
+                     <h3 className="font-bold text-slate-800">Roturas de Material por Sector</h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-6">Cantidad de bolsas rotas de cada material, clasificadas por lugar de falla.</p>
+
+                {data.byMaterial.length > 0 ? (
+                     <div className="flex-grow">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={data.byMaterial} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <XAxis 
+                                    dataKey="name" 
+                                    stroke="#94a3b8" 
+                                    fontSize={11} 
+                                    tickFormatter={(val) => val.length > 15 ? val.substring(0,15)+'...' : val}
+                                />
+                                <YAxis stroke="#94a3b8" fontSize={12} />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    cursor={{fill: '#f8fafc'}}
+                                />
+                                <Legend wrapperStyle={{paddingTop: '10px'}} />
+                                <Bar dataKey="sectors.Ensacadora" name="Ensacadora" stackId="a" fill={SECTOR_COLORS['Ensacadora']} />
+                                <Bar dataKey="sectors.NoEmboquillada" name="No Emboquillada" stackId="a" fill={SECTOR_COLORS['NoEmboquillada']} />
+                                <Bar dataKey="sectors.Ventocheck" name="Ventocheck" stackId="a" fill={SECTOR_COLORS['Ventocheck']} />
+                                <Bar dataKey="sectors.Transporte" name="Transporte" stackId="a" fill={SECTOR_COLORS['Transporte']} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                     </div>
+                ) : (
+                    <div className="flex-grow flex items-center justify-center text-slate-400">
+                        Sin datos de materiales
+                    </div>
+                )}
+            </div>
+
+            {/* Analysis Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {/* Sector Breakdown Pie Chart */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
-                    <h3 className="font-bold text-slate-800 mb-1">Distribución por Sector</h3>
+                    <h3 className="font-bold text-slate-800 mb-1">Distribución Total por Sector</h3>
                     <p className="text-xs text-slate-500 mb-4">¿En qué parte del proceso ocurren las roturas?</p>
                     
                     {data.bySector.length > 0 ? (
                         <div className="flex-grow flex flex-col items-center justify-center">
-                            <div className="w-full h-[250px]">
+                            <div className="w-full h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={data.bySector}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={70}
+                                            innerRadius={60}
                                             outerRadius={100}
                                             paddingAngle={2}
                                             dataKey="value"
+                                            label={renderCustomizedLabel}
+                                            labelLine={false}
                                         >
                                             {data.bySector.map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
