@@ -23,21 +23,26 @@ async function tryGenerateWithModel(model: string, apiKey: string, prompt: strin
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json" },
+          contents: [{ parts: [{ text: prompt }] }]
         }),
       }
     );
 
     if (!response.ok) {
-        if (response.status === 404 || response.status === 400) {
+        const status = response.status;
+        const errText = await response.text();
+
+        if (status === 404) {
             throw new Error(`MODEL_NOT_FOUND`);
         }
-        if (response.status === 429) {
+        if (status === 429) {
              throw new Error(`QUOTA_EXCEEDED`);
         }
-        const errText = await response.text();
-        throw new Error(`API_ERROR_${response.status}: ${errText}`);
+        if (status === 400 && (errText.includes('API key not valid') || errText.includes('API_KEY_INVALID'))) {
+             throw new Error(`API_KEY_INVALID`);
+        }
+        
+        throw new Error(`API_ERROR_${status}: ${errText}`);
     }
 
     return response.json();
@@ -96,12 +101,11 @@ export async function POST(req: Request) {
       }
     `;
 
-    // Lista exhaustiva de modelos a probar (Fallback Strategy)
     const modelsToTry = [
         "gemini-1.5-flash",
         "gemini-1.5-flash-latest",
         "gemini-1.5-flash-002",
-        "gemini-1.5-flash-001",
+        "gemini-1.5-flash-8b",
         "gemini-1.5-pro",
         "gemini-pro"
     ];
@@ -115,6 +119,9 @@ export async function POST(req: Request) {
             if (data) break;
         } catch (e: any) {
             lastError = e;
+            if (e.message.includes('API_KEY_INVALID')) {
+                throw new Error("API Key inválida. Verifique configuración en Vercel.");
+            }
             continue;
         }
     }

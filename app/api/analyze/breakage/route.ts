@@ -31,26 +31,32 @@ async function tryGenerateWithModel(model: string, apiKey: string, prompt: strin
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: "application/json"
-          },
+          contents: [{ parts: [{ text: prompt }] }]
         }),
       }
     );
 
     if (!response.ok) {
-        // Si es 404 (Modelo no encontrado) o 400 (Bad Request), lanzamos error específico para intentar el siguiente
-        if (response.status === 404 || response.status === 400) {
+        const status = response.status;
+        const errText = await response.text();
+
+        // Si es 404, es el único caso donde asumimos que el MODELO no existe para esa key
+        if (status === 404) {
             throw new Error(`MODEL_NOT_FOUND`);
         }
-        // Si es 429 (Cuota), también intentamos el siguiente por si acaso tiene cuota distinta
-        if (response.status === 429) {
+        
+        // Si es 429, es cuota excedida
+        if (status === 429) {
              throw new Error(`QUOTA_EXCEEDED`);
         }
         
-        const errText = await response.text();
-        throw new Error(`API_ERROR_${response.status}: ${errText}`);
+        // Si es 400 y menciona API Key, fallamos rápido
+        if (status === 400 && (errText.includes('API key not valid') || errText.includes('API_KEY_INVALID'))) {
+             throw new Error(`API_KEY_INVALID`);
+        }
+
+        // Otros errores (400 genérico, 500, etc)
+        throw new Error(`API_ERROR_${status}: ${errText}`);
     }
 
     return response.json();
@@ -119,7 +125,7 @@ export async function POST(req: Request) {
         "gemini-1.5-flash",
         "gemini-1.5-flash-latest",
         "gemini-1.5-flash-002",
-        "gemini-1.5-flash-001",
+        "gemini-1.5-flash-8b", 
         "gemini-1.5-pro",
         "gemini-pro"
     ];
@@ -130,19 +136,21 @@ export async function POST(req: Request) {
     // Estrategia de Fallback: Probar modelos uno por uno
     for (const model of modelsToTry) {
         try {
-            // console.log(`Trying model: ${model}...`);
             data = await tryGenerateWithModel(model, apiKey, prompt);
             if (data) break; // Si funciona, salimos del bucle
         } catch (e: any) {
             lastError = e;
+            // Si la API Key es inválida, no tiene sentido probar los otros modelos
+            if (e.message.includes('API_KEY_INVALID')) {
+                throw new Error("API Key inválida. Verifique que la clave copiada en Vercel sea correcta.");
+            }
             continue; 
         }
     }
 
     if (!data) {
-        // Si ninguno funcionó
         if (lastError?.message?.includes('QUOTA_EXCEEDED')) {
-             throw new Error("Límite de cuota IA excedido.");
+             throw new Error("Límite de cuota IA excedido (Error 429).");
         }
         if (lastError?.message?.includes('MODEL_NOT_FOUND')) {
              throw new Error("Ningún modelo Gemini disponible para esta API Key.");
@@ -158,7 +166,6 @@ export async function POST(req: Request) {
         return NextResponse.json(JSON.parse(cleanedJson));
       } catch (e) {
         console.error("JSON Parse Error:", e);
-        console.error("Raw Text:", textResponse);
         throw new Error("La IA devolvió un formato inválido.");
       }
     }
