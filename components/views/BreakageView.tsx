@@ -127,7 +127,7 @@ export const BreakageView: React.FC = () => {
             </div>
 
             {/* Evolution Chart (History) */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[450px]">
                 <div className="flex items-center gap-2 mb-1">
                      <Activity size={20} className="text-indigo-500" />
                      <h3 className="font-bold text-slate-800">Evolución de Falla por Proveedor</h3>
@@ -135,7 +135,7 @@ export const BreakageView: React.FC = () => {
                 <p className="text-xs text-slate-500 mb-6">Tendencia diaria del porcentaje de rotura.</p>
 
                 {data.history && data.history.length > 0 ? (
-                     <div className="flex-grow">
+                     <div className="flex-grow w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={data.history} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -148,10 +148,10 @@ export const BreakageView: React.FC = () => {
                                 <Legend wrapperStyle={{paddingTop: '10px'}} />
                                 {data.byProvider.map((prov, idx) => (
                                     <Line 
-                                        key={prov.id} // USE SAFE ID
+                                        key={prov.id} // SAFE KEY (id_Provider)
                                         type="monotone" 
-                                        dataKey={prov.id} // USE SAFE ID to access data in history object
-                                        name={prov.name} // Display Real Name
+                                        dataKey={prov.id} // Matches SAFE KEY in history object
+                                        name={prov.name} // Shows REAL NAME
                                         stroke={LINE_COLORS[idx % LINE_COLORS.length]} 
                                         strokeWidth={2}
                                         dot={{r: 4}}
@@ -170,7 +170,7 @@ export const BreakageView: React.FC = () => {
             </div>
 
              {/* Stacked Bar Chart: Materials by Sector */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[450px] flex flex-col">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[500px]">
                 <div className="flex items-center gap-2 mb-1">
                      <GanttChartSquare size={20} className="text-emerald-500" />
                      <h3 className="font-bold text-slate-800">Roturas de Material por Sector</h3>
@@ -178,7 +178,7 @@ export const BreakageView: React.FC = () => {
                 <p className="text-xs text-slate-500 mb-6">Cantidad de bolsas rotas de cada material, clasificadas por lugar de falla.</p>
 
                 {data.byMaterial.length > 0 ? (
-                     <div className="flex-grow">
+                     <div className="flex-grow w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data.byMaterial} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -194,7 +194,7 @@ export const BreakageView: React.FC = () => {
                                     cursor={{fill: '#f8fafc'}}
                                 />
                                 <Legend wrapperStyle={{paddingTop: '10px'}} />
-                                {/* Use FLATTENED keys */}
+                                {/* FLATTENED KEYS */}
                                 <Bar dataKey="sector_Ensacadora" name="Ensacadora" stackId="a" fill={SECTOR_COLORS['Ensacadora']} />
                                 <Bar dataKey="sector_NoEmboquillada" name="No Emboquillada" stackId="a" fill={SECTOR_COLORS['NoEmboquillada']} />
                                 <Bar dataKey="sector_Ventocheck" name="Ventocheck" stackId="a" fill={SECTOR_COLORS['Ventocheck']} />
@@ -213,7 +213,7 @@ export const BreakageView: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {/* Sector Breakdown Pie Chart */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[450px]">
                     <h3 className="font-bold text-slate-800 mb-1">Distribución Total por Sector</h3>
                     <p className="text-xs text-slate-500 mb-4">¿En qué parte del proceso ocurren las roturas?</p>
                     
@@ -256,7 +256,7 @@ export const BreakageView: React.FC = () => {
                 </div>
 
                 {/* Provider Ranking Table */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[450px]">
                     <h3 className="font-bold text-slate-800 mb-1">Ranking por Proveedor</h3>
                     <p className="text-xs text-slate-500 mb-4">Ranking de tasa de falla por fabricante.</p>
                     
@@ -272,7 +272,7 @@ export const BreakageView: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {data.byProvider.map((prov) => (
-                                    <tr key={prov.name} className="hover:bg-slate-50">
+                                    <tr key={prov.id} className="hover:bg-slate-50">
                                         <td className="px-3 py-2 font-medium text-slate-700">{prov.name}</td>
                                         <td className="px-3 py-2 text-right text-slate-500">{prov.produced.toLocaleString()}</td>
                                         <td className="px-3 py-2 text-right font-medium text-slate-800">{prov.broken}</td>
@@ -297,7 +297,7 @@ export const BreakageView: React.FC = () => {
                 </div>
 
                 {/* Material Breakdown Table (Full Width) */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[400px] flex flex-col lg:col-span-2">
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[400px] lg:col-span-2">
                     <div className="flex items-center gap-2 mb-1">
                         <Layers size={20} className="text-indigo-600" />
                         <h3 className="font-bold text-slate-800">Detalle por Material / SKU</h3>
@@ -317,7 +317,7 @@ export const BreakageView: React.FC = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {data.byMaterial.map((mat) => (
-                                    <tr key={mat.name} className="hover:bg-slate-50">
+                                    <tr key={mat.id} className="hover:bg-slate-50">
                                         <td className="px-4 py-3 font-medium text-slate-700 max-w-xs truncate" title={mat.name}>{mat.name}</td>
                                         <td className="px-4 py-3 text-right text-slate-500">{mat.produced.toLocaleString()}</td>
                                         <td className="px-4 py-3 text-right font-medium text-slate-800">{mat.broken}</td>

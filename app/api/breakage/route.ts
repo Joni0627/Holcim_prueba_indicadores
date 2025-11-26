@@ -8,7 +8,8 @@ const CACHE_TTL = 60 * 1000; // 60 segundos
 const cache = new Map<string, { data: any; timestamp: number }>();
 
 // Helper to generate safe keys for Recharts (replace dots, spaces, special chars)
-const toSafeKey = (str: string) => str.trim().replace(/[^a-zA-Z0-9]/g, '_');
+// PREPEND 'id_' to ensure it doesn't start with a number (e.g. "3M") which breaks Recharts
+const toSafeKey = (str: string) => `id_${str.trim().replace(/[^a-zA-Z0-9]/g, '_')}`;
 
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
@@ -43,13 +44,54 @@ function parseSheetDate(dateStr: string): Date | null {
 function parseNumber(val: any): number {
     if (typeof val === 'number') return val;
     if (!val) return 0;
+    
     let str = String(val).trim();
     if (str === '') return 0;
+
+    // Manejo de Porcentajes
     if (str.includes('%')) {
         str = str.replace('%', '');
-        return parseFloat(str.replace(',', '.')) / 100;
+        // Si tiene punto de miles y coma decimal (ej: 1.200,50%)
+        if (str.includes('.') && str.includes(',')) {
+             str = str.replace(/\./g, ''); // Quitar miles
+             str = str.replace(',', '.'); // Cambiar coma a punto
+        } else if (str.includes(',')) {
+             str = str.replace(',', '.');
+        }
+        return parseFloat(str) / 100;
     }
-    return parseFloat(str.replace(',', '.'));
+
+    // Manejo de Números (Cantidades)
+    // Formato LATAM: 1.200,50 (Punto para miles, Coma para decimales)
+    // Formato US: 1,200.50
+    
+    // Si contiene puntos y comas, asumimos formato LATAM o mixto complejo.
+    // Estrategia segura: Eliminar puntos (miles), reemplazar coma por punto.
+    if (str.includes('.') && str.includes(',')) {
+         str = str.replace(/\./g, ''); // Quitar puntos de miles
+         str = str.replace(',', '.');  // Reemplazar coma decimal
+    } 
+    // Si solo tiene puntos (ej: 1.200), asumimos que es mil si son 3 digitos tras el punto, 
+    // pero es arriesgado. En este contexto industrial, 1.200 suele ser mil doscientos.
+    else if (str.includes('.') && !str.includes(',')) {
+         // Verificamos si parece un decimal o un millar.
+         // Si hay más de un punto, son miles seguro (1.000.000)
+         if ((str.match(/\./g) || []).length > 1) {
+             str = str.replace(/\./g, '');
+         } else {
+             // Caso difícil: 1.200 (1200) vs 1.5 (1.5)
+             // Asumiremos que si viene de SAP/Excel Latam, el punto es miles
+             // SIEMPRE que no sea un número pequeño lógico (ej < 100 podria ser decimal)
+             // Para seguridad en roturas (bolsas), eliminamos el punto.
+             str = str.replace(/\./g, '');
+         }
+    }
+    // Si solo tiene coma (1200,50)
+    else if (str.includes(',')) {
+        str = str.replace(',', '.');
+    }
+
+    return parseFloat(str) || 0;
 }
 
 export async function GET(req: Request) {
@@ -133,7 +175,7 @@ export async function GET(req: Request) {
         const produced = parseNumber(row.get("BOLSAS PRODUCIDAS"));
         const providerRaw = row.get("DESCRIPCION_PROVEEDOR");
         const provider = providerRaw ? String(providerRaw).trim() : "Sin Proveedor";
-        const providerSafeKey = toSafeKey(provider); // SANITIZED KEY
+        const providerSafeKey = toSafeKey(provider); // SANITIZED KEY (e.g., id_3M, id_FABRICA_S_A)
         
         const materialRaw = row.get("DESCRIPCION_MATERIAL");
         const material = materialRaw ? String(materialRaw).trim() : "Desconocido";
@@ -194,6 +236,7 @@ export async function GET(req: Request) {
     const history = Object.entries(historyMap).map(([date, providers]) => {
         const item: any = { date };
         Object.entries(providers).forEach(([safeProv, stats]) => {
+             // Calculate percentage rate
              const rate = stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0;
              item[safeProv] = parseFloat(rate.toFixed(2));
         });
@@ -221,8 +264,8 @@ export async function GET(req: Request) {
         ].filter(s => s.value > 0), 
         
         byProvider: Object.entries(providerStats).map(([name, stats]) => ({
-            id: toSafeKey(name), // Safe ID for charts
-            name,
+            id: toSafeKey(name), // Safe ID for charts (e.g. id_3M)
+            name, // Real name for display
             produced: stats.produced,
             broken: stats.broken,
             rate: stats.produced > 0 ? (stats.broken / stats.produced) * 100 : 0
