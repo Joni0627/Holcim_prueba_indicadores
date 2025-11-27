@@ -118,11 +118,11 @@ export const getProductionHistory = (hours: number = 8): ProductionMetrics[] => 
 };
 
 export const getStocks = (): StockItem[] => [
-  { id: 'S1', materialName: 'Saco Cemento 50kg', sku: 'SAC-50-CEM', currentLevel: 1200, minLevel: 5000, maxLevel: 20000, unit: 'und', status: 'critical' },
-  { id: 'S2', materialName: 'Saco Mortero 25kg', sku: 'SAC-25-MOR', currentLevel: 8500, minLevel: 2000, maxLevel: 10000, unit: 'und', status: 'ok' },
-  { id: 'S3', materialName: 'Film Stretch Auto', sku: 'FLM-STR-01', currentLevel: 45, minLevel: 20, maxLevel: 100, unit: 'bobinas', status: 'ok' },
-  { id: 'S4', materialName: 'Adhesivo Pallet', sku: 'ADH-PLT-05', currentLevel: 150, minLevel: 200, maxLevel: 500, unit: 'litros', status: 'low' },
-  { id: 'S5', materialName: 'Pallet Madera Std', sku: 'PLT-WOD-STD', currentLevel: 300, minLevel: 100, maxLevel: 400, unit: 'und', status: 'ok' },
+  { id: 'S1', product: 'Cemento CPF 40', quantity: 1200, tonnage: 60, isProduced: true, lastUpdated: new Date().toISOString() },
+  { id: 'S2', product: 'Cemento CPF 30', quantity: 8500, tonnage: 425, isProduced: true, lastUpdated: new Date().toISOString() },
+  { id: 'S3', product: 'Film Stretch Auto', quantity: 45, tonnage: 0, isProduced: false, lastUpdated: new Date().toISOString() },
+  { id: 'S4', product: 'Adhesivo Pallet', quantity: 150, tonnage: 0, isProduced: false, lastUpdated: new Date().toISOString() },
+  { id: 'S5', product: 'Pallet Madera Std', quantity: 300, tonnage: 0, isProduced: false, lastUpdated: new Date().toISOString() },
 ];
 
 export const getBreakageData = (): BreakageEvent[] => {

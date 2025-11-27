@@ -94,13 +94,16 @@ export interface BreakageStats {
 
 export interface StockItem {
   id: string;
-  materialName: string;
-  sku: string;
-  currentLevel: number;
-  minLevel: number;
-  maxLevel: number;
-  unit: string;
-  status: 'ok' | 'low' | 'critical' | 'overstock';
+  product: string;
+  quantity: number; // From 'CANTIDAD'
+  tonnage: number; // From 'TN' (Count) + 'TN' (Production Night)
+  isProduced: boolean; // True for the 4 special cements
+  lastUpdated: string;
+}
+
+export interface StockStats {
+  date: string; // Date of the count
+  items: StockItem[];
 }
 
 export interface BreakageEvent {
