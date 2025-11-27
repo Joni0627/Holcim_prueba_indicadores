@@ -21,28 +21,32 @@ export const StocksView: React.FC = () => {
       }
   };
 
+  // Mantener orden alfabético para las burbujas principales para consistencia visual
   const producedItems = data?.items.filter(i => i.isProduced).sort((a,b) => a.product.localeCompare(b.product)) || [];
   
   const allOtherItems = data?.items.filter(i => !i.isProduced) || [];
   
-  // Logic to separate categories
+  // Logic to separate categories and SORT DESCENDING
+  
+  // 1. Pallets - Sort by Quantity DESC
   const pallets = allOtherItems.filter(i => 
       i.product.toUpperCase().includes('TARIMA') || 
       i.product.toUpperCase().includes('PALLET')
-  );
+  ).sort((a, b) => b.quantity - a.quantity);
   
+  // 2. Packaging - Sort by Quantity DESC
   const packaging = allOtherItems.filter(i => 
       i.product.toUpperCase().includes('ENVASE') || 
       i.product.toUpperCase().includes('SACO') || 
       i.product.toUpperCase().includes('BOLSA') ||
       i.product.toUpperCase().includes('BIG BAG') ||
       i.product.toUpperCase().includes('FILM')
-  );
+  ).sort((a, b) => b.quantity - a.quantity);
   
-  // Supplies are whatever is left (not pallets, not packaging)
+  // 3. Supplies - Sort by Tonnage DESC (since we only show TN for these)
   const supplies = allOtherItems.filter(i => 
       !pallets.includes(i) && !packaging.includes(i)
-  );
+  ).sort((a, b) => b.tonnage - a.tonnage);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -81,7 +85,8 @@ export const StocksView: React.FC = () => {
                             
                             <div className="space-y-1">
                                 <p className="text-3xl font-black text-slate-900 tracking-tight">
-                                    {item.tonnage.toLocaleString(undefined, {maximumFractionDigits: 1})} <span className="text-lg font-medium text-slate-400">Tn</span>
+                                    {/* Sin decimales */}
+                                    {item.tonnage.toLocaleString(undefined, {maximumFractionDigits: 0})} <span className="text-lg font-medium text-slate-400">Tn</span>
                                 </p>
                                 <p className="text-sm text-slate-500 font-medium">
                                     {item.quantity.toLocaleString()} <span className="text-xs">unid.</span>
@@ -176,7 +181,8 @@ export const StocksView: React.FC = () => {
                             {supplies.map((item) => (
                                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-slate-700">{item.product}</td>
-                                    <td className="px-6 py-4 text-right font-bold text-slate-800">{item.tonnage > 0 ? item.tonnage.toLocaleString(undefined, {maximumFractionDigits: 2}) : '-'}</td>
+                                    {/* Sin decimales */}
+                                    <td className="px-6 py-4 text-right font-bold text-slate-800">{item.tonnage > 0 ? item.tonnage.toLocaleString(undefined, {maximumFractionDigits: 0}) : '-'}</td>
                                 </tr>
                             ))}
                             {supplies.length === 0 && (
