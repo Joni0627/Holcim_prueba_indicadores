@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Package, AlertTriangle, CheckCircle, Loader2, Factory, Box } from 'lucide-react';
+import { Package, Loader2, Factory, Layers, Container, BoxSelect } from 'lucide-react';
 import { DateFilter } from '../DateFilter';
 import { fetchStocks } from '../../services/sheetService';
 import { StockStats, StockItem } from '../../types';
@@ -22,7 +22,26 @@ export const StocksView: React.FC = () => {
   };
 
   const producedItems = data?.items.filter(i => i.isProduced) || [];
-  const otherItems = data?.items.filter(i => !i.isProduced) || [];
+  
+  // Logic to separate categories based on naming conventions
+  const allOtherItems = data?.items.filter(i => !i.isProduced) || [];
+  
+  const pallets = allOtherItems.filter(i => 
+      i.product.toLowerCase().includes('tarima') || 
+      i.product.toLowerCase().includes('pallet')
+  );
+  
+  const packaging = allOtherItems.filter(i => 
+      i.product.toLowerCase().includes('envase') || 
+      i.product.toLowerCase().includes('saco') || 
+      i.product.toLowerCase().includes('bolsa') ||
+      i.product.toLowerCase().includes('film')
+  );
+  
+  // Supplies are whatever is left
+  const supplies = allOtherItems.filter(i => 
+      !pallets.includes(i) && !packaging.includes(i)
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -45,15 +64,15 @@ export const StocksView: React.FC = () => {
            </div>
       ) : (
           <>
-            {/* Produced Materials (Bubbles) */}
+            {/* 1. PRODUCTOS EMBOLSADOS (Bubbles) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {producedItems.map((item) => (
                     <div key={item.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -mr-10 -mt-10 group-hover:bg-indigo-100 transition-colors"></div>
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-full -mr-10 -mt-10 group-hover:bg-teal-100 transition-colors"></div>
                         
                         <div className="relative z-10">
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-indigo-600 text-white rounded-lg shadow-sm">
+                                <div className="p-2 bg-teal-600 text-white rounded-lg shadow-sm">
                                     <Factory size={20} />
                                 </div>
                                 <h3 className="font-bold text-slate-800 leading-tight">{item.product}</h3>
@@ -77,13 +96,72 @@ export const StocksView: React.FC = () => {
                 )}
             </div>
 
-            {/* Other Items (Table) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* 2. TARIMAS TABLE */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                    <div className="p-4 border-b border-slate-200 bg-cyan-50/50 flex items-center gap-2">
+                        <Layers size={20} className="text-cyan-600" />
+                        <h3 className="font-bold text-slate-800">Tarimas</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-3 font-semibold">Tipo</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {pallets.map((item) => (
+                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-slate-700">{item.product}</td>
+                                        <td className="px-4 py-3 text-right font-bold text-slate-800">{item.quantity.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                                {pallets.length === 0 && (
+                                    <tr><td colSpan={2} className="p-4 text-center text-slate-400">Sin datos</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* 3. ENVASES TABLE */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                    <div className="p-4 border-b border-slate-200 bg-blue-50/50 flex items-center gap-2">
+                        <Container size={20} className="text-blue-600" />
+                        <h3 className="font-bold text-slate-800">Envases</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-3 font-semibold">Producto</th>
+                                    <th className="px-4 py-3 font-semibold text-right">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {packaging.map((item) => (
+                                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-slate-700">{item.product}</td>
+                                        <td className="px-4 py-3 text-right font-bold text-slate-800">{item.quantity.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                                {packaging.length === 0 && (
+                                    <tr><td colSpan={2} className="p-4 text-center text-slate-400">Sin datos</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {/* 4. INSUMOS / OTROS TABLE */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-6 border-b border-slate-200 bg-slate-50/50">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                        <Package size={20} className="text-slate-500" />
-                        Insumos y Otros Materiales
-                    </h3>
+                <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center gap-2">
+                    <BoxSelect size={20} className="text-slate-500" />
+                    <h3 className="font-bold text-slate-800">Otros Insumos</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
@@ -95,14 +173,14 @@ export const StocksView: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {otherItems.map((item) => (
+                            {supplies.map((item) => (
                                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-slate-700">{item.product}</td>
                                     <td className="px-6 py-4 text-right font-mono text-slate-600">{item.quantity.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right font-bold text-slate-800">{item.tonnage.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
+                                    <td className="px-6 py-4 text-right font-bold text-slate-800">{item.tonnage > 0 ? item.tonnage.toLocaleString(undefined, {maximumFractionDigits: 2}) : '-'}</td>
                                 </tr>
                             ))}
-                            {otherItems.length === 0 && (
+                            {supplies.length === 0 && (
                                 <tr>
                                     <td colSpan={3} className="px-6 py-8 text-center text-slate-400">
                                         No hay otros materiales registrados.
@@ -113,6 +191,7 @@ export const StocksView: React.FC = () => {
                     </table>
                 </div>
             </div>
+
           </>
       )}
     </div>
