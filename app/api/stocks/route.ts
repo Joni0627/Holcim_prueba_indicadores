@@ -38,10 +38,9 @@ function parseNumber(val: any): number {
     return parseFloat(str) || 0;
 }
 
-// Función auxiliar para normalizar nombres y facilitar comparación
-// Elimina espacios, pasa a mayúsculas. Ej: "Cemento CPF 40 " -> "CEMENTOCPF40"
-function normalizeName(str: string): string {
-    return str.toUpperCase().replace(/[^A-Z0-9]/g, '');
+// Normalización simple: Trim y Uppercase para comparar
+function cleanName(str: string): string {
+    return String(str || "").trim().toUpperCase();
 }
 
 export async function GET(req: Request) {
@@ -102,18 +101,15 @@ export async function GET(req: Request) {
     const idsNoche = new Set(cabecerasNoche.map(r => r.get("id_produccion")));
 
     // Mapa: Producto -> Tn Producidas en Noche
-    // Clave Normalizada -> Toneladas
     const nightProductionMap: Record<string, number> = {};
 
     rowsLista.forEach(row => {
         if (idsNoche.has(row.get("ID_CABECERA"))) {
-            const material = String(row.get("DESCRIPCION_MATERIAL") || "").trim();
+            const material = cleanName(row.get("DESCRIPCION_MATERIAL"));
             const tn = parseNumber(row.get("tn/bdp") || row.get("TN_PRODUCIDA"));
             
-            // Guardamos producción con clave normalizada
-            const keyNorm = normalizeName(material);
-            if (!nightProductionMap[keyNorm]) nightProductionMap[keyNorm] = 0;
-            nightProductionMap[keyNorm] += tn;
+            if (!nightProductionMap[material]) nightProductionMap[material] = 0;
+            nightProductionMap[material] += tn;
         }
     });
 
@@ -123,38 +119,44 @@ export async function GET(req: Request) {
         return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
     });
 
-    const PRODUCED_KEYWORDS = ['CPF40', 'CPF30', 'RAPIDO', 'MAESTRO'];
+    // LISTA EXACTA DE PRODUCTOS PRODUCIDOS EN PLANTA
+    const PRODUCED_PRODUCTS = new Set([
+        "CEMENTO MAESTRO",
+        "CEMENTO CPF 40",
+        "CEMENTO RAPIDO",
+        "CEMENTO CPF 30"
+    ]);
 
     const stockMap: Record<string, { qty: number, tn: number, isProduced: boolean, date: string }> = {};
 
     conteosFiltrados.forEach(row => {
-        const producto = String(row.get("PRODUCTO") || "").trim();
+        const productoOriginal = String(row.get("PRODUCTO") || "").trim();
+        const productoNorm = cleanName(productoOriginal);
+        
         const cantidad = parseNumber(row.get("CANTIDAD"));
         let tn = parseNumber(row.get("TN"));
         const fecha = row.get("FECHA");
         
-        const productoNorm = normalizeName(producto);
-
-        // Identificar si es uno de los producidos buscando palabras clave en el nombre normalizado
-        const isProduced = PRODUCED_KEYWORDS.some(kw => productoNorm.includes(kw));
+        // Verificamos si está en la lista exacta de producidos
+        // Usamos includes parcial SOLO si estamos seguros que no machea Envases
+        // Pero dado que tenemos la lista exacta, usamos coincidencia exacta o startsWith seguro.
+        // Como el usuario dijo que los nombres son identicos, usamos el Set.
         
-        // Si es producido, buscar en el mapa de producción noche
+        // Corrección: A veces hay espacios extra, cleanName ya los quitó.
+        // Hacemos una verificación extra por si acaso "CEMENTO CPF 40 " vs "CEMENTO CPF 40"
+        let isProduced = PRODUCED_PRODUCTS.has(productoNorm);
+        
+        // Si es producido, sumamos la producción noche correspondiente
         if (isProduced) {
-            // Buscamos si alguna clave de producción coincide parcial o totalmente
-            // Iteramos las claves de producción porque "CPF40" (prod) está contenido en "CEMENTOCPF40" (conteo)
-            Object.keys(nightProductionMap).forEach(prodKey => {
-                if (productoNorm.includes(prodKey) || prodKey.includes(productoNorm)) {
-                    tn += nightProductionMap[prodKey];
-                    // Limpiamos (opcional, para no sumar doble si hubiera duplicados raros, pero dejémoslo acumulativo)
-                }
-            });
+            const nightTn = nightProductionMap[productoNorm] || 0;
+            tn += nightTn;
         }
 
-        if (!stockMap[producto]) {
-            stockMap[producto] = { qty: 0, tn: 0, isProduced, date: fecha };
+        if (!stockMap[productoOriginal]) {
+            stockMap[productoOriginal] = { qty: 0, tn: 0, isProduced, date: fecha };
         }
-        stockMap[producto].qty += cantidad;
-        stockMap[producto].tn += tn;
+        stockMap[productoOriginal].qty += cantidad;
+        stockMap[productoOriginal].tn += tn;
     });
 
     const items = Object.entries(stockMap).map(([product, stats], idx) => ({

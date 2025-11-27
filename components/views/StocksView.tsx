@@ -35,6 +35,7 @@ export const StocksView: React.FC = () => {
       i.product.toLowerCase().includes('envase') || 
       i.product.toLowerCase().includes('saco') || 
       i.product.toLowerCase().includes('bolsa') ||
+      i.product.toLowerCase().includes('big bag') ||
       i.product.toLowerCase().includes('film')
   );
   
@@ -131,7 +132,7 @@ export const StocksView: React.FC = () => {
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
                     <div className="p-4 border-b border-slate-200 bg-blue-50/50 flex items-center gap-2">
                         <Container size={20} className="text-blue-600" />
-                        <h3 className="font-bold text-slate-800">Envases</h3>
+                        <h3 className="font-bold text-slate-800">Envases y Embalaje</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
@@ -161,7 +162,7 @@ export const StocksView: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center gap-2">
                     <BoxSelect size={20} className="text-slate-500" />
-                    <h3 className="font-bold text-slate-800">Otros Insumos</h3>
+                    <h3 className="font-bold text-slate-800">Insumos y Productos Especiales</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
