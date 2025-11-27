@@ -54,10 +54,11 @@ export const PalletizerView: React.FC = () => {
       // 2. Calcular Promedios por Máquina
       const metrics = Object.values(grouped).map((m: any) => ({
           name: m.name,
-          availability: +(m.availSum / m.count * 100).toFixed(1),
-          performance: +(m.perfSum / m.count * 100).toFixed(1),
-          oee: +(m.oeeSum / m.count * 100).toFixed(1)
-      })).sort((a, b) => b.oee - a.oee); // Ranking por OEE
+          // Redondeo a enteros usando Math.round
+          availability: Math.round(m.availSum / m.count * 100),
+          performance: Math.round(m.perfSum / m.count * 100),
+          oee: Math.round(m.oeeSum / m.count * 100)
+      })).sort((a, b) => a.name.localeCompare(b.name)); // Ordenar alfabéticamente (672 -> 673 -> 674)
 
       setMachineMetrics(metrics);
 
@@ -69,9 +70,9 @@ export const PalletizerView: React.FC = () => {
           const totalOEE = (totalAvail * totalPerf) / 100;
 
           setGlobalMetrics({
-              availability: +totalAvail.toFixed(1),
-              performance: +totalPerf.toFixed(1),
-              oee: +totalOEE.toFixed(1)
+              availability: Math.round(totalAvail),
+              performance: Math.round(totalPerf),
+              oee: Math.round(totalOEE)
           });
       }
   };
