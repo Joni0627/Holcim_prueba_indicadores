@@ -303,7 +303,7 @@ export const SummaryView: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                    {Object.entries(groupedMetrics).map(([machineName, metrics]) => (
+                    {Object.entries(groupedMetrics).map(([machineName, metrics]: [string, ShiftMetric[]]) => (
                     <div key={machineName} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
                             <h4 className="font-bold text-slate-800">{machineName}</h4>
