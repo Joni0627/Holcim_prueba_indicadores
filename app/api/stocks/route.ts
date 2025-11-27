@@ -26,11 +26,17 @@ function parseNumber(val: any): number {
     if (!val) return 0;
     let str = String(val).trim();
     if (str === '') return 0;
-    // Formato LATAM: 1.200,50
+    
+    // Formato LATAM: 1.200,50 -> 1200.50
+    // Si tiene punto y coma, el punto es miles
     if (str.includes('.') && str.includes(',')) {
          str = str.replace(/\./g, ''); 
          str = str.replace(',', '.');
-    } else if (str.includes('.') && !str.includes(',')) {
+    } 
+    // Si solo tiene punto, asumimos miles si parece estructura de miles (ej: 1.200) 
+    // OJO: En roturas usamos una lógica, en Stock asumimos que Excel manda números formateados.
+    // Para seguridad: Eliminamos punto, cambiamos coma por punto.
+    else if (str.includes('.') && !str.includes(',')) {
          str = str.replace(/\./g, '');
     } else if (str.includes(',')) {
         str = str.replace(',', '.');
@@ -38,9 +44,14 @@ function parseNumber(val: any): number {
     return parseFloat(str) || 0;
 }
 
-// Normalización simple: Trim y Uppercase para comparar
+// Normalización robusta: Trim, Uppercase y Quitar Acentos (NFD)
+// Para que "Rápido" coincida con "RAPIDO"
 function cleanName(str: string): string {
-    return String(str || "").trim().toUpperCase();
+    return String(str || "")
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 }
 
 export async function GET(req: Request) {
@@ -89,11 +100,11 @@ export async function GET(req: Request) {
         sheetLista.getRows()
     ]);
 
-    // 1. OBTENER PRODUCION NOCHE DE LA FECHA SELECCIONADA
+    // 1. OBTENER PRODUCION NOCHE
     const cabecerasNoche = rowsCabecera.filter(row => {
         const d = parseSheetDate(row.get("fecha"));
         const turnoRaw = String(row.get("turno") || "").trim().toUpperCase();
-        // Lógica Estricta: "3.NOCHE"
+        // Lógica Estricta: "3.NOCHE" o empieza con "3."
         const isTurnoNoche = turnoRaw === "3.NOCHE" || turnoRaw.startsWith("3.");
         return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime() && isTurnoNoche;
     });
@@ -106,7 +117,8 @@ export async function GET(req: Request) {
     rowsLista.forEach(row => {
         if (idsNoche.has(row.get("ID_CABECERA"))) {
             const material = cleanName(row.get("DESCRIPCION_MATERIAL"));
-            const tn = parseNumber(row.get("tn/bdp") || row.get("TN_PRODUCIDA"));
+            // Prioridad a TN_PRODUCIDA, fallback a tn/bdp
+            const tn = parseNumber(row.get("TN_PRODUCIDA") || row.get("tn/bdp"));
             
             if (!nightProductionMap[material]) nightProductionMap[material] = 0;
             nightProductionMap[material] += tn;
@@ -119,7 +131,7 @@ export async function GET(req: Request) {
         return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
     });
 
-    // LISTA EXACTA DE PRODUCTOS PRODUCIDOS EN PLANTA
+    // LISTA EXACTA DE PRODUCTOS PRODUCIDOS (Normalizada: Sin acentos, Mayus)
     const PRODUCED_PRODUCTS = new Set([
         "CEMENTO MAESTRO",
         "CEMENTO CPF 40",
@@ -137,13 +149,7 @@ export async function GET(req: Request) {
         let tn = parseNumber(row.get("TN"));
         const fecha = row.get("FECHA");
         
-        // Verificamos si está en la lista exacta de producidos
-        // Usamos includes parcial SOLO si estamos seguros que no machea Envases
-        // Pero dado que tenemos la lista exacta, usamos coincidencia exacta o startsWith seguro.
-        // Como el usuario dijo que los nombres son identicos, usamos el Set.
-        
-        // Corrección: A veces hay espacios extra, cleanName ya los quitó.
-        // Hacemos una verificación extra por si acaso "CEMENTO CPF 40 " vs "CEMENTO CPF 40"
+        // Verificamos si es producido (coincidencia exacta normalizada)
         let isProduced = PRODUCED_PRODUCTS.has(productoNorm);
         
         // Si es producido, sumamos la producción noche correspondiente
@@ -167,13 +173,6 @@ export async function GET(req: Request) {
         isProduced: stats.isProduced,
         lastUpdated: stats.date
     }));
-
-    // Ordenar
-    items.sort((a, b) => {
-        if (a.isProduced && !b.isProduced) return -1;
-        if (!a.isProduced && b.isProduced) return 1;
-        return a.product.localeCompare(b.product);
-    });
 
     const result = {
         date: items[0]?.lastUpdated || startParam,

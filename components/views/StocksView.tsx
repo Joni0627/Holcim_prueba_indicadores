@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Package, Loader2, Factory, Layers, Container, BoxSelect } from 'lucide-react';
+import { Loader2, Factory, Layers, Container, BoxSelect } from 'lucide-react';
 import { DateFilter } from '../DateFilter';
 import { fetchStocks } from '../../services/sheetService';
-import { StockStats, StockItem } from '../../types';
+import { StockStats } from '../../types';
 
 export const StocksView: React.FC = () => {
   const [data, setData] = useState<StockStats | null>(null);
@@ -21,25 +21,25 @@ export const StocksView: React.FC = () => {
       }
   };
 
-  const producedItems = data?.items.filter(i => i.isProduced) || [];
+  const producedItems = data?.items.filter(i => i.isProduced).sort((a,b) => a.product.localeCompare(b.product)) || [];
   
-  // Logic to separate categories based on naming conventions
   const allOtherItems = data?.items.filter(i => !i.isProduced) || [];
   
+  // Logic to separate categories
   const pallets = allOtherItems.filter(i => 
-      i.product.toLowerCase().includes('tarima') || 
-      i.product.toLowerCase().includes('pallet')
+      i.product.toUpperCase().includes('TARIMA') || 
+      i.product.toUpperCase().includes('PALLET')
   );
   
   const packaging = allOtherItems.filter(i => 
-      i.product.toLowerCase().includes('envase') || 
-      i.product.toLowerCase().includes('saco') || 
-      i.product.toLowerCase().includes('bolsa') ||
-      i.product.toLowerCase().includes('big bag') ||
-      i.product.toLowerCase().includes('film')
+      i.product.toUpperCase().includes('ENVASE') || 
+      i.product.toUpperCase().includes('SACO') || 
+      i.product.toUpperCase().includes('BOLSA') ||
+      i.product.toUpperCase().includes('BIG BAG') ||
+      i.product.toUpperCase().includes('FILM')
   );
   
-  // Supplies are whatever is left
+  // Supplies are whatever is left (not pallets, not packaging)
   const supplies = allOtherItems.filter(i => 
       !pallets.includes(i) && !packaging.includes(i)
   );
@@ -65,7 +65,7 @@ export const StocksView: React.FC = () => {
            </div>
       ) : (
           <>
-            {/* 1. PRODUCTOS EMBOLSADOS (Bubbles) */}
+            {/* 1. PRODUCTOS PRODUCIDOS (Burbujas Fijas) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {producedItems.map((item) => (
                     <div key={item.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
@@ -92,14 +92,14 @@ export const StocksView: React.FC = () => {
                 ))}
                 {producedItems.length === 0 && (
                     <div className="col-span-full p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                        No se encontraron datos de Cementos en el conteo.
+                        No se encontraron datos de Cementos Producidos.
                     </div>
                 )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* 2. TARIMAS TABLE */}
+                {/* 2. TARIMAS TABLE (Cantidad) */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
                     <div className="p-4 border-b border-slate-200 bg-cyan-50/50 flex items-center gap-2">
                         <Layers size={20} className="text-cyan-600" />
@@ -128,11 +128,11 @@ export const StocksView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* 3. ENVASES TABLE */}
+                {/* 3. ENVASES TABLE (Cantidad) */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
                     <div className="p-4 border-b border-slate-200 bg-blue-50/50 flex items-center gap-2">
                         <Container size={20} className="text-blue-600" />
-                        <h3 className="font-bold text-slate-800">Envases y Embalaje</h3>
+                        <h3 className="font-bold text-slate-800">Envases</h3>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
@@ -158,7 +158,7 @@ export const StocksView: React.FC = () => {
                 </div>
             </div>
 
-            {/* 4. INSUMOS / OTROS TABLE */}
+            {/* 4. INSUMOS / OTROS TABLE (Solo TN) */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center gap-2">
                     <BoxSelect size={20} className="text-slate-500" />
@@ -169,7 +169,6 @@ export const StocksView: React.FC = () => {
                         <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
                             <tr>
                                 <th className="px-6 py-4 font-semibold">Producto</th>
-                                <th className="px-6 py-4 font-semibold text-right">Cantidad (Unid)</th>
                                 <th className="px-6 py-4 font-semibold text-right">Total (Tn)</th>
                             </tr>
                         </thead>
@@ -177,13 +176,12 @@ export const StocksView: React.FC = () => {
                             {supplies.map((item) => (
                                 <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-slate-700">{item.product}</td>
-                                    <td className="px-6 py-4 text-right font-mono text-slate-600">{item.quantity.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-right font-bold text-slate-800">{item.tonnage > 0 ? item.tonnage.toLocaleString(undefined, {maximumFractionDigits: 2}) : '-'}</td>
                                 </tr>
                             ))}
                             {supplies.length === 0 && (
                                 <tr>
-                                    <td colSpan={3} className="px-6 py-8 text-center text-slate-400">
+                                    <td colSpan={2} className="px-6 py-8 text-center text-slate-400">
                                         No hay otros materiales registrados.
                                     </td>
                                 </tr>
