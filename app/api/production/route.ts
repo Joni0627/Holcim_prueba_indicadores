@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
@@ -95,11 +96,15 @@ export async function GET(req: Request) {
     
     // Mapa para agrupar detalles para OEE
     const detailsMap: Record<string, { 
-        tnSum: number,
+        // Acumuladores para Disponibilidad
         hsMarchaSum: number,
         hsParoExtSum: number,
         duracionSum: number,
-        bdpSum: number,
+        
+        // Acumuladores para Rendimiento Ponderado (Looker Logic)
+        weightedRendNumer: number, // (rendimiento * tn)
+        weightedRendDenom: number, // (tn)
+
         count: number,
         machineName: string,
         shift: string
@@ -112,12 +117,14 @@ export async function GET(req: Request) {
         const turno = row.get("turno");
         const key = `${maquinaDesc}-${turno}`;
 
-        // Valores numéricos para fórmulas
+        // Valores numéricos
         const tn = parseNumber(row.get("tn_totales_turno"));
         const hsMarcha = parseNumber(row.get("hs_marcha"));
         const hsParoExt = parseNumber(row.get("hs_paro_externo_decimal"));
         const duracion = parseNumber(row.get("duracion_turno"));
-        const bdp = parseNumber(row.get("bdp_ponderado"));
+        
+        // Dato de Rendimiento de la fila (para ponderar)
+        const rendimientoFila = parseNumber(row.get("rendimiento"));
         
         // Acumular Totales Generales (Tn se saca de cabecera)
         totalTn += tn;
@@ -129,20 +136,29 @@ export async function GET(req: Request) {
         // Acumular para OEE
         if (!detailsMap[key]) {
             detailsMap[key] = { 
-                tnSum: 0, hsMarchaSum: 0, hsParoExtSum: 0, duracionSum: 0, bdpSum: 0, count: 0,
+                hsMarchaSum: 0, hsParoExtSum: 0, duracionSum: 0, 
+                weightedRendNumer: 0, weightedRendDenom: 0,
+                count: 0,
                 machineName: maquinaDesc, shift: turno 
             };
         }
-        detailsMap[key].tnSum += tn;
+        
+        // Acumuladores Disponibilidad
         detailsMap[key].hsMarchaSum += hsMarcha;
         detailsMap[key].hsParoExtSum += hsParoExt;
         detailsMap[key].duracionSum += duracion;
-        detailsMap[key].bdpSum += bdp;
+
+        // Acumuladores Rendimiento Ponderado (Looker Logic)
+        // CASE WHEN tn_totales_turno > 0 THEN rendimiento * tn_totales_turno ELSE 0 END
+        if (tn > 0) {
+            detailsMap[key].weightedRendNumer += (rendimientoFila * tn);
+            detailsMap[key].weightedRendDenom += tn;
+        }
+
         detailsMap[key].count += 1;
     });
 
     // --- PROCESAR LISTA (Bolsas) ---
-    // Debemos cruzar con cabecera para saber la "descripcion_paletizadora" correcta
     listaFiltrada.forEach(row => {
         const idCab = row.get("ID_CABECERA");
         const bags = parseNumber(row.get("BOLSAS PRODUCIDAS"));
@@ -166,7 +182,7 @@ export async function GET(req: Request) {
     // --- CONSTRUIR RESPUESTA ---
 
     const byShift = Object.entries(shiftTotals).map(([name, value]) => ({
-        name, value, target: 0 // Target removed
+        name, value, target: 0 
     }));
 
     const byMachine = Object.entries(machineStats).map(([name, stats]) => ({
@@ -176,20 +192,16 @@ export async function GET(req: Request) {
     }));
 
     const details = Object.values(detailsMap).map(d => {
-        // Fórmulas del Usuario:
-        
         // 1. Disponibilidad = (hs_paro_externo_decimal + hs_marcha) / duracion_turno
-        // Evitar división por cero
         const disponibilidad = d.duracionSum > 0 
             ? (d.hsParoExtSum + d.hsMarchaSum) / d.duracionSum 
             : 0;
 
-        // 2. Rendimiento = (tn_totales_turno / hs_marcha) / bdp_ponderado
-        // Primero calculamos velocidad real promedio
-        const avgBdp = d.count > 0 ? d.bdpSum / d.count : 0;
-        const realSpeed = d.hsMarchaSum > 0 ? d.tnSum / d.hsMarchaSum : 0;
-        
-        const rendimiento = avgBdp > 0 ? realSpeed / avgBdp : 0;
+        // 2. Rendimiento (Ponderado por Tn - Lógica Looker)
+        // SUM(CASE WHEN tn > 0 THEN rend * tn) / SUM(CASE WHEN tn > 0 THEN tn)
+        const rendimiento = d.weightedRendDenom > 0 
+            ? d.weightedRendNumer / d.weightedRendDenom 
+            : 0;
 
         // 3. OEE = Disponibilidad * Rendimiento
         const oee = disponibilidad * rendimiento;
