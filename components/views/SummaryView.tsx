@@ -383,23 +383,24 @@ export const SummaryView: React.FC = () => {
                         <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
                             <h4 className="font-bold text-slate-800">{machineName}</h4>
                         </div>
-                        <div className="overflow-x-auto">
+                        {/* Eliminado overflow-x-auto para evitar scroll horizontal, ajuste en padding */}
+                        <div className="w-full">
                             <table className="w-full text-sm text-left">
                             <thead className="text-xs text-slate-500 uppercase bg-slate-50/50">
                                 <tr>
-                                <th className="px-4 py-3 font-semibold">Turno</th>
-                                <th className="px-4 py-3 font-semibold text-center">Disp %</th>
-                                <th className="px-4 py-3 font-semibold text-center">Rend %</th>
-                                <th className="px-4 py-3 font-semibold text-center">OEE</th>
+                                <th className="px-2 py-3 font-semibold">Turno</th>
+                                <th className="px-2 py-3 font-semibold text-center">Disp %</th>
+                                <th className="px-2 py-3 font-semibold text-center">Rend %</th>
+                                <th className="px-2 py-3 font-semibold text-center">OEE</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {metrics.map((row) => (
                                 <tr key={row.shift} className="hover:bg-slate-50">
-                                    <td className="px-4 py-3 font-medium text-slate-700">{row.shift}</td>
-                                    <td className="px-4 py-3 text-center text-slate-600">{(row.availability * 100).toFixed(1)}%</td>
-                                    <td className="px-4 py-3 text-center text-slate-600">{(row.performance * 100).toFixed(1)}%</td>
-                                    <td className="px-4 py-3 text-center">
+                                    <td className="px-2 py-3 font-medium text-slate-700">{row.shift}</td>
+                                    <td className="px-2 py-3 text-center text-slate-600">{(row.availability * 100).toFixed(1)}%</td>
+                                    <td className="px-2 py-3 text-center text-slate-600">{(row.performance * 100).toFixed(1)}%</td>
+                                    <td className="px-2 py-3 text-center">
                                     <span className={`px-2 py-1 rounded text-xs font-bold ${getOEEColor(row.oee)}`}>
                                         {(row.oee * 100).toFixed(1)}%
                                     </span>
