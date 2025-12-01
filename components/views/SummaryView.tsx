@@ -174,7 +174,7 @@ export const SummaryView: React.FC = () => {
                     </div>
                     <div>
                         <p className="text-slate-500 font-medium uppercase tracking-wider text-sm">Toneladas Totales</p>
-                        <h2 className="text-5xl font-bold mt-1">{totalTn.toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-2xl font-normal text-slate-400">Tn</span></h2>
+                        <h2 className="text-5xl font-bold mt-1">{totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-2xl font-normal text-slate-400">Tn</span></h2>
                     </div>
                 </div>
             </div>
@@ -269,7 +269,7 @@ export const SummaryView: React.FC = () => {
                                                         {m.value.toLocaleString()}
                                                     </td>
                                                     <td className="px-3 py-2 text-right text-slate-500">
-                                                        {m.valueTn.toLocaleString(undefined, {maximumFractionDigits: 1})}
+                                                        {m.valueTn.toLocaleString(undefined, {maximumFractionDigits: 0})}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -398,11 +398,11 @@ export const SummaryView: React.FC = () => {
                                 {metrics.map((row) => (
                                 <tr key={row.shift} className="hover:bg-slate-50">
                                     <td className="px-2 py-3 font-medium text-slate-700">{row.shift}</td>
-                                    <td className="px-2 py-3 text-center text-slate-600">{(row.availability * 100).toFixed(1)}%</td>
-                                    <td className="px-2 py-3 text-center text-slate-600">{(row.performance * 100).toFixed(1)}%</td>
+                                    <td className="px-2 py-3 text-center text-slate-600">{(row.availability * 100).toFixed(0)}%</td>
+                                    <td className="px-2 py-3 text-center text-slate-600">{(row.performance * 100).toFixed(0)}%</td>
                                     <td className="px-2 py-3 text-center">
                                     <span className={`px-2 py-1 rounded text-xs font-bold ${getOEEColor(row.oee)}`}>
-                                        {(row.oee * 100).toFixed(1)}%
+                                        {(row.oee * 100).toFixed(0)}%
                                     </span>
                                     </td>
                                 </tr>
