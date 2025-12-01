@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight } from 'lucide-react';
+import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { fetchDowntimes, fetchProductionStats } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric } from '../../types';
@@ -33,10 +33,44 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
+// Tooltip para el gráfico apilado de producción
+const StackedProdTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+        const total = payload.reduce((acc: number, curr: any) => acc + (curr.value || 0), 0);
+        
+        return (
+            <div className="bg-white p-3 border border-slate-100 shadow-lg rounded-lg z-50">
+                <p className="font-bold text-slate-800 text-sm mb-2 border-b border-slate-100 pb-1">{label}</p>
+                <div className="space-y-1">
+                    {payload.map((entry: any, idx: number) => (
+                         entry.value > 0 && (
+                            <div key={idx} className="flex justify-between items-center gap-4 text-xs">
+                                <span className="flex items-center gap-1.5 text-slate-600">
+                                    <span className="w-2 h-2 rounded-full" style={{backgroundColor: entry.color}}></span>
+                                    {entry.name}
+                                </span>
+                                <span className="font-mono font-medium text-slate-800">
+                                    {entry.value.toLocaleString()} u
+                                </span>
+                            </div>
+                         )
+                    ))}
+                </div>
+                <div className="mt-2 pt-1 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-900">
+                    <span>Total</span>
+                    <span>{total.toLocaleString()} u</span>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
+
 export const SummaryView: React.FC = () => {
   const [downtimes, setDowntimes] = useState<DowntimeEvent[]>([]);
   const [shiftData, setShiftData] = useState<any[]>([]);
   const [machineData, setMachineData] = useState<any[]>([]);
+  const [machineProductData, setMachineProductData] = useState<any[]>([]);
   const [detailedMetrics, setDetailedMetrics] = useState<ShiftMetric[]>([]);
   const [totalBags, setTotalBags] = useState(0);
   const [totalTn, setTotalTn] = useState(0);
@@ -60,12 +94,14 @@ export const SummaryView: React.FC = () => {
             setTotalTn(prodResult.totalTn);
             setShiftData(prodResult.byShift);
             setMachineData(prodResult.byMachine);
+            setMachineProductData(prodResult.byMachineProduct || []);
             setDetailedMetrics(prodResult.details);
         } else {
              setTotalBags(0);
              setTotalTn(0);
              setShiftData([]);
              setMachineData([]);
+             setMachineProductData([]);
              setDetailedMetrics([]);
         }
 
@@ -77,6 +113,13 @@ export const SummaryView: React.FC = () => {
   };
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
+  // Colores para productos en barra apilada
+  const PROD_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6'];
+
+  // Obtener claves únicas de productos para el gráfico apilado
+  const productKeys = Array.from(new Set(
+      machineProductData.flatMap(d => Object.keys(d).filter(k => k !== 'name'))
+  ));
 
   // Helper to colorize OEE values
   const getOEEColor = (val: number) => {
@@ -239,6 +282,38 @@ export const SummaryView: React.FC = () => {
                          <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
                     )}
                 </div>
+            </div>
+
+            {/* Stacked Bar Chart (Machine vs Product) */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px] flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <BarChart2 className="text-purple-500" size={20} />
+                        Detalle de Productos por Paletizadora
+                    </h3>
+                </div>
+                {machineProductData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={machineProductData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis dataKey="name" stroke="#64748b" fontSize={13} fontWeight={500} />
+                            <YAxis stroke="#64748b" />
+                            <Tooltip content={<StackedProdTooltip />} cursor={{fill: '#f8fafc'}} />
+                            <Legend wrapperStyle={{paddingTop: '20px'}} />
+                            {productKeys.map((key, index) => (
+                                <Bar 
+                                    key={key} 
+                                    dataKey={key} 
+                                    name={key} 
+                                    stackId="a" 
+                                    fill={PROD_COLORS[index % PROD_COLORS.length]} 
+                                />
+                            ))}
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de productos</div>
+                )}
             </div>
 
             {/* Top 10 Downtime Ranking */}

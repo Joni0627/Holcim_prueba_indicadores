@@ -94,46 +94,39 @@ export async function GET(req: Request) {
     const shiftTotals: Record<string, number> = {};
     const machineStats: Record<string, { bags: number, tn: number }> = {};
     
+    // New Aggregation for Stacked Bar (Machine -> Product -> Quantity)
+    const machineProductMap: Record<string, Record<string, number>> = {};
+    
     // Mapa para agrupar detalles para OEE
     const detailsMap: Record<string, { 
-        // Acumuladores para Disponibilidad
         hsMarchaSum: number,
         hsParoExtSum: number,
         duracionSum: number,
-        
-        // Acumuladores para Rendimiento Ponderado (Looker Logic)
-        weightedRendNumer: number, // (rendimiento * tn)
-        weightedRendDenom: number, // (tn)
-
+        weightedRendNumer: number, 
+        weightedRendDenom: number,
         count: number,
         machineName: string,
         shift: string
     }> = {};
 
     // --- PROCESAR CABECERA (KPIs y Toneladas) ---
-    // Agrupamos por Descripción Paletizadora, no por ID
     cabecerasFiltradas.forEach(row => {
         const maquinaDesc = row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida";
         const turno = row.get("turno");
         const key = `${maquinaDesc}-${turno}`;
 
-        // Valores numéricos
         const tn = parseNumber(row.get("tn_totales_turno"));
         const hsMarcha = parseNumber(row.get("hs_marcha"));
         const hsParoExt = parseNumber(row.get("hs_paro_externo_decimal"));
         const duracion = parseNumber(row.get("duracion_turno"));
         
-        // Dato de Rendimiento de la fila (para ponderar)
         const rendimientoFila = parseNumber(row.get("rendimiento"));
         
-        // Acumular Totales Generales (Tn se saca de cabecera)
         totalTn += tn;
 
-        // Acumular Totales por Máquina (Tn)
         if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
         machineStats[maquinaDesc].tn += tn;
 
-        // Acumular para OEE
         if (!detailsMap[key]) {
             detailsMap[key] = { 
                 hsMarchaSum: 0, hsParoExtSum: 0, duracionSum: 0, 
@@ -143,13 +136,10 @@ export async function GET(req: Request) {
             };
         }
         
-        // Acumuladores Disponibilidad
         detailsMap[key].hsMarchaSum += hsMarcha;
         detailsMap[key].hsParoExtSum += hsParoExt;
         detailsMap[key].duracionSum += duracion;
 
-        // Acumuladores Rendimiento Ponderado (Looker Logic)
-        // CASE WHEN tn_totales_turno > 0 THEN rendimiento * tn_totales_turno ELSE 0 END
         if (tn > 0) {
             detailsMap[key].weightedRendNumer += (rendimientoFila * tn);
             detailsMap[key].weightedRendDenom += tn;
@@ -158,10 +148,11 @@ export async function GET(req: Request) {
         detailsMap[key].count += 1;
     });
 
-    // --- PROCESAR LISTA (Bolsas) ---
+    // --- PROCESAR LISTA (Bolsas y Productos) ---
     listaFiltrada.forEach(row => {
         const idCab = row.get("ID_CABECERA");
         const bags = parseNumber(row.get("BOLSAS PRODUCIDAS"));
+        const material = String(row.get("DESCRIPCION_MATERIAL") || "Otros").trim();
         
         const cabecera = cabecerasFiltradas.find(c => c.get("id_produccion") === idCab);
         if (!cabecera) return;
@@ -176,6 +167,11 @@ export async function GET(req: Request) {
 
         if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
         machineStats[maquinaDesc].bags += bags;
+        
+        // Stacked Bar Aggregation
+        if (!machineProductMap[maquinaDesc]) machineProductMap[maquinaDesc] = {};
+        if (!machineProductMap[maquinaDesc][material]) machineProductMap[maquinaDesc][material] = 0;
+        machineProductMap[maquinaDesc][material] += bags;
     });
 
 
@@ -191,19 +187,21 @@ export async function GET(req: Request) {
         valueTn: stats.tn
     }));
 
+    // Convert Stacked Map to Array
+    const byMachineProduct = Object.entries(machineProductMap).map(([name, products]) => ({
+        name,
+        ...products // Spread products for Recharts: { name: 'MG.672', 'CPF40': 500, 'Maestro': 200 }
+    })).sort((a,b) => a.name.localeCompare(b.name));
+
     const details = Object.values(detailsMap).map(d => {
-        // 1. Disponibilidad = (hs_paro_externo_decimal + hs_marcha) / duracion_turno
         const disponibilidad = d.duracionSum > 0 
             ? (d.hsParoExtSum + d.hsMarchaSum) / d.duracionSum 
             : 0;
 
-        // 2. Rendimiento (Ponderado por Tn - Lógica Looker)
-        // SUM(CASE WHEN tn > 0 THEN rend * tn) / SUM(CASE WHEN tn > 0 THEN tn)
         const rendimiento = d.weightedRendDenom > 0 
             ? d.weightedRendNumer / d.weightedRendDenom 
             : 0;
 
-        // 3. OEE = Disponibilidad * Rendimiento
         const oee = disponibilidad * rendimiento;
 
         return {
@@ -212,7 +210,7 @@ export async function GET(req: Request) {
             shift: d.shift,
             availability: disponibilidad,
             performance: rendimiento,
-            quality: 1, // No medido
+            quality: 1, 
             oee: oee
         };
     });
@@ -222,13 +220,12 @@ export async function GET(req: Request) {
         totalTn,
         byShift,
         byMachine,
+        byMachineProduct,
         details
     };
 
-    // 2. ACTUALIZAR CACHÉ
     cache.set(cacheKey, { data: result, timestamp: now });
 
-    // 3. RETORNAR CON CABECERAS (CDN)
     return NextResponse.json(result, {
         headers: {
             'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',

@@ -55,7 +55,9 @@ export interface ProductionStats {
   totalBags: number;
   totalTn: number; // New field for Total Tons
   byShift: { name: string; value: number; target: number }[];
-  byMachine: { name: string; value: number; valueTn: number }[]; // Added valueTn
+  byMachine: { name: string; value: number; valueTn: number }[]; 
+  // New field for Stacked Bar Chart (Machine vs Products)
+  byMachineProduct: { name: string; [key: string]: number | string }[];
   details: ShiftMetric[];
 }
 
