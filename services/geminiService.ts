@@ -1,7 +1,7 @@
 
 import { DowntimeEvent, OEEData, ProductionMetrics, AIAnalysisResult, BreakageStats } from "../types";
 
-// Client-side service that calls our Next.js API Route
+// Client-side service that calls our Next.js API Routes
 export const analyzePlantData = async (
   oee: OEEData,
   downtimes: DowntimeEvent[],
@@ -47,6 +47,29 @@ export const analyzeBreakageData = async (stats: BreakageStats): Promise<AIAnaly
         return {
             insight: `No se pudo generar análisis. ${error.message || ''}`,
             recommendations: ["Revise la tabla manualmente", "Verifique API Key en Vercel"],
+            priority: "low"
+        };
+    }
+};
+
+export const analyzeDowntimeData = async (downtimes: DowntimeEvent[]): Promise<AIAnalysisResult> => {
+    try {
+        const response = await fetch('/api/analyze/downtime', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ downtimes }),
+        });
+
+        if (!response.ok) {
+             const err = await response.json().catch(() => ({}));
+             throw new Error(err.error || `Error ${response.status}: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error: any) {
+        console.error("Error analyzing downtime:", error);
+        return {
+            insight: `Error en análisis de paros. ${error.message || ''}`,
+            recommendations: ["Revise el ranking de Pareto", "Contacte a soporte técnico"],
             priority: "low"
         };
     }

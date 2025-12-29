@@ -4,7 +4,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Clock, ClipboardCheck, Loader2, Filter, Table, ArrowDownCircle, BarChart2 } from 'lucide-react';
 import { DateFilter } from '../DateFilter';
 import { fetchDowntimes } from '../../services/sheetService';
-import { DowntimeEvent } from '../../types';
+import { analyzeDowntimeData } from '../../services/geminiService';
+import { DowntimeEvent, AIAnalysisResult } from '../../types';
+import { AIAnalyst } from '../AIAnalyst';
 
 // Helper for hh:mm format
 const formatMinutes = (mins: number) => {
@@ -40,7 +42,6 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
 // Tooltip para el gráfico apilado
 const StackedTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-        // Calcular total de la barra actual
         const total = payload.reduce((acc: number, curr: any) => acc + (curr.value || 0), 0);
         
         return (
@@ -76,8 +77,13 @@ export const DowntimeView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<'all' | 'interno' | 'externo'>('all');
   
+  // AI States
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  
   const handleFilterChange = async (range: { start: Date, end: Date }) => {
       setLoading(true);
+      setAiAnalysis(null); // Reset analysis on range change
       try {
           const result = await fetchDowntimes(range.start, range.end);
           setDowntimes(result);
@@ -85,6 +91,19 @@ export const DowntimeView: React.FC = () => {
           console.error(e);
       } finally {
           setLoading(false);
+      }
+  };
+
+  const handleAIAnalysis = async () => {
+      if (downtimes.length === 0) return;
+      setAiLoading(true);
+      try {
+          const result = await analyzeDowntimeData(downtimes);
+          setAiAnalysis(result);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setAiLoading(false);
       }
   };
 
@@ -109,32 +128,25 @@ export const DowntimeView: React.FC = () => {
       return acc;
   }, [] as { name: string, value: number }[]).sort((a,b) => b.value - a.value);
 
-  // --- LOGIC FOR STACKED BAR CHART (HAC vs REASON/TEXTO DE CAUSA) ---
+  // LOGIC FOR STACKED BAR CHART
   const stackedDataMap = filteredDowntimes.reduce((acc, curr) => {
       const machine = curr.hac || 'Sin HAC';
-      // Use reason (Texto de Causa) for stacking
       const cause = curr.reason || 'Sin Motivo';
       
       if (!acc[machine]) {
           acc[machine] = { name: machine, totalDuration: 0 };
       }
       
-      // Sumar al acumulador específico de esa causa
       acc[machine][cause] = (acc[machine][cause] || 0) + curr.durationMinutes;
-      // Sumar al total de la máquina para ordenamiento
       acc[machine].totalDuration += curr.durationMinutes;
       
       return acc;
   }, {} as Record<string, any>);
 
-  // Convertir mapa a array y ordenar por duración total (Pareto de Máquinas)
   const stackedData = Object.values(stackedDataMap).sort((a: any, b: any) => b.totalDuration - a.totalDuration);
-
-  // Obtener todas las claves únicas de MOTIVOS (Reasons) para las barras apiladas
   const stackKeys = Array.from(new Set(filteredDowntimes.map(d => d.reason || 'Sin Motivo')));
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b', '#06b6d4', '#84cc16'];
-  // Expanded palette for reasons since there might be many
   const STACK_COLORS = [
       '#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#f43f5e', '#84cc16', 
       '#3b82f6', '#ef4444', '#14b8a6', '#d946ef', '#f97316', '#a855f7', '#0ea5e9', '#22c55e'
@@ -148,7 +160,6 @@ export const DowntimeView: React.FC = () => {
           <p className="text-slate-500 text-sm mt-1">Ranking de motivos y distribución por Causas.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 items-center">
-            {/* Downtime Type Filter */}
             <div className="flex items-center bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
                 <button 
                     onClick={() => setSelectedType('all')}
@@ -181,6 +192,15 @@ export const DowntimeView: React.FC = () => {
           </div>
       ) : (
           <>
+            {/* AI Analyst Component */}
+            <div className="mb-6">
+                <AIAnalyst 
+                    analysis={aiAnalysis} 
+                    loading={aiLoading} 
+                    onAnalyze={handleAIAnalysis} 
+                />
+            </div>
+
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
@@ -192,7 +212,7 @@ export const DowntimeView: React.FC = () => {
                         <p className="text-3xl font-bold text-slate-800 mt-2">{formatMinutes(totalDowntime)} <span className="text-sm font-normal text-slate-400">hh:mm</span></p>
                     </div>
                     <div className="text-right text-sm text-slate-400">
-                         ≈ {(totalDowntime / 60).toFixed(1)} horas
+                         ≈ {(totalDowntime / 60).toFixed(0)} horas
                     </div>
                 </div>
                 
@@ -259,7 +279,7 @@ export const DowntimeView: React.FC = () => {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={filteredDowntimes.slice(0, 10)} layout="vertical" margin={{top:5, right:30, left:20, bottom:5}}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                <XAxis type="number" unit="m" stroke="#94a3b8" fontSize={12} tickFormatter={formatMinutes} />
+                                <XAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={formatMinutes} />
                                 <YAxis 
                                     type="category" 
                                     dataKey="reason" 
