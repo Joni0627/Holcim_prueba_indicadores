@@ -49,7 +49,10 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
     const sortedEvents = events
       .map(e => {
           const eventStart = timeToMinutes(e.startTime || '00:00');
-          return { ...e, relativeStart: eventStart - shiftStartMin };
+          let relativeStart = eventStart - shiftStartMin;
+          
+          // Ajuste para el turno noche (comienza a las 00:00, no requiere ajuste de wrap-around si las fechas son correctas)
+          return { ...e, relativeStart };
       })
       .filter(e => e.relativeStart >= 0 && e.relativeStart < totalMins)
       .sort((a, b) => a.relativeStart - b.relativeStart);
@@ -245,7 +248,7 @@ export const DailyTimelineView: React.FC = () => {
                         <tbody className="divide-y divide-slate-100">
                             {downtimes.sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e, i) => (
                                 <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 font-mono font-bold text-indigo-600">{e.startTime}</td>
+                                    <td className="px-6 py-4 font-mono font-bold text-indigo-600">{e.startTime || '00:00'}</td>
                                     <td className="px-6 py-4 font-bold text-slate-800">{e.hac}</td>
                                     <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{getVisualShift(e.startTime || '')}</td>
                                     <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">"{e.reason}"</td>

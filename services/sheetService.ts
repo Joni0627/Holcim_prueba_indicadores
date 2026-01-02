@@ -6,11 +6,11 @@ export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEv
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
     
-    // Call API with Range
+    // Llamada a la API con el rango de fechas
     const res = await fetch(`/api/paros?start=${startStr}&end=${endStr}`);
     
     if (!res.ok) {
-        console.warn("API returned error, using empty data");
+        console.warn("La API devolvió un error, se usará un arreglo vacío");
         return [];
     }
 
@@ -20,17 +20,18 @@ export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEv
         return [];
     }
 
-    // Map Raw API Data to App Types
+    // Mapeo de datos brutos de la API a los tipos de la aplicación
     return data.map((row: any) => ({
         id: row.id,
         reason: row.reason || 'Sin motivo',
         durationMinutes: row.durationMinutes || 0,
         machineId: row.machineId || 'Desconocida',
-        category: row.sapCause || 'Otros', // Map SAP CAUSE to category for charts
+        category: row.sapCause || 'Otros',
         
-        // New fields
+        // Campos específicos para el cronograma y tabla detallada
         date: row.date,
         shift: row.shift,
+        startTime: row.startTime, // CRÍTICO: Asegurar que este campo pase al front
         hac: row.hac,
         hacDetail: row.hacDetail,
         sapCause: row.sapCause,
@@ -40,7 +41,7 @@ export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEv
     }));
 
   } catch (error) {
-    console.error("Failed to fetch downtimes from sheet:", error);
+    console.error("Error al obtener paros de la hoja:", error);
     return [];
   }
 };
@@ -57,7 +58,7 @@ export const fetchProductionStats = async (start: Date, end: Date): Promise<Prod
         const data = await res.json();
         return data as ProductionStats;
     } catch (error) {
-        console.error("Failed to fetch production stats:", error);
+        console.error("Error al obtener estadísticas de producción:", error);
         return null;
     }
 };
@@ -74,7 +75,7 @@ export const fetchBreakageStats = async (start: Date, end: Date): Promise<Breaka
         const data = await res.json();
         return data as BreakageStats;
     } catch (error) {
-        console.error("Failed to fetch breakage stats:", error);
+        console.error("Error al obtener estadísticas de roturas:", error);
         return null;
     }
 };
@@ -91,7 +92,7 @@ export const fetchStocks = async (start: Date, end: Date): Promise<StockStats | 
         const data = await res.json();
         return data as StockStats;
     } catch (error) {
-        console.error("Failed to fetch stocks:", error);
+        console.error("Error al obtener stocks:", error);
         return null;
     }
 };
