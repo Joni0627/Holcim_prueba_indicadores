@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar, Settings2, ShieldAlert } from 'lucide-react';
 import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent } from '../../types';
 
@@ -23,13 +23,9 @@ const timeToMinutes = (timeStr: string) => {
 // Clasificación automática basada puramente en la hora de inicio
 const getVisualShift = (startTime: string) => {
     const mins = timeToMinutes(startTime);
-    // 06:00 (360) a 13:59 (839)
     if (mins >= 360 && mins < 840) return '1.MAÑANA';
-    // 14:00 (840) a 21:59 (1319)
     if (mins >= 840 && mins < 1320) return '2.TARDE';
-    // 22:00 (1320) a 23:59 (1439)
     if (mins >= 1320 && mins < 1440) return '4.NOCHE FIN';
-    // 00:00 (0) a 05:59 (359)
     if (mins >= 0 && mins < 360) return '3.NOCHE';
     return '1.MAÑANA';
 };
@@ -45,15 +41,8 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
     const segments: { type: 'uptime' | 'downtime', duration: number, event?: DowntimeEvent }[] = [];
     let currentPos = 0;
 
-    // Normalizar eventos al inicio del turno para posicionamiento
     const sortedEvents = events
-      .map(e => {
-          const eventStart = timeToMinutes(e.startTime || '00:00');
-          let relativeStart = eventStart - shiftStartMin;
-          
-          // Ajuste para el turno noche (comienza a las 00:00, no requiere ajuste de wrap-around si las fechas son correctas)
-          return { ...e, relativeStart };
-      })
+      .map(e => ({ ...e, relativeStart: timeToMinutes(e.startTime || '00:00') - shiftStartMin }))
       .filter(e => e.relativeStart >= 0 && e.relativeStart < totalMins)
       .sort((a, b) => a.relativeStart - b.relativeStart);
 
@@ -76,6 +65,14 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
   const downtimeTotal = events.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const availability = Math.max(0, ((totalMins - downtimeTotal) / totalMins) * 100);
 
+  const getBlockColor = (block: any) => {
+    if (block.type === 'uptime') return 'bg-emerald-500/80 hover:bg-emerald-500';
+    const type = (block.event?.downtimeType || '').toLowerCase();
+    if (type.includes('interno')) return 'bg-slate-400 hover:bg-slate-500 cursor-help';
+    if (type.includes('externo')) return 'bg-red-500 hover:bg-red-600 cursor-help';
+    return 'bg-red-500 hover:bg-red-600 cursor-help'; // fallback por si no tiene tipo
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row h-auto md:h-24 overflow-visible">
       <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-4 flex flex-col justify-center shrink-0">
@@ -83,11 +80,16 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
           <Clock size={14} className="text-slate-400" />
           <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">{config.label}</span>
         </div>
-        <div className="flex items-center justify-between mt-1">
-            <span className="text-[10px] text-slate-400 font-mono">Total: {totalMins/60}h</span>
-            <span className={`text-xs font-bold ${availability > 90 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {availability.toFixed(1)}% Disp.
-            </span>
+        <div className="flex flex-col mt-1">
+            <div className="flex justify-between items-center">
+                <span className="text-[10px] text-slate-400 font-mono">Total: {totalMins/60}h</span>
+                <span className={`text-xs font-bold ${availability > 90 ? 'text-emerald-600' : availability > 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                    {availability.toFixed(1)}% Disp.
+                </span>
+            </div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase mt-0.5">
+                Paros: <span className={downtimeTotal > 0 ? 'text-red-500' : 'text-slate-400'}>{downtimeTotal} min</span>
+            </div>
         </div>
       </div>
 
@@ -96,15 +98,14 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
           {blocks.map((block, idx) => (
             <div 
               key={idx}
-              className={`h-full relative transition-all border-r border-white/20 last:border-0 group/block ${
-                block.type === 'uptime' ? 'bg-emerald-500/80 hover:bg-emerald-500' : 'bg-red-500 hover:bg-red-600 cursor-help'
-              }`}
+              className={`h-full relative transition-all border-r border-white/20 last:border-0 group/block ${getBlockColor(block)}`}
               style={{ width: `${(block.duration / totalMins) * 100}%` }}
             >
               {block.type === 'downtime' && block.event && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 bg-slate-900 text-white p-3 rounded-xl shadow-2xl opacity-0 group-hover/block:opacity-100 transition-all z-[100] pointer-events-none transform translate-y-1 group-hover/block:translate-y-0">
                   <div className="text-[10px] font-black border-b border-white/10 pb-1 mb-2 flex justify-between uppercase">
                     <span className="text-indigo-300">INICIO: {block.event.startTime}</span>
+                    <span className="text-white/60">{block.event.downtimeType}</span>
                     <span className="text-red-400">{block.duration} MIN</span>
                   </div>
                   <p className="text-[11px] font-bold text-white mb-1 uppercase tracking-tight">{block.event.hac}</p>
@@ -163,7 +164,6 @@ export const DailyTimelineView: React.FC = () => {
     }, {} as Record<string, DowntimeEvent[]>);
   }, [downtimes]);
 
-  // Orden cronológico lógico para el carril
   const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
 
   return (
@@ -205,12 +205,13 @@ export const DailyTimelineView: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4 overflow-visible">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center gap-6 text-[11px] text-slate-500 shadow-sm">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center gap-6 text-[10px] text-slate-500 shadow-sm font-bold uppercase tracking-wider">
             <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> OPERATIVO</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> PARO REGISTRADO</div>
-            <div className="ml-auto flex items-center gap-1.5 font-medium text-slate-400 italic">
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-sm"></div> PARO INTERNO</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> PARO EXTERNO</div>
+            <div className="ml-auto flex items-center gap-1.5 font-medium text-slate-400 italic normal-case">
                 <Info size={14} className="text-indigo-400" />
-                Los paros se clasifican automáticamente según la hora reportada en la columna INICIO.
+                Los paros se clasifican automáticamente según la hora reportada.
             </div>
           </div>
 
@@ -240,7 +241,8 @@ export const DailyTimelineView: React.FC = () => {
                             <tr>
                                 <th className="px-6 py-3">INICIO (REAL)</th>
                                 <th className="px-6 py-3">EQUIPO (HAC)</th>
-                                <th className="px-6 py-3">CARRIL ASIGNADO</th>
+                                <th className="px-6 py-3">TURNO</th>
+                                <th className="px-6 py-3">TIPO</th>
                                 <th className="px-6 py-3">MOTIVO</th>
                                 <th className="px-6 py-3 text-right">DURACIÓN (MIN)</th>
                             </tr>
@@ -251,6 +253,15 @@ export const DailyTimelineView: React.FC = () => {
                                     <td className="px-6 py-4 font-mono font-bold text-indigo-600">{e.startTime || '00:00'}</td>
                                     <td className="px-6 py-4 font-bold text-slate-800">{e.hac}</td>
                                     <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{getVisualShift(e.startTime || '')}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                                            (e.downtimeType || '').toLowerCase().includes('interno') 
+                                            ? 'bg-slate-100 text-slate-600' 
+                                            : 'bg-red-50 text-red-600'
+                                        }`}>
+                                            {e.downtimeType}
+                                        </span>
+                                    </td>
                                     <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">"{e.reason}"</td>
                                     <td className="px-6 py-4 text-right font-black text-red-600">{e.durationMinutes}</td>
                                 </tr>
