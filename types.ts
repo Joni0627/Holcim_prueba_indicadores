@@ -25,6 +25,7 @@ export interface DowntimeEvent {
   // New specific SAP fields
   date: string; // FECHA
   shift: string; // TURNO
+  startTime?: string; // HORA (HH:mm) - New for Timeline
   hac: string; // HAC
   hacDetail: string; // DETALLE HAC
   downtimeType?: string; // TIPO PARO (Interno/Externo)
@@ -44,7 +45,7 @@ export interface OEEData {
 export interface ShiftMetric {
   machineId: string;
   machineName: string;
-  shift: string; // Changed from literal union to string to accept API values
+  shift: string; 
   availability: number;
   performance: number;
   quality: number;
@@ -53,39 +54,36 @@ export interface ShiftMetric {
 
 export interface ProductionStats {
   totalBags: number;
-  totalTn: number; // New field for Total Tons
+  totalTn: number; 
   byShift: { name: string; value: number; target: number }[];
   byMachine: { name: string; value: number; valueTn: number }[]; 
-  // New field for Stacked Bar Chart (Machine vs Products)
   byMachineProduct: { name: string; [key: string]: number | string }[];
   details: ShiftMetric[];
 }
 
-// Interface for Historical Evolution Chart
 export interface BreakageHistoryItem {
-    date: string; // DD/MM
-    [key: string]: number | string; // Dynamic provider keys (using safeIds)
+    date: string; 
+    [key: string]: number | string; 
 }
 
 export interface BreakageStats {
   totalProduced: number;
   totalBroken: number;
-  globalRate: number; // Percentage
+  globalRate: number; 
   bySector: { name: string; value: number; percentage: number }[]; 
   byProvider: { 
-    id: string; // Safe Key for Recharts
+    id: string; 
     name: string; 
     produced: number; 
     broken: number; 
-    rate: number; // Percentage
+    rate: number; 
   }[];
   byMaterial: {
-    id: string; // Safe Key for Recharts
+    id: string; 
     name: string;
     produced: number;
     broken: number;
     rate: number;
-    // Flattened Breakdown for Stacked Bar Chart compatibility
     sector_Ensacadora: number;
     sector_NoEmboquillada: number;
     sector_Ventocheck: number;
@@ -97,14 +95,14 @@ export interface BreakageStats {
 export interface StockItem {
   id: string;
   product: string;
-  quantity: number; // From 'CANTIDAD'
-  tonnage: number; // From 'TN' (Count) + 'TN' (Production Night)
-  isProduced: boolean; // True for the 4 special cements
+  quantity: number; 
+  tonnage: number; 
+  isProduced: boolean; 
   lastUpdated: string;
 }
 
 export interface StockStats {
-  date: string; // Date of the count
+  date: string; 
   items: StockItem[];
 }
 

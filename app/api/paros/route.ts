@@ -1,42 +1,33 @@
+
 import { NextResponse } from "next/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 
-// --- CONFIGURACIÓN DE CACHÉ ---
-// Caché en memoria para instancias calientes de Lambda
-const CACHE_TTL = 60 * 1000; // 60 segundos
+const CACHE_TTL = 60 * 1000; 
 const cache = new Map<string, { data: any; timestamp: number }>();
 
-/**
- * Convierte "0:15:00" → 900
- */
 function hmsToSeconds(hms: string | null | undefined) {
   if (!hms || typeof hms !== "string") return 0;
-
   const parts = hms.split(":").map(Number);
-  if (parts.length !== 3) return 0;
-
+  if (parts.length < 2) return 0;
+  if (parts.length === 2) return parts[0] * 60 + parts[1]; // mm:ss
   const [h, m, s] = parts;
   return h * 3600 + m * 60 + s;
 }
 
-/**
- * Parsea una fecha en formato "DD/MM/YYYY" a un objeto Date (ignorando hora)
- */
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
   const parts = dateStr.trim().split("/");
   if (parts.length !== 3) return null;
   const [day, month, year] = parts.map(Number);
-  // Crear fecha en UTC o local consistente
   return new Date(year, month - 1, day);
 }
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const startParam = searchParams.get("start"); // YYYY-MM-DD
-    const endParam = searchParams.get("end");     // YYYY-MM-DD
+    const startParam = searchParams.get("start"); 
+    const endParam = searchParams.get("end");
 
     if (!startParam || !endParam) {
       return NextResponse.json(
@@ -45,13 +36,11 @@ export async function GET(req: Request) {
       );
     }
 
-    // 1. VERIFICAR CACHÉ EN MEMORIA
     const cacheKey = `paros-${startParam}-${endParam}`;
     const cachedEntry = cache.get(cacheKey);
     const now = Date.now();
 
     if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL)) {
-       // Retornar caché con cabeceras para el Edge Cache
        return NextResponse.json(cachedEntry.data, {
            headers: {
                'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
@@ -60,21 +49,17 @@ export async function GET(req: Request) {
        });
     }
 
-    // Convertir params a Dates (inicio del día start, final del día end)
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
 
-    // Variables de entorno
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const key = process.env.GOOGLE_SERVICE_ACCOUNT_KEY?.replace(/\\n/g, "\n");
     const sheetId = process.env.GOOGLE_SHEET_ID;
 
     if (!email || !key || !sheetId) {
-      console.warn("Faltan variables de entorno para Google Sheets.");
       return NextResponse.json([]); 
     }
 
-    // Auth
     const auth = new JWT({
       email,
       key,
@@ -87,30 +72,18 @@ export async function GET(req: Request) {
     const doc = new GoogleSpreadsheet(sheetId, auth);
     await doc.loadInfo();
 
-    // Hoja PARO DE MAQUINA
     const sheet = doc.sheetsByTitle["PARO DE MAQUINA"];
-    if (!sheet) {
-      return NextResponse.json(
-        { error: "No existe hoja PARO DE MAQUINA" },
-        { status: 404 }
-      );
-    }
+    if (!sheet) return NextResponse.json([], { status: 404 });
 
     const rows = await sheet.getRows();
 
-    // Filtrar por RANGO de fechas
     const filtrado = rows.filter((r) => {
       const fechaCell = r.get("FECHA");
       const rowDate = parseSheetDate(String(fechaCell));
       if (!rowDate) return false;
-
-      // Comparación simple de timestamps
       return rowDate.getTime() >= startDate.getTime() && rowDate.getTime() <= endDate.getTime();
     });
 
-    if (filtrado.length === 0) return NextResponse.json([]);
-
-    // Mapeo de columnas específicas solicitadas
     const resultados = filtrado.map((r) => {
       const durHMS = r.get("DURACIÓN") ?? "0:00:00";
       const seconds = hmsToSeconds(durHMS);
@@ -119,25 +92,19 @@ export async function GET(req: Request) {
         date: r.get("FECHA"),
         machineId: r.get("MÁQUINA AFECTADA"),
         shift: r.get("TURNO"),
+        startTime: r.get("HORA") || "00:00", // Nueva columna capturada
         durationMinutes: Math.round(seconds / 60),
         hac: r.get("HAC"),
         hacDetail: r.get("DETALLE HAC"),
         reason: r.get("TEXTO DE CAUSA"),
         sapCause: r.get("CAUSA SAP"),
         downtimeType: r.get("TIPO PARO"),
-        // Metadata extra
-        rawDuration: durHMS,
         id: r.get("IDPARO") || Math.random().toString(36).substr(2, 9)
       };
     });
 
-    // Ordenar por mayor duración
-    resultados.sort((a, b) => b.durationMinutes - a.durationMinutes);
-
-    // 2. ACTUALIZAR CACHÉ EN MEMORIA
     cache.set(cacheKey, { data: resultados, timestamp: now });
 
-    // 3. RETORNAR CON CABECERAS DE CACHÉ (CDN)
     return NextResponse.json(resultados, {
         headers: {
             'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=30',
@@ -147,12 +114,6 @@ export async function GET(req: Request) {
 
   } catch (err: any) {
     console.error("API Error:", err);
-    return NextResponse.json(
-      {
-        error: "Error interno",
-        message: err.message,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
