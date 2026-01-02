@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar, Settings2, ShieldAlert } from 'lucide-react';
+import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent } from '../../types';
 
@@ -68,9 +68,10 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
   const getBlockColor = (block: any) => {
     if (block.type === 'uptime') return 'bg-emerald-500/80 hover:bg-emerald-500';
     const type = (block.event?.downtimeType || '').toLowerCase();
-    if (type.includes('interno')) return 'bg-slate-400 hover:bg-slate-500 cursor-help';
-    if (type.includes('externo')) return 'bg-red-500 hover:bg-red-600 cursor-help';
-    return 'bg-red-500 hover:bg-red-600 cursor-help'; // fallback por si no tiene tipo
+    // NUEVA LÓGICA: Interno = Rojo, Externo = Gris
+    if (type.includes('interno')) return 'bg-red-500 hover:bg-red-600 cursor-help';
+    if (type.includes('externo')) return 'bg-slate-400 hover:bg-slate-500 cursor-help';
+    return 'bg-red-500 hover:bg-red-600 cursor-help'; 
   };
 
   return (
@@ -207,8 +208,9 @@ export const DailyTimelineView: React.FC = () => {
         <div className="space-y-4 overflow-visible">
           <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center gap-6 text-[10px] text-slate-500 shadow-sm font-bold uppercase tracking-wider">
             <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> OPERATIVO</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-sm"></div> PARO INTERNO</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> PARO EXTERNO</div>
+            {/* LEYENDA AJUSTADA: Interno Rojo, Externo Gris */}
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> PARO INTERNO</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-sm"></div> PARO EXTERNO</div>
             <div className="ml-auto flex items-center gap-1.5 font-medium text-slate-400 italic normal-case">
                 <Info size={14} className="text-indigo-400" />
                 Los paros se clasifican automáticamente según la hora reportada.
@@ -256,8 +258,8 @@ export const DailyTimelineView: React.FC = () => {
                                     <td className="px-6 py-4">
                                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
                                             (e.downtimeType || '').toLowerCase().includes('interno') 
-                                            ? 'bg-slate-100 text-slate-600' 
-                                            : 'bg-red-50 text-red-600'
+                                            ? 'bg-red-50 text-red-600' 
+                                            : 'bg-slate-100 text-slate-600'
                                         }`}>
                                             {e.downtimeType}
                                         </span>
