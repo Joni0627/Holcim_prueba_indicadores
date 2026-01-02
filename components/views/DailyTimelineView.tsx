@@ -4,26 +4,32 @@ import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRigh
 import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent } from '../../types';
 
-// CONFIGURACIÓN DE TURNOS ACTUALIZADA SEGÚN USUARIO
+// CONFIGURACIÓN DE TURNOS EXACTA SEGÚN USUARIO
 const SHIFT_MAP = {
-  '1.MAÑANA': { duration: 480, start: 6, label: 'Mañana (06:00 - 14:00)', color: 'emerald' },
-  '2.TARDE': { duration: 480, start: 14, label: 'Tarde (14:00 - 22:00)', color: 'blue' },
-  '4.NOCHE FIN': { duration: 120, start: 22, label: 'Noche Fin (22:00 - 00:00)', color: 'slate' },
-  '3.NOCHE': { duration: 360, start: 0, label: 'Noche (00:00 - 06:00)', color: 'indigo' }
+  '1.MAÑANA': { duration: 480, start: 6, label: 'Mañana (06:00 - 13:59)', color: 'emerald' },
+  '2.TARDE': { duration: 480, start: 14, label: 'Tarde (14:00 - 21:59)', color: 'blue' },
+  '4.NOCHE FIN': { duration: 120, start: 22, label: 'Noche Fin (22:00 - 23:59)', color: 'slate' },
+  '3.NOCHE': { duration: 360, start: 0, label: 'Noche (00:00 - 05:59)', color: 'indigo' }
 };
 
 const timeToMinutes = (timeStr: string) => {
   if (!timeStr) return 0;
-  const [h, m] = timeStr.split(':').map(Number);
-  return h * 60 + (m || 0);
+  const parts = timeStr.split(':').map(Number);
+  const h = parts[0] || 0;
+  const m = parts[1] || 0;
+  return h * 60 + m;
 };
 
 // Clasificación automática basada puramente en la hora de inicio
 const getVisualShift = (startTime: string) => {
     const mins = timeToMinutes(startTime);
+    // 06:00 (360) a 13:59 (839)
     if (mins >= 360 && mins < 840) return '1.MAÑANA';
+    // 14:00 (840) a 21:59 (1319)
     if (mins >= 840 && mins < 1320) return '2.TARDE';
+    // 22:00 (1320) a 23:59 (1439)
     if (mins >= 1320 && mins < 1440) return '4.NOCHE FIN';
+    // 00:00 (0) a 05:59 (359)
     if (mins >= 0 && mins < 360) return '3.NOCHE';
     return '1.MAÑANA';
 };
@@ -39,9 +45,12 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
     const segments: { type: 'uptime' | 'downtime', duration: number, event?: DowntimeEvent }[] = [];
     let currentPos = 0;
 
-    // Normalizar eventos al inicio del turno
+    // Normalizar eventos al inicio del turno para posicionamiento
     const sortedEvents = events
-      .map(e => ({ ...e, relativeStart: timeToMinutes(e.startTime || '00:00') - shiftStartMin }))
+      .map(e => {
+          const eventStart = timeToMinutes(e.startTime || '00:00');
+          return { ...e, relativeStart: eventStart - shiftStartMin };
+      })
       .filter(e => e.relativeStart >= 0 && e.relativeStart < totalMins)
       .sort((a, b) => a.relativeStart - b.relativeStart);
 
@@ -93,7 +102,7 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 bg-slate-900 text-white p-3 rounded-xl shadow-2xl opacity-0 group-hover/block:opacity-100 transition-all z-[100] pointer-events-none transform translate-y-1 group-hover/block:translate-y-0">
                   <div className="text-[10px] font-black border-b border-white/10 pb-1 mb-2 flex justify-between uppercase">
                     <span className="text-indigo-300">INICIO: {block.event.startTime}</span>
-                    <span className="text-red-400">{block.durationMinutes} MIN</span>
+                    <span className="text-red-400">{block.duration} MIN</span>
                   </div>
                   <p className="text-[11px] font-bold text-white mb-1 uppercase tracking-tight">{block.event.hac}</p>
                   <p className="text-[10px] leading-tight text-slate-300 italic">"{block.event.reason}"</p>
