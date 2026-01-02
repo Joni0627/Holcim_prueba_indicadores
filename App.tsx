@@ -1,31 +1,34 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Activity, Settings, AlertCircle, Package, Ban, BarChart3, Menu, X, Home, Box, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Activity, Settings, AlertCircle, Package, Ban, BarChart3, Menu, X, Home, Box, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { SummaryView } from './components/views/SummaryView';
 import { StocksView } from './components/views/StocksView';
 import { DowntimeView } from './components/views/DowntimeView';
 import { PalletizerView } from './components/views/PalletizerView';
 import { BreakageView } from './components/views/BreakageView';
+import { DailyTimelineView } from './components/views/DailyTimelineView';
 
-type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage';
+type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false); // Estado para colapsar en escritorio
+  const [isCollapsed, setIsCollapsed] = useState(false); 
   const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowIntro(false);
-    }, 2500); // 2.5 seconds intro
+    }, 2500); 
     return () => clearTimeout(timer);
   }, []);
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'stocks', label: 'Hoja Stocks', icon: Package },
+    { id: 'timeline', label: 'Cronograma Diario', icon: Clock },
     { id: 'downtime', label: 'Análisis Paros', icon: AlertCircle },
     { id: 'palletizers', label: 'Rendimiento Paletizadora', icon: Activity },
     { id: 'breakage', label: 'Roturas de Sacos', icon: Ban },
@@ -35,6 +38,7 @@ function App() {
     switch (currentView) {
       case 'home': return <SummaryView />;
       case 'stocks': return <StocksView />;
+      case 'timeline': return <DailyTimelineView />;
       case 'downtime': return <DowntimeView />;
       case 'palletizers': return <PalletizerView />;
       case 'breakage': return <BreakageView />;
@@ -42,7 +46,6 @@ function App() {
     }
   };
 
-  // Intro Screen Component
   if (showIntro) {
     return (
       <div className="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
@@ -87,7 +90,6 @@ function App() {
         ${isCollapsed ? 'md:w-20' : 'md:w-72'}
       `}>
         
-        {/* Desktop Toggle Button */}
         <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden md:flex absolute -right-3 top-9 bg-slate-800 text-slate-400 hover:text-white border border-slate-700 rounded-full p-1 shadow-lg z-50 items-center justify-center transition-colors"
@@ -95,7 +97,6 @@ function App() {
             {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
 
-        {/* Sidebar Header */}
         <div className={`p-6 border-b border-slate-800 flex ${isCollapsed ? 'justify-center' : 'justify-between'} items-center transition-all`}>
           <div className="overflow-hidden whitespace-nowrap">
              <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : ''}`}>
@@ -108,7 +109,6 @@ function App() {
                 Expedición Malagueño
              </p>
           </div>
-          {/* Close button only visible on mobile */}
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white">
             <X size={20} />
           </button>
@@ -144,10 +144,6 @@ function App() {
                 <BarChart3 size={20} className="shrink-0" />
                 <span className={`whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Reportes Históricos</span>
             </button>
-            <button title="Configuración" className={`w-full flex items-center gap-3 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-lg text-sm font-medium transition-all ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
-                <Settings size={20} className="shrink-0" />
-                <span className={`whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Configuración Planta</span>
-            </button>
           </div>
         </nav>
 
@@ -165,7 +161,6 @@ function App() {
         </div>
       </aside>
 
-      {/* Overlay for mobile sidebar - High z-index but below sidebar */}
       {isMobileMenuOpen && (
         <div 
             className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 md:hidden"
@@ -173,7 +168,6 @@ function App() {
         />
       )}
 
-      {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen scroll-smooth">
         {renderView()}
       </main>
