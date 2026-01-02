@@ -1,15 +1,15 @@
 
-import React, { useState, useMemo } from 'react';
-import { Calendar, Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent } from '../../types';
 
-// CONFIGURACIÓN DE TURNOS SEGÚN TABLA "TURNOS"
+// CONFIGURACIÓN DE TURNOS ACTUALIZADA SEGÚN USUARIO
 const SHIFT_MAP = {
-  '1.MAÑANA': { duration: 480, start: 6, end: 14, label: 'Mañana (06:00 - 14:00)' },
-  '2.TARDE': { duration: 480, start: 14, end: 22, label: 'Tarde (14:00 - 22:00)' },
-  '3.NOCHE': { duration: 360, start: 22, end: 4, label: 'Noche (22:00 - 04:00)' },
-  '4.NOCHE FIN': { duration: 120, start: 4, end: 6, label: 'Noche Fin (04:00 - 06:00)' }
+  '1.MAÑANA': { duration: 480, start: 6, label: 'Mañana (06:00 - 14:00)', color: 'emerald' },
+  '2.TARDE': { duration: 480, start: 14, label: 'Tarde (14:00 - 22:00)', color: 'blue' },
+  '4.NOCHE FIN': { duration: 120, start: 22, label: 'Noche Fin (22:00 - 00:00)', color: 'slate' },
+  '3.NOCHE': { duration: 360, start: 0, label: 'Noche (00:00 - 06:00)', color: 'indigo' }
 };
 
 const timeToMinutes = (timeStr: string) => {
@@ -18,39 +18,32 @@ const timeToMinutes = (timeStr: string) => {
   return h * 60 + (m || 0);
 };
 
-// FUNCIÓN PARA ACOMODAR PAROS EN EL TURNO CORRECTO SEGÚN LA HORA (Fix Mismatch)
+// Clasificación automática basada puramente en la hora de inicio
 const getVisualShift = (startTime: string) => {
     const mins = timeToMinutes(startTime);
     if (mins >= 360 && mins < 840) return '1.MAÑANA';
     if (mins >= 840 && mins < 1320) return '2.TARDE';
-    if (mins >= 1320 || mins < 240) return '3.NOCHE'; // 22:00 a 04:00
-    if (mins >= 240 && mins < 360) return '4.NOCHE FIN'; // 04:00 a 06:00
+    if (mins >= 1320 && mins < 1440) return '4.NOCHE FIN';
+    if (mins >= 0 && mins < 360) return '3.NOCHE';
     return '1.MAÑANA';
 };
 
 const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ shiftKey, events }) => {
-  const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP] || { duration: 480, start: 0, label: shiftKey };
+  const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
+  if (!config) return null;
+  
   const totalMins = config.duration;
   const shiftStartMin = config.start * 60;
 
   const blocks = useMemo(() => {
-    const sortedEvents = events
-      .map(e => {
-        let eventStartMin = timeToMinutes(e.startTime || '00:00');
-        
-        // Manejo de cruce de medianoche para el cálculo relativo
-        if (config.start === 22 && eventStartMin < 6 * 60) eventStartMin += 24 * 60;
-        
-        let relativeStart = eventStartMin - shiftStartMin;
-        if (relativeStart < 0 && config.start >= 22) relativeStart += 24 * 60;
-
-        return { ...e, relativeStart };
-      })
-      .filter(e => e.relativeStart >= 0 && e.relativeStart < totalMins)
-      .sort((a, b) => a.relativeStart - b.relativeStart);
-
     const segments: { type: 'uptime' | 'downtime', duration: number, event?: DowntimeEvent }[] = [];
     let currentPos = 0;
+
+    // Normalizar eventos al inicio del turno
+    const sortedEvents = events
+      .map(e => ({ ...e, relativeStart: timeToMinutes(e.startTime || '00:00') - shiftStartMin }))
+      .filter(e => e.relativeStart >= 0 && e.relativeStart < totalMins)
+      .sort((a, b) => a.relativeStart - b.relativeStart);
 
     sortedEvents.forEach(event => {
       if (event.relativeStart > currentPos) {
@@ -72,7 +65,7 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
   const availability = Math.max(0, ((totalMins - downtimeTotal) / totalMins) * 100);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row h-auto md:h-24">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row h-auto md:h-24 overflow-visible">
       <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-4 flex flex-col justify-center shrink-0">
         <div className="flex items-center gap-2 mb-1">
           <Clock size={14} className="text-slate-400" />
@@ -100,9 +93,9 @@ const TimelineBar: React.FC<{ shiftKey: string, events: DowntimeEvent[] }> = ({ 
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 bg-slate-900 text-white p-3 rounded-xl shadow-2xl opacity-0 group-hover/block:opacity-100 transition-all z-[100] pointer-events-none transform translate-y-1 group-hover/block:translate-y-0">
                   <div className="text-[10px] font-black border-b border-white/10 pb-1 mb-2 flex justify-between uppercase">
                     <span className="text-indigo-300">INICIO: {block.event.startTime}</span>
-                    <span className="text-red-400">{block.duration} MINUTOS</span>
+                    <span className="text-red-400">{block.durationMinutes} MIN</span>
                   </div>
-                  <p className="text-[11px] font-bold text-white mb-1 uppercase">{block.event.hac}</p>
+                  <p className="text-[11px] font-bold text-white mb-1 uppercase tracking-tight">{block.event.hac}</p>
                   <p className="text-[10px] leading-tight text-slate-300 italic">"{block.event.reason}"</p>
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
                 </div>
@@ -128,7 +121,8 @@ export const DailyTimelineView: React.FC = () => {
   const loadData = async (dateStr: string) => {
     setLoading(true);
     try {
-      const dateObj = new Date(dateStr + "T12:00:00");
+      const parts = dateStr.split('-');
+      const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
       const result = await fetchDowntimes(dateObj, dateObj);
       setDowntimes(result);
     } catch (e) {
@@ -138,7 +132,7 @@ export const DailyTimelineView: React.FC = () => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadData(selectedDay);
   }, [selectedDay]);
 
@@ -157,10 +151,11 @@ export const DailyTimelineView: React.FC = () => {
     }, {} as Record<string, DowntimeEvent[]>);
   }, [downtimes]);
 
-  const shifts = ['1.MAÑANA', '2.TARDE', '3.NOCHE', '4.NOCHE FIN'];
+  // Orden cronológico lógico para el carril
+  const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 overflow-visible">
+    <div className="space-y-6 animate-in fade-in duration-500 overflow-visible pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
             <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-100">
@@ -168,23 +163,23 @@ export const DailyTimelineView: React.FC = () => {
             </div>
             <div>
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">Cronograma de Operación</h2>
-                <p className="text-slate-500 text-sm flex items-center gap-2">
-                    Seleccione el día para ver la cronología de paros.
-                </p>
+                <p className="text-slate-500 text-sm">Visualización basada en hora real de inicio (Columna INICIO).</p>
             </div>
         </div>
 
-        {/* SELECTOR DE DÍA ÚNICO */}
         <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
             <button onClick={() => handleDayChange(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
                 <ChevronLeft size={20} />
             </button>
-            <input 
-                type="date" 
-                value={selectedDay}
-                onChange={(e) => setSelectedDay(e.target.value)}
-                className="bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-700 px-4 py-1"
-            />
+            <div className="relative flex items-center">
+                <Calendar size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
+                <input 
+                    type="date" 
+                    value={selectedDay}
+                    onChange={(e) => setSelectedDay(e.target.value)}
+                    className="bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-700 pl-9 pr-4 py-1"
+                />
+            </div>
             <button onClick={() => handleDayChange(1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
                 <ChevronRight size={20} />
             </button>
@@ -199,16 +194,16 @@ export const DailyTimelineView: React.FC = () => {
       ) : (
         <div className="space-y-4 overflow-visible">
           <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center gap-6 text-[11px] text-slate-500 shadow-sm">
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> OPERATIVO (UPTIME)</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> PARO REGISTRADO (DOWNTIME)</div>
-            <div className="ml-auto flex items-center gap-1.5 font-medium">
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> OPERATIVO</div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> PARO REGISTRADO</div>
+            <div className="ml-auto flex items-center gap-1.5 font-medium text-slate-400 italic">
                 <Info size={14} className="text-indigo-400" />
-                Los paros se clasifican automáticamente por hora de inicio.
+                Los paros se clasifican automáticamente según la hora reportada en la columna INICIO.
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 overflow-visible">
-            {shifts.map(s => (
+            {shiftsOrdered.map(s => (
               <TimelineBar key={s} shiftKey={s} events={grouped[s] || []} />
             ))}
           </div>
@@ -219,32 +214,32 @@ export const DailyTimelineView: React.FC = () => {
                     <Activity size={32} />
                 </div>
                 <h3 className="text-xl font-bold text-emerald-900 uppercase">Sin Novedades de Parada</h3>
-                <p className="text-emerald-700/70 max-w-sm mt-2 text-sm">Planta operando al 100% de disponibilidad teórica para el día seleccionado.</p>
+                <p className="text-emerald-700/70 max-w-sm mt-2 text-sm">Planta operando con normalidad teórica para el día seleccionado.</p>
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
                     <AlertTriangle size={18} className="text-amber-500" />
-                    <h3 className="font-bold text-slate-800">Eventos del Día ({selectedDay})</h3>
+                    <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Lista detallada de paros detectados</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-widest">
                             <tr>
-                                <th className="px-6 py-3">CARRIL VISUAL</th>
-                                <th className="px-6 py-3">HORA</th>
-                                <th className="px-6 py-3">HAC</th>
-                                <th className="px-6 py-3">MOTIVO SAP / CAUSA</th>
-                                <th className="px-6 py-3 text-right">MINUTOS</th>
+                                <th className="px-6 py-3">INICIO (REAL)</th>
+                                <th className="px-6 py-3">EQUIPO (HAC)</th>
+                                <th className="px-6 py-3">CARRIL ASIGNADO</th>
+                                <th className="px-6 py-3">MOTIVO</th>
+                                <th className="px-6 py-3 text-right">DURACIÓN (MIN)</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {downtimes.sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e, i) => (
                                 <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 text-[10px] font-black text-slate-400">{getVisualShift(e.startTime || '')}</td>
                                     <td className="px-6 py-4 font-mono font-bold text-indigo-600">{e.startTime}</td>
                                     <td className="px-6 py-4 font-bold text-slate-800">{e.hac}</td>
-                                    <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate">"{e.reason}"</td>
+                                    <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{getVisualShift(e.startTime || '')}</td>
+                                    <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">"{e.reason}"</td>
                                     <td className="px-6 py-4 text-right font-black text-red-600">{e.durationMinutes}</td>
                                 </tr>
                             ))}
