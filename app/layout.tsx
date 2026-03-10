@@ -22,6 +22,11 @@ export default function RootLayout({
       signUpUrl="/sign-up"
       afterSignInUrl="/"
       afterSignUpUrl="/"
+      appearance={{
+        elements: {
+          footer: "hidden", // Ocultar el footer a veces ayuda con problemas de redirección en iframes
+        }
+      }}
     >
       <html lang="es">
         <body className={`${inter.className} bg-slate-50 text-slate-900 antialiased`}>
