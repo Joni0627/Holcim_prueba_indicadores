@@ -54,13 +54,22 @@ export const SummaryView: React.FC = () => {
             fetchStocks(range.start, range.end)
         ]);
         
-        setDowntimes(downtimeResult.slice(0, 10));
+        // Ordenar paros de mayor a menor duración
+        const sortedDowntimes = [...downtimeResult].sort((a, b) => b.durationMinutes - a.durationMinutes);
+        setDowntimes(sortedDowntimes.slice(0, 10));
         setStockData(stockResult);
 
         if (prodResult) {
             setTotalBags(prodResult.totalBags);
             setTotalTn(prodResult.totalTn);
-            setShiftData(prodResult.byShift);
+            
+            // Convertir producción por turno a Tn (asumiendo 50kg/bolsa si no viene en Tn)
+            const shiftDataWithTn = prodResult.byShift.map(s => ({
+                ...s,
+                valueTn: s.value * 0.05 // 50kg = 0.05 Tn
+            }));
+            setShiftData(shiftDataWithTn);
+            
             setMachineData(prodResult.byMachine);
             setMachineProductData(prodResult.byMachineProduct || []);
             setDetailedMetrics(prodResult.details);
@@ -92,7 +101,7 @@ export const SummaryView: React.FC = () => {
     }).replace(/^\w/, (c) => c.toUpperCase());
   };
 
-  // Extraer productos para el desglose (Top 4)
+  // Extraer productos para el desglose (Top 4) - Convertido a Tn
   const productBreakdown = machineProductData.reduce((acc: any[], curr) => {
     Object.keys(curr).forEach(key => {
       if (key !== 'name') {
@@ -105,9 +114,25 @@ export const SummaryView: React.FC = () => {
       }
     });
     return acc;
-  }, []).sort((a, b) => b.value - a.value).slice(0, 4);
+  }, []).sort((a, b) => b.value - a.value).slice(0, 4).map(p => ({
+    ...p,
+    valueTn: p.value * 0.05 // Conversión a Tn
+  }));
 
-  const maxProductValue = Math.max(...productBreakdown.map(p => p.value), 1);
+  const maxProductValue = Math.max(...productBreakdown.map(p => p.valueTn), 1);
+
+  // Helper para obtener métricas promedio por turno
+  const getShiftMetrics = (shiftName: string) => {
+    const shiftMetrics = detailedMetrics.filter(m => m.shift === shiftName);
+    if (shiftMetrics.length === 0) return { disp: 0, rend: 0, oee: 0 };
+    
+    const count = shiftMetrics.length;
+    return {
+      disp: shiftMetrics.reduce((acc, m) => acc + m.availability, 0) / count,
+      rend: shiftMetrics.reduce((acc, m) => acc + m.performance, 0) / count,
+      oee: shiftMetrics.reduce((acc, m) => acc + m.oee, 0) / count
+    };
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
@@ -151,13 +176,13 @@ export const SummaryView: React.FC = () => {
                     {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
                         <div key={prod.name} className="space-y-1">
                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
-                                <span>{prod.name} xxx Tn</span>
-                                <span>{prod.value.toLocaleString()} u</span>
+                                <span>{prod.name}</span>
+                                <span>{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn</span>
                             </div>
                             <div className="h-2 bg-blue-900/50 rounded-full overflow-hidden">
                                 <div 
                                     className="h-full bg-red-500 rounded-full" 
-                                    style={{ width: `${(prod.value / maxProductValue) * 100}%` }}
+                                    style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
                                 />
                             </div>
                         </div>
@@ -195,7 +220,7 @@ export const SummaryView: React.FC = () => {
                         <Clock size={16} />
                     </div>
                     <div className="bg-slate-800 text-white p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                        {stockData?.items.slice(0, 4).map(item => (
+                        {stockData?.items.filter(i => i.isProduced).slice(0, 4).map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
                                 <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">TOTAL {item.product}</p>
                                 <p className="text-2xl font-black tracking-tighter">{item.quantity.toLocaleString()}</p>
@@ -246,35 +271,40 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-7 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[450px] flex flex-col">
                 <div className="flex items-center gap-2 mb-6">
                     <TrendingUp className="text-emerald-500" size={20} />
-                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Turno</h3>
+                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Turno (Tn)</h3>
                 </div>
                 <div className="flex-grow">
                     {shiftData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={shiftData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                            <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" stroke="#64748b" fontSize={11} fontWeight={700} />
                                 <YAxis stroke="#64748b" fontSize={11} />
                                 <Tooltip cursor={{fill: '#f8fafc'}} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={60}>
+                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={60}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} />
                                     ))}
                                     <LabelList 
-                                        dataKey="value" 
+                                        dataKey="valueTn" 
                                         position="top" 
                                         content={(props: any) => {
-                                            const { x, y, width, value } = props;
+                                            const { x, y, width, value, index } = props;
+                                            const shiftName = shiftData[index].name;
+                                            const metrics = getShiftMetrics(shiftName);
                                             return (
                                                 <g>
-                                                    <text x={x + width / 2} y={y - 10} fill="#475569" textAnchor="middle" fontSize={10} fontWeight="bold">
-                                                        Tn:
+                                                    <text x={x + width / 2} y={y - 5} fill="#1e293b" textAnchor="middle" fontSize={11} fontWeight="black">
+                                                        {value.toFixed(0)} Tn
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 22} fill="#475569" textAnchor="middle" fontSize={10} fontWeight="bold">
-                                                        Disp
+                                                    <text x={x + width / 2} y={y - 18} fill="#64748b" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                        OEE: {(metrics.oee * 100).toFixed(0)}%
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 34} fill="#475569" textAnchor="middle" fontSize={10} fontWeight="bold">
-                                                        Rend
+                                                    <text x={x + width / 2} y={y - 28} fill="#64748b" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                        Rend: {(metrics.rend * 100).toFixed(0)}%
+                                                    </text>
+                                                    <text x={x + width / 2} y={y - 38} fill="#64748b" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                        Disp: {(metrics.disp * 100).toFixed(0)}%
                                                     </text>
                                                 </g>
                                             );
@@ -292,7 +322,7 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[450px] flex flex-col">
                 <div className="flex items-center gap-2 mb-6">
                     <Activity className="text-blue-500" size={20} />
-                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
+                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora (Tn)</h3>
                 </div>
                 
                 {machineData.length > 0 ? (
@@ -307,7 +337,8 @@ export const SummaryView: React.FC = () => {
                                         innerRadius={40}
                                         outerRadius={70}
                                         paddingAngle={5}
-                                        dataKey="value"
+                                        dataKey="valueTn"
+                                        label={({ name, valueTn }) => `${name}: ${valueTn.toFixed(0)} Tn`}
                                     >
                                         {machineData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -323,8 +354,7 @@ export const SummaryView: React.FC = () => {
                                 <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-tighter">
                                     <tr>
                                         <th className="px-2 py-2 text-left">Máquina</th>
-                                        <th className="px-2 py-2 text-right">Bolsas</th>
-                                        <th className="px-2 py-2 text-right">Tn</th>
+                                        <th className="px-2 py-2 text-right">Toneladas</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -335,10 +365,7 @@ export const SummaryView: React.FC = () => {
                                                 <span className="font-bold text-slate-700">{m.name}</span>
                                             </td>
                                             <td className="px-2 py-2 text-right font-mono font-bold text-slate-800">
-                                                {m.value.toLocaleString()}
-                                            </td>
-                                            <td className="px-2 py-2 text-right font-mono text-slate-500">
-                                                {m.valueTn.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                                                {m.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
                                             </td>
                                         </tr>
                                     ))}
