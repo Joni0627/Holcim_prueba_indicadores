@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
-import { fetchDowntimes, fetchProductionStats } from '../../services/sheetService';
-import { DowntimeEvent, ShiftMetric } from '../../types';
+import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList } from 'recharts';
+import { fetchDowntimes, fetchProductionStats, fetchStocks } from '../../services/sheetService';
+import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
 import { DateFilter } from '../DateFilter';
 
 // Helper for hh:mm format
@@ -26,42 +26,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             Duración: <span className="font-bold text-slate-900">{formatMinutes(data.durationMinutes)}</span> 
             <span className="text-xs text-slate-400 ml-1">({data.durationMinutes} min)</span>
           </p>
-          <p className="text-xs text-slate-400 mt-1 capitalize">{data.sapCause}</p>
         </div>
       );
-    }
-    return null;
-};
-
-// Tooltip para el gráfico apilado de producción
-const StackedProdTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-        const total = payload.reduce((acc: number, curr: any) => acc + (curr.value || 0), 0);
-        
-        return (
-            <div className="bg-white p-3 border border-slate-100 shadow-lg rounded-lg z-50">
-                <p className="font-bold text-slate-800 text-sm mb-2 border-b border-slate-100 pb-1">{label}</p>
-                <div className="space-y-1">
-                    {payload.map((entry: any, idx: number) => (
-                         entry.value > 0 && (
-                            <div key={idx} className="flex justify-between items-center gap-4 text-xs">
-                                <span className="flex items-center gap-1.5 text-slate-600">
-                                    <span className="w-2 h-2 rounded-full" style={{backgroundColor: entry.color}}></span>
-                                    {entry.name}
-                                </span>
-                                <span className="font-mono font-medium text-slate-800">
-                                    {entry.value.toLocaleString()} u
-                                </span>
-                            </div>
-                         )
-                    ))}
-                </div>
-                <div className="mt-2 pt-1 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-900">
-                    <span>Total</span>
-                    <span>{total.toLocaleString()} u</span>
-                </div>
-            </div>
-        );
     }
     return null;
 };
@@ -72,23 +38,25 @@ export const SummaryView: React.FC = () => {
   const [machineData, setMachineData] = useState<any[]>([]);
   const [machineProductData, setMachineProductData] = useState<any[]>([]);
   const [detailedMetrics, setDetailedMetrics] = useState<ShiftMetric[]>([]);
+  const [stockData, setStockData] = useState<StockStats | null>(null);
   const [totalBags, setTotalBags] = useState(0);
   const [totalTn, setTotalTn] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   const handleFilterChange = async (range: { start: Date, end: Date }) => {
     setLoading(true);
+    setSelectedDate(range.start);
     try {
-        // Fetch Parallel
-        const [downtimeResult, prodResult] = await Promise.all([
+        const [downtimeResult, prodResult, stockResult] = await Promise.all([
             fetchDowntimes(range.start, range.end),
-            fetchProductionStats(range.start, range.end)
+            fetchProductionStats(range.start, range.end),
+            fetchStocks(range.start, range.end)
         ]);
         
-        // Set Downtimes (Top 10)
         setDowntimes(downtimeResult.slice(0, 10));
+        setStockData(stockResult);
 
-        // Set Production Data
         if (prodResult) {
             setTotalBags(prodResult.totalBags);
             setTotalTn(prodResult.totalTn);
@@ -112,314 +80,278 @@ export const SummaryView: React.FC = () => {
     }
   };
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
-  // Colores para productos en barra apilada
-  const PROD_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6'];
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+  const SHIFT_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1'];
 
-  // Obtener claves únicas de productos para el gráfico apilado
-  const productKeys = Array.from(new Set(
-      machineProductData.flatMap(d => Object.keys(d).filter(k => k !== 'name'))
-  ));
-
-  // Helper to colorize OEE values
-  const getOEEColor = (val: number) => {
-    if (val >= 0.85) return 'text-emerald-600 bg-emerald-50';
-    if (val >= 0.65) return 'text-amber-600 bg-amber-50';
-    return 'text-red-600 bg-red-50';
+  // Formatear fecha como en la imagen: "Miércoles 04 de Marzo"
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('es-ES', { 
+      weekday: 'long', 
+      day: '2-digit', 
+      month: 'long' 
+    }).replace(/^\w/, (c) => c.toUpperCase());
   };
 
-  // Group metrics by Machine Name for the table
-  const groupedMetrics = detailedMetrics.reduce((acc, curr) => {
-      if (!acc[curr.machineName]) acc[curr.machineName] = [];
-      acc[curr.machineName].push(curr);
-      return acc;
-  }, {} as Record<string, ShiftMetric[]>);
+  // Extraer productos para el desglose (Top 4)
+  const productBreakdown = machineProductData.reduce((acc: any[], curr) => {
+    Object.keys(curr).forEach(key => {
+      if (key !== 'name') {
+        const existing = acc.find(p => p.name === key);
+        if (existing) {
+          existing.value += (curr[key] as number);
+        } else {
+          acc.push({ name: key, value: curr[key] as number });
+        }
+      }
+    });
+    return acc;
+  }, []).sort((a, b) => b.value - a.value).slice(0, 4);
+
+  const maxProductValue = Math.max(...productBreakdown.map(p => p.value), 1);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-            <h1 className="text-3xl font-bold text-slate-900">Dashboard General</h1>
-            <p className="text-slate-500 mt-1">Resumen ejecutivo y métricas clave en tiempo real.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-3">
+            <Calendar className="text-slate-400" size={24} />
+            <h1 className="text-2xl font-bold text-slate-800">{formatDate(selectedDate)}</h1>
         </div>
-        <div className="flex flex-col items-end gap-2">
-           <DateFilter onFilterChange={handleFilterChange} />
-        </div>
+        <DateFilter onFilterChange={handleFilterChange} />
       </div>
 
       {loading ? (
-           <div className="h-64 flex flex-col items-center justify-center text-slate-400">
-              <Loader2 className="animate-spin mb-2" size={32} />
-              <p>Actualizando indicadores...</p>
+           <div className="h-96 flex flex-col items-center justify-center text-slate-400">
+              <Loader2 className="animate-spin mb-2" size={48} />
+              <p className="text-lg font-medium">Sincronizando con Planta...</p>
           </div>
       ) : (
-        <>
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-indigo-600 text-white p-6 rounded-xl shadow-lg shadow-indigo-200 flex items-center gap-6">
-                    <div className="p-4 bg-white/20 rounded-xl">
-                        <PackageCheck size={40} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* LEFT COLUMN (KPIs) - 3/12 */}
+            <div className="lg:col-span-3 space-y-6">
+                
+                {/* Producción Total Card */}
+                <div className="bg-blue-600 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <PackageCheck size={120} />
                     </div>
-                    <div>
-                        <p className="text-indigo-100 font-medium uppercase tracking-wider text-sm">Bolsas Totales</p>
-                        <h2 className="text-5xl font-bold mt-1">{totalBags.toLocaleString()}</h2>
+                    <p className="text-blue-100 font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
+                    <div className="flex items-baseline gap-2">
+                        <h2 className="text-5xl font-black tracking-tighter">
+                            {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </h2>
+                        <span className="text-2xl font-bold text-blue-200">Tn</span>
                     </div>
                 </div>
 
-                <div className="bg-white text-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-6">
-                    <div className="p-4 bg-emerald-50 text-emerald-600 rounded-xl">
-                        <Weight size={40} />
-                    </div>
-                    <div>
-                        <p className="text-slate-500 font-medium uppercase tracking-wider text-sm">Toneladas Totales</p>
-                        <h2 className="text-5xl font-bold mt-1">{totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-2xl font-normal text-slate-400">Tn</span></h2>
+                {/* Desglose por Producto */}
+                <div className="bg-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4">
+                    {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
+                        <div key={prod.name} className="space-y-1">
+                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
+                                <span>{prod.name} xxx Tn</span>
+                                <span>{prod.value.toLocaleString()} u</span>
+                            </div>
+                            <div className="h-2 bg-blue-900/50 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-red-500 rounded-full" 
+                                    style={{ width: `${(prod.value / maxProductValue) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    )) : (
+                        <p className="text-xs text-blue-300 italic">Cargando desglose...</p>
+                    )}
+                </div>
+
+                {/* Disp % / Rend % Card */}
+                <div className="bg-blue-600 text-white p-6 rounded-lg shadow-lg">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="text-xs font-bold uppercase text-blue-200">Disp %</p>
+                            <p className="text-2xl font-black">
+                                {(detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold uppercase text-blue-200">Rend %</p>
+                            <p className="text-2xl font-black">
+                                {(detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Production Analysis Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* RIGHT COLUMN (Stock & Downtime) - 9/12 */}
+            <div className="lg:col-span-9 space-y-6">
                 
-                {/* Production by Shift */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[400px]">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <Timer className="text-indigo-500" size={20} />
-                            Producción por Turno
-                        </h3>
+                {/* Stock Section */}
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-green-500 text-white px-6 py-2 flex justify-between items-center">
+                        <h3 className="font-black uppercase tracking-widest text-sm">Stock a las 06:00 hs.</h3>
+                        <Clock size={16} />
                     </div>
-                    <div className="flex-grow">
-                        {shiftData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={shiftData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                    <XAxis dataKey="name" stroke="#64748b" fontSize={13} fontWeight={500} />
-                                    <YAxis stroke="#64748b" />
-                                    <Tooltip 
-                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        cursor={{fill: '#f1f5f9'}}
-                                    />
-                                    <Bar dataKey="value" name="Unidades" fill="#6366f1" radius={[6, 6, 0, 0]}>
-                                        {shiftData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                             <div className="h-full flex items-center justify-center text-slate-400">Sin datos de producción</div>
+                    <div className="bg-slate-800 text-white p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        {stockData?.items.slice(0, 4).map(item => (
+                            <div key={item.id} className="border-r border-slate-700 last:border-0">
+                                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">TOTAL {item.product}</p>
+                                <p className="text-2xl font-black tracking-tighter">{item.quantity.toLocaleString()}</p>
+                            </div>
+                        )) || (
+                            <div className="col-span-4 py-2 text-slate-500 text-xs italic">Datos de stock no disponibles</div>
                         )}
                     </div>
                 </div>
 
-                {/* Production by Palletizer (Split Layout) */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[400px]">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <TrendingUp className="text-emerald-500" size={20} />
-                            Producción por Paletizadora
-                        </h3>
+                {/* Downtime Horizontal Chart */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[400px] flex flex-col">
+                    <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
+                        <AlertTriangle className="text-red-500" size={18} />
+                        <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Análisis de Paradas Principales</h3>
                     </div>
-                    
-                    {machineData.length > 0 ? (
-                        <div className="flex flex-col md:flex-row h-full gap-4">
-                            {/* Left: Chart */}
-                            <div className="flex-1 min-h-[250px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={machineData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {machineData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                            
-                            {/* Right: Summary Table */}
-                            <div className="flex-1 flex flex-col justify-center">
-                                <div className="overflow-hidden rounded-lg border border-slate-100">
-                                    <table className="w-full text-sm">
-                                        <thead className="bg-slate-50 text-slate-500 font-semibold">
-                                            <tr>
-                                                <th className="px-3 py-2 text-left">Máquina</th>
-                                                <th className="px-3 py-2 text-right">Bolsas</th>
-                                                <th className="px-3 py-2 text-right">Tn</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {machineData.map((m, i) => (
-                                                <tr key={m.name}>
-                                                    <td className="px-3 py-2 flex items-center gap-2">
-                                                        <span className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i % COLORS.length]}}></span>
-                                                        <span className="font-medium text-slate-700">{m.name}</span>
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right font-bold text-slate-800">
-                                                        {m.value.toLocaleString()}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-right text-slate-500">
-                                                        {m.valueTn.toLocaleString(undefined, {maximumFractionDigits: 0})}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                         <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
-                    )}
+                    <div className="flex-grow">
+                        {downtimes.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={downtimes}
+                                    layout="vertical"
+                                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                    <XAxis type="number" hide />
+                                    <YAxis
+                                        type="category"
+                                        dataKey="reason"
+                                        stroke="#64748b"
+                                        fontSize={10}
+                                        width={180}
+                                        tick={{ fill: '#475569', fontWeight: 600 }}
+                                        tickFormatter={(val) => val.length > 25 ? `${val.substring(0,25)}...` : val}
+                                    />
+                                    <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
+                                    <Bar dataKey="durationMinutes" fill="#f87171" radius={[0, 4, 4, 0]} barSize={15} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-slate-400 italic text-sm">Sin registros de paros</div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* Stacked Bar Chart (Machine vs Product) */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[450px] flex flex-col">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <BarChart2 className="text-purple-500" size={20} />
-                        Detalle de Productos por Paletizadora
-                    </h3>
+            {/* BOTTOM ROW - Shift & Palletizer */}
+            <div className="lg:col-span-7 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[450px] flex flex-col">
+                <div className="flex items-center gap-2 mb-6">
+                    <TrendingUp className="text-emerald-500" size={20} />
+                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Turno</h3>
                 </div>
-                {machineProductData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={machineProductData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="name" stroke="#64748b" fontSize={13} fontWeight={500} />
-                            <YAxis stroke="#64748b" />
-                            <Tooltip content={<StackedProdTooltip />} cursor={{fill: '#f8fafc'}} />
-                            <Legend wrapperStyle={{paddingTop: '20px'}} />
-                            {productKeys.map((key, index) => (
-                                <Bar 
-                                    key={key} 
-                                    dataKey={key} 
-                                    name={key} 
-                                    stackId="a" 
-                                    fill={PROD_COLORS[index % PROD_COLORS.length]} 
-                                />
-                            ))}
-                        </BarChart>
-                    </ResponsiveContainer>
-                ) : (
-                    <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de productos</div>
-                )}
-            </div>
-
-            {/* Top 10 Downtime Ranking */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
-                        <div className="p-2 bg-red-50 rounded-lg text-red-600">
-                            <AlertTriangle size={20} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-800">Top 10 Paros (Por Duración)</h3>
-                            <p className="text-sm text-slate-500">Ranking por duración mostrando Motivo y Equipo (HAC).</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="h-[400px]">
-                    {downtimes.length > 0 ? (
+                <div className="flex-grow">
+                    {shiftData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                                data={downtimes}
-                                layout="vertical"
-                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                                <XAxis type="number" stroke="#64748b" fontSize={12} tickFormatter={formatMinutes} />
-                                <YAxis
-                                    type="category"
-                                    dataKey="reason"
-                                    stroke="#475569"
-                                    fontSize={11}
-                                    width={220}
-                                    tick={{ fill: '#334155', fontWeight: 500 }}
-                                    tickFormatter={(val, index) => {
-                                        const item = downtimes[index];
-                                        const hacShort = item?.hac ? ` - [${item.hac}]` : '';
-                                        const fullLabel = `${val}${hacShort}`;
-                                        return fullLabel.length > 35 ? `${fullLabel.substring(0,35)}...` : fullLabel;
-                                    }}
-                                />
-                                <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
-                                <Bar dataKey="durationMinutes" name="Duración" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20}>
-                                    {downtimes.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={index < 3 ? '#ef4444' : '#f87171'} />
+                            <BarChart data={shiftData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" stroke="#64748b" fontSize={11} fontWeight={700} />
+                                <YAxis stroke="#64748b" fontSize={11} />
+                                <Tooltip cursor={{fill: '#f8fafc'}} />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={60}>
+                                    {shiftData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} />
                                     ))}
+                                    <LabelList 
+                                        dataKey="value" 
+                                        position="top" 
+                                        content={(props: any) => {
+                                            const { x, y, width, value } = props;
+                                            return (
+                                                <g>
+                                                    <text x={x + width / 2} y={y - 10} fill="#475569" textAnchor="middle" fontSize={10} fontWeight="bold">
+                                                        Tn:
+                                                    </text>
+                                                    <text x={x + width / 2} y={y - 22} fill="#475569" textAnchor="middle" fontSize={10} fontWeight="bold">
+                                                        Disp
+                                                    </text>
+                                                    <text x={x + width / 2} y={y - 34} fill="#475569" textAnchor="middle" fontSize={10} fontWeight="bold">
+                                                        Rend
+                                                    </text>
+                                                </g>
+                                            );
+                                        }}
+                                    />
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-slate-400">
-                            No hay registros de paros para la fecha seleccionada.
-                        </div>
+                        <div className="h-full flex items-center justify-center text-slate-400">Sin datos de turnos</div>
                     )}
                 </div>
             </div>
 
-            {/* Detailed Metrics Table */}
-            <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                    <TableProperties className="text-slate-600" size={24} />
-                    <h3 className="text-xl font-bold text-slate-800">Detalle de Eficiencia por Turno</h3>
+            <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[450px] flex flex-col">
+                <div className="flex items-center gap-2 mb-6">
+                    <Activity className="text-blue-500" size={20} />
+                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
                 </div>
                 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                    {Object.entries(groupedMetrics).map(([machineName, metrics]: [string, ShiftMetric[]]) => (
-                    <div key={machineName} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
-                            <h4 className="font-bold text-slate-800">{machineName}</h4>
+                {machineData.length > 0 ? (
+                    <div className="flex flex-col h-full">
+                        <div className="h-1/2">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={machineData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={40}
+                                        outerRadius={70}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {machineData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
                         </div>
-                        {/* Eliminado overflow-x-auto para evitar scroll horizontal, ajuste en padding */}
-                        <div className="w-full">
-                            <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50/50">
-                                <tr>
-                                <th className="px-2 py-3 font-semibold">Turno</th>
-                                <th className="px-2 py-3 font-semibold text-center">Disp %</th>
-                                <th className="px-2 py-3 font-semibold text-center">Rend %</th>
-                                <th className="px-2 py-3 font-semibold text-center">OEE</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {metrics.map((row) => (
-                                <tr key={row.shift} className="hover:bg-slate-50">
-                                    <td className="px-2 py-3 font-medium text-slate-700">{row.shift}</td>
-                                    <td className="px-2 py-3 text-center text-slate-600">{(row.availability * 100).toFixed(0)}%</td>
-                                    <td className="px-2 py-3 text-center text-slate-600">{(row.performance * 100).toFixed(0)}%</td>
-                                    <td className="px-2 py-3 text-center">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold ${getOEEColor(row.oee)}`}>
-                                        {(row.oee * 100).toFixed(0)}%
-                                    </span>
-                                    </td>
-                                </tr>
-                                ))}
-                            </tbody>
+                        
+                        <div className="h-1/2 overflow-auto mt-4">
+                            <table className="w-full text-xs">
+                                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-tighter">
+                                    <tr>
+                                        <th className="px-2 py-2 text-left">Máquina</th>
+                                        <th className="px-2 py-2 text-right">Bolsas</th>
+                                        <th className="px-2 py-2 text-right">Tn</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {machineData.map((m, i) => (
+                                        <tr key={m.name} className="hover:bg-slate-50">
+                                            <td className="px-2 py-2 flex items-center gap-2">
+                                                <span className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i % COLORS.length]}}></span>
+                                                <span className="font-bold text-slate-700">{m.name}</span>
+                                            </td>
+                                            <td className="px-2 py-2 text-right font-mono font-bold text-slate-800">
+                                                {m.value.toLocaleString()}
+                                            </td>
+                                            <td className="px-2 py-2 text-right font-mono text-slate-500">
+                                                {m.valueTn.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
                             </table>
                         </div>
                     </div>
-                    ))}
-                    {Object.keys(groupedMetrics).length === 0 && (
-                        <div className="col-span-3 text-center py-8 text-slate-400 bg-white rounded-xl border border-slate-200">
-                            No hay detalles de eficiencia disponibles para este rango.
-                        </div>
-                    )}
-                </div>
+                ) : (
+                    <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
+                )}
             </div>
-        </>
+
+        </div>
       )}
 
     </div>
