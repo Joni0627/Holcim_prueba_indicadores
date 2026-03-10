@@ -18,13 +18,14 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider 
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
       afterSignInUrl="/"
       afterSignUpUrl="/"
       appearance={{
         elements: {
-          footer: "hidden", // Ocultar el footer a veces ayuda con problemas de redirección en iframes
+          footer: "hidden",
         }
       }}
     >
