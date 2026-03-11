@@ -1,52 +1,54 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Loader2, Factory, Layers, Container, BoxSelect } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { DateFilter } from '../DateFilter';
 import { fetchStocks } from '../../services/sheetService';
 import { StockStats } from '../../types';
 
 export const StocksView: React.FC = () => {
-  const [data, setData] = useState<StockStats | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
+    start: new Date(),
+    end: new Date()
+  });
 
-  const handleFilterChange = async (range: { start: Date, end: Date }) => {
-      setLoading(true);
-      try {
-          const result = await fetchStocks(range.start, range.end);
-          setData(result);
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoading(false);
-      }
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['stocks', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchStocks(dateRange.start, dateRange.end),
+  });
+
+  const handleFilterChange = (range: { start: Date, end: Date }) => {
+    setDateRange(range);
   };
 
-  // Mantener orden alfabético para las burbujas principales para consistencia visual
-  const producedItems = data?.items.filter(i => i.isProduced).sort((a,b) => a.product.localeCompare(b.product)) || [];
-  
-  const allOtherItems = data?.items.filter(i => !i.isProduced) || [];
-  
-  // Logic to separate categories and SORT DESCENDING
-  
-  // 1. Pallets - Sort by Quantity DESC
-  const pallets = allOtherItems.filter(i => 
-      i.product.toUpperCase().includes('TARIMA') || 
-      i.product.toUpperCase().includes('PALLET')
-  ).sort((a, b) => b.quantity - a.quantity);
-  
-  // 2. Packaging - Sort by Quantity DESC
-  const packaging = allOtherItems.filter(i => 
-      i.product.toUpperCase().includes('ENVASE') || 
-      i.product.toUpperCase().includes('SACO') || 
-      i.product.toUpperCase().includes('BOLSA') ||
-      i.product.toUpperCase().includes('BIG BAG') ||
-      i.product.toUpperCase().includes('FILM')
-  ).sort((a, b) => b.quantity - a.quantity);
-  
-  // 3. Supplies - Sort by Tonnage DESC (since we only show TN for these)
-  const supplies = allOtherItems.filter(i => 
-      !pallets.includes(i) && !packaging.includes(i)
-  ).sort((a, b) => b.tonnage - a.tonnage);
+  // Memoize processed data for performance
+  const processedData = useMemo(() => {
+    if (!data) return { producedItems: [], pallets: [], packaging: [], supplies: [] };
+
+    const producedItems = data.items.filter(i => i.isProduced).sort((a,b) => a.product.localeCompare(b.product));
+    const allOtherItems = data.items.filter(i => !i.isProduced);
+    
+    const pallets = allOtherItems.filter(i => 
+        i.product.toUpperCase().includes('TARIMA') || 
+        i.product.toUpperCase().includes('PALLET')
+    ).sort((a, b) => b.quantity - a.quantity);
+    
+    const packaging = allOtherItems.filter(i => 
+        i.product.toUpperCase().includes('ENVASE') || 
+        i.product.toUpperCase().includes('SACO') || 
+        i.product.toUpperCase().includes('BOLSA') ||
+        i.product.toUpperCase().includes('BIG BAG') ||
+        i.product.toUpperCase().includes('FILM')
+    ).sort((a, b) => b.quantity - a.quantity);
+    
+    const supplies = allOtherItems.filter(i => 
+        !pallets.includes(i) && !packaging.includes(i)
+    ).sort((a, b) => b.tonnage - a.tonnage);
+
+    return { producedItems, pallets, packaging, supplies };
+  }, [data]);
+
+  const { producedItems, pallets, packaging, supplies } = processedData;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

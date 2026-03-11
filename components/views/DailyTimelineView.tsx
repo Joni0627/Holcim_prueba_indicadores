@@ -1,6 +1,7 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar, Box } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent } from '../../types';
 
@@ -122,27 +123,16 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
 };
 
 export const DailyTimelineView: React.FC = () => {
-  const [downtimes, setDowntimes] = useState<DowntimeEvent[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const loadData = async (dateStr: string) => {
-    setLoading(true);
-    try {
-      const parts = dateStr.split('-');
-      const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
-      const result = await fetchDowntimes(dateObj, dateObj);
-      setDowntimes(result);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData(selectedDay);
-  }, [selectedDay]);
+  const { data: downtimes = [], isLoading: loading } = useQuery({
+    queryKey: ['downtimes', selectedDay],
+    queryFn: async () => {
+        const parts = selectedDay.split('-');
+        const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+        return fetchDowntimes(dateObj, dateObj);
+    },
+  });
 
   const handleDayChange = (offset: number) => {
     const d = new Date(selectedDay + "T12:00:00");
@@ -279,7 +269,7 @@ export const DailyTimelineView: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {downtimes.sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e, i) => (
+                            {[...downtimes].sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e, i) => (
                                 <tr key={i} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4 font-mono font-bold text-indigo-600">{e.startTime || '00:00'}</td>
                                     <td className="px-6 py-4 font-black text-slate-800 uppercase text-[11px]">{e.machineId}</td>

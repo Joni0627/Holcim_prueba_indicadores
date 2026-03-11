@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 import { fetchDowntimes, fetchProductionStats, fetchStocks } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
 import { DateFilter } from '../DateFilter';
@@ -33,60 +34,31 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export const SummaryView: React.FC = () => {
-  const [downtimes, setDowntimes] = useState<DowntimeEvent[]>([]);
-  const [shiftData, setShiftData] = useState<any[]>([]);
-  const [machineData, setMachineData] = useState<any[]>([]);
-  const [machineProductData, setMachineProductData] = useState<any[]>([]);
-  const [detailedMetrics, setDetailedMetrics] = useState<ShiftMetric[]>([]);
-  const [stockData, setStockData] = useState<StockStats | null>(null);
-  const [totalBags, setTotalBags] = useState(0);
-  const [totalTn, setTotalTn] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  const handleFilterChange = async (range: { start: Date, end: Date }) => {
-    setLoading(true);
-    setSelectedDate(range.start);
-    try {
-        const [downtimeResult, prodResult, stockResult] = await Promise.all([
-            fetchDowntimes(range.start, range.end),
-            fetchProductionStats(range.start, range.end),
-            fetchStocks(range.start, range.end)
-        ]);
-        
-        // Ordenar paros de mayor a menor duración
-        const sortedDowntimes = [...downtimeResult].sort((a, b) => b.durationMinutes - a.durationMinutes);
-        setDowntimes(sortedDowntimes.slice(0, 10));
-        setStockData(stockResult);
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
+    start: new Date(),
+    end: new Date()
+  });
 
-        if (prodResult) {
-            setTotalBags(prodResult.totalBags);
-            setTotalTn(prodResult.totalTn);
-            
-            // Convertir producción por turno a Tn (asumiendo 50kg/bolsa si no viene en Tn)
-            const shiftDataWithTn = prodResult.byShift.map(s => ({
-                ...s,
-                valueTn: s.value * 0.05 // 50kg = 0.05 Tn
-            }));
-            setShiftData(shiftDataWithTn);
-            
-            setMachineData(prodResult.byMachine);
-            setMachineProductData(prodResult.byMachineProduct || []);
-            setDetailedMetrics(prodResult.details);
-        } else {
-             setTotalBags(0);
-             setTotalTn(0);
-             setShiftData([]);
-             setMachineData([]);
-             setMachineProductData([]);
-             setDetailedMetrics([]);
-        }
+  // Queries with React Query for caching and optimization
+  const { data: downtimeResult, isLoading: loadingDowntimes } = useQuery({
+    queryKey: ['downtimes', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchDowntimes(dateRange.start, dateRange.end),
+  });
 
-    } catch (e) {
-        console.error("Error loading summary data", e);
-    } finally {
-        setLoading(false);
-    }
+  const { data: prodResult, isLoading: loadingProd } = useQuery({
+    queryKey: ['production', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchProductionStats(dateRange.start, dateRange.end),
+  });
+
+  const { data: stockResult, isLoading: loadingStocks } = useQuery({
+    queryKey: ['stocks', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchStocks(dateRange.start, dateRange.end),
+  });
+
+  const isLoading = loadingDowntimes || loadingProd || loadingStocks;
+
+  const handleFilterChange = (range: { start: Date, end: Date }) => {
+    setDateRange(range);
   };
 
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
@@ -101,25 +73,48 @@ export const SummaryView: React.FC = () => {
     }).replace(/^\w/, (c) => c.toUpperCase());
   };
 
-  // Extraer productos para el desglose (Top 4) - Convertido a Tn
-  const productBreakdown = machineProductData.reduce((acc: any[], curr) => {
-    Object.keys(curr).forEach(key => {
-      if (key !== 'name') {
-        const existing = acc.find(p => p.name === key);
-        if (existing) {
-          existing.value += (curr[key] as number);
-        } else {
-          acc.push({ name: key, value: curr[key] as number });
-        }
-      }
-    });
-    return acc;
-  }, []).sort((a, b) => b.value - a.value).slice(0, 4).map(p => ({
-    ...p,
-    valueTn: p.value * 0.05 // Conversión a Tn
-  }));
+  // Data processing using useMemo for performance
+  const downtimes = useMemo(() => {
+    if (!downtimeResult) return [];
+    return [...downtimeResult]
+      .sort((a, b) => b.durationMinutes - a.durationMinutes)
+      .slice(0, 10);
+  }, [downtimeResult]);
 
-  const maxProductValue = Math.max(...productBreakdown.map(p => p.valueTn), 1);
+  const shiftData = useMemo(() => {
+    if (!prodResult?.byShift) return [];
+    return prodResult.byShift.map(s => ({
+        ...s,
+        valueTn: s.value * 0.05 // 50kg = 0.05 Tn
+    }));
+  }, [prodResult]);
+
+  const productBreakdown = useMemo(() => {
+    if (!prodResult?.byMachineProduct) return [];
+    const breakdown = prodResult.byMachineProduct.reduce((acc: any[], curr) => {
+      Object.keys(curr).forEach(key => {
+        if (key !== 'name') {
+          const existing = acc.find(p => p.name === key);
+          if (existing) {
+            existing.value += (curr[key] as number);
+          } else {
+            acc.push({ name: key, value: curr[key] as number });
+          }
+        }
+      });
+      return acc;
+    }, []).sort((a, b) => b.value - a.value).slice(0, 4).map(p => ({
+      ...p,
+      valueTn: p.value * 0.05 // Conversión a Tn
+    }));
+    return breakdown;
+  }, [prodResult]);
+
+  const maxProductValue = useMemo(() => 
+    Math.max(...productBreakdown.map(p => p.valueTn), 1), 
+  [productBreakdown]);
+
+  const detailedMetrics = prodResult?.details || [];
 
   // Helper para obtener métricas promedio por turno
   const getShiftMetrics = (shiftName: string) => {
@@ -141,12 +136,12 @@ export const SummaryView: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
         <div className="flex items-center gap-3">
             <Calendar className="text-slate-400" size={24} />
-            <h1 className="text-2xl font-bold text-slate-800">{formatDate(selectedDate)}</h1>
+            <h1 className="text-2xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
         </div>
         <DateFilter onFilterChange={handleFilterChange} />
       </div>
 
-      {loading ? (
+      {isLoading ? (
            <div className="h-96 flex flex-col items-center justify-center text-slate-400">
               <Loader2 className="animate-spin mb-2" size={48} />
               <p className="text-lg font-medium">Sincronizando con Planta...</p>
@@ -165,7 +160,7 @@ export const SummaryView: React.FC = () => {
                     <p className="text-blue-100 font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
                     <div className="flex items-baseline gap-2">
                         <h2 className="text-5xl font-black tracking-tighter">
-                            {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
                         <span className="text-2xl font-bold text-blue-200">Tn</span>
                     </div>
@@ -187,7 +182,7 @@ export const SummaryView: React.FC = () => {
                             </div>
                         </div>
                     )) : (
-                        <p className="text-xs text-blue-300 italic">Cargando desglose...</p>
+                        <p className="text-xs text-blue-300 italic">Sin datos de productos</p>
                     )}
                 </div>
 
@@ -220,7 +215,7 @@ export const SummaryView: React.FC = () => {
                         <Clock size={16} />
                     </div>
                     <div className="bg-slate-800 text-white p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                        {stockData?.items.filter(i => i.isProduced).slice(0, 4).map(item => (
+                        {stockResult?.items.filter(i => i.isProduced).slice(0, 4).map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
                                 <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">TOTAL {item.product}</p>
                                 <p className="text-2xl font-black tracking-tighter">{item.quantity.toLocaleString()}</p>
@@ -325,13 +320,13 @@ export const SummaryView: React.FC = () => {
                     <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora (Tn)</h3>
                 </div>
                 
-                {machineData.length > 0 ? (
+                {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
                     <div className="flex flex-col h-full">
                         <div className="h-1/2">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
-                                        data={machineData}
+                                        data={prodResult.byMachine}
                                         cx="50%"
                                         cy="50%"
                                         innerRadius={40}
@@ -340,7 +335,7 @@ export const SummaryView: React.FC = () => {
                                         dataKey="valueTn"
                                         label={({ name, valueTn }) => `${name}: ${valueTn.toFixed(0)} Tn`}
                                     >
-                                        {machineData.map((entry, index) => (
+                                        {prodResult.byMachine.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
@@ -358,7 +353,7 @@ export const SummaryView: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {machineData.map((m, i) => (
+                                    {prodResult.byMachine.map((m, i) => (
                                         <tr key={m.name} className="hover:bg-slate-50">
                                             <td className="px-2 py-2 flex items-center gap-2">
                                                 <span className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i % COLORS.length]}}></span>

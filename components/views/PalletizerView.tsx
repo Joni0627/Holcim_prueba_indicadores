@@ -1,81 +1,78 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Cell, PieChart, Pie, ResponsiveContainer, Tooltip } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 import { DateFilter } from '../DateFilter';
 import { Zap, Activity, Gauge, Loader2, AlertCircle } from 'lucide-react';
 import { fetchProductionStats } from '../../services/sheetService';
 import { ShiftMetric } from '../../types';
 
 export const PalletizerView: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [machineMetrics, setMachineMetrics] = useState<any[]>([]);
-  const [globalMetrics, setGlobalMetrics] = useState({ availability: 0, performance: 0, oee: 0 });
-  const [hasData, setHasData] = useState(false);
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
+    start: new Date(),
+    end: new Date()
+  });
 
-  const handleFilterChange = async (range: { start: Date, end: Date }) => {
-      setLoading(true);
-      try {
-          const result = await fetchProductionStats(range.start, range.end);
-          
-          if (result && result.details && result.details.length > 0) {
-              processMetrics(result.details);
-              setHasData(true);
-          } else {
-              setMachineMetrics([]);
-              setGlobalMetrics({ availability: 0, performance: 0, oee: 0 });
-              setHasData(false);
-          }
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoading(false);
-      }
+  const { data: productionStats, isLoading: loading } = useQuery({
+    queryKey: ['production', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchProductionStats(dateRange.start, dateRange.end),
+  });
+
+  const handleFilterChange = (range: { start: Date, end: Date }) => {
+      setDateRange(range);
   };
 
-  const processMetrics = (details: ShiftMetric[]) => {
-      // 1. Agrupar por Máquina (ignorando turnos para sacar el promedio del periodo)
-      const grouped = details.reduce((acc, curr) => {
-          if (!acc[curr.machineName]) {
-              acc[curr.machineName] = {
-                  name: curr.machineName,
-                  availSum: 0,
-                  perfSum: 0,
-                  oeeSum: 0,
-                  count: 0
-              };
-          }
-          acc[curr.machineName].availSum += curr.availability;
-          acc[curr.machineName].perfSum += curr.performance;
-          acc[curr.machineName].oeeSum += curr.oee;
-          acc[curr.machineName].count += 1;
-          return acc;
-      }, {} as Record<string, any>);
+  const { machineMetrics, globalMetrics, hasData } = useMemo(() => {
+    if (!productionStats || !productionStats.details || productionStats.details.length === 0) {
+        return { machineMetrics: [], globalMetrics: { availability: 0, performance: 0, oee: 0 }, hasData: false };
+    }
 
-      // 2. Calcular Promedios por Máquina
-      const metrics = Object.values(grouped).map((m: any) => ({
-          name: m.name,
-          // Redondeo a enteros usando Math.round
-          availability: Math.round(m.availSum / m.count * 100),
-          performance: Math.round(m.perfSum / m.count * 100),
-          oee: Math.round(m.oeeSum / m.count * 100)
-      })).sort((a, b) => a.name.localeCompare(b.name)); // Ordenar alfabéticamente (672 -> 673 -> 674)
+    const details = productionStats.details;
 
-      setMachineMetrics(metrics);
+    // 1. Agrupar por Máquina (ignorando turnos para sacar el promedio del periodo)
+    const grouped = details.reduce((acc, curr) => {
+        if (!acc[curr.machineName]) {
+            acc[curr.machineName] = {
+                name: curr.machineName,
+                availSum: 0,
+                perfSum: 0,
+                oeeSum: 0,
+                count: 0
+            };
+        }
+        acc[curr.machineName].availSum += curr.availability;
+        acc[curr.machineName].perfSum += curr.performance;
+        acc[curr.machineName].oeeSum += curr.oee;
+        acc[curr.machineName].count += 1;
+        return acc;
+    }, {} as Record<string, any>);
 
-      // 3. Calcular Promedio Global de Planta
-      if (metrics.length > 0) {
-          const totalAvail = metrics.reduce((acc, curr) => acc + curr.availability, 0) / metrics.length;
-          const totalPerf = metrics.reduce((acc, curr) => acc + curr.performance, 0) / metrics.length;
-          // OEE Global recalculado como Disp * Rend (o promedio de OEEs, matemáticamente Disp*Rend es más puro)
-          const totalOEE = (totalAvail * totalPerf) / 100;
+    // 2. Calcular Promedios por Máquina
+    const metrics = Object.values(grouped).map((m: any) => ({
+        name: m.name,
+        // Redondeo a enteros usando Math.round
+        availability: Math.round(m.availSum / m.count * 100),
+        performance: Math.round(m.perfSum / m.count * 100),
+        oee: Math.round(m.oeeSum / m.count * 100)
+    })).sort((a, b) => a.name.localeCompare(b.name)); // Ordenar alfabéticamente (672 -> 673 -> 674)
 
-          setGlobalMetrics({
-              availability: Math.round(totalAvail),
-              performance: Math.round(totalPerf),
-              oee: Math.round(totalOEE)
-          });
-      }
-  };
+    // 3. Calcular Promedio Global de Planta
+    let global = { availability: 0, performance: 0, oee: 0 };
+    if (metrics.length > 0) {
+        const totalAvail = metrics.reduce((acc, curr) => acc + curr.availability, 0) / metrics.length;
+        const totalPerf = metrics.reduce((acc, curr) => acc + curr.performance, 0) / metrics.length;
+        // OEE Global recalculado como Disp * Rend (o promedio de OEEs, matemáticamente Disp*Rend es más puro)
+        const totalOEE = (totalAvail * totalPerf) / 100;
+
+        global = {
+            availability: Math.round(totalAvail),
+            performance: Math.round(totalPerf),
+            oee: Math.round(totalOEE)
+        };
+    }
+
+    return { machineMetrics: metrics, globalMetrics: global, hasData: true };
+  }, [productionStats]);
 
   const gaugeData = [
     { name: 'OEE', value: globalMetrics.oee, fill: '#6366f1' },

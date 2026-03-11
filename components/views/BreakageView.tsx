@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LineChart, Line, BarChart, Bar } from 'recharts';
 import { Ban, AlertOctagon, Loader2, Factory, TrendingDown, Layers, Activity, GanttChartSquare } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { DateFilter } from '../DateFilter';
 import { fetchBreakageStats } from '../../services/sheetService';
 import { analyzeBreakageData } from '../../services/geminiService';
@@ -9,22 +10,21 @@ import { BreakageStats, AIAnalysisResult } from '../../types';
 import { AIAnalyst } from '../AIAnalyst';
 
 export const BreakageView: React.FC = () => {
-  const [data, setData] = useState<BreakageStats | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
+    start: new Date(),
+    end: new Date()
+  });
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const handleFilterChange = async (range: { start: Date, end: Date }) => {
-      setLoading(true);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['breakage', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchBreakageStats(dateRange.start, dateRange.end),
+  });
+
+  const handleFilterChange = (range: { start: Date, end: Date }) => {
+      setDateRange(range);
       setAiAnalysis(null); // Reset AI on filter change
-      try {
-          const result = await fetchBreakageStats(range.start, range.end);
-          setData(result);
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoading(false);
-      }
   };
 
   const handleAIAnalysis = async () => {
