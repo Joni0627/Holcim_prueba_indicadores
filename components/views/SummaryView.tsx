@@ -85,7 +85,7 @@ export const SummaryView: React.FC = () => {
     if (!prodResult?.byShift) return [];
     return prodResult.byShift.map(s => ({
         ...s,
-        valueTn: s.value * 0.05 // 50kg = 0.05 Tn
+        valueTn: s.valueTn // Ya viene en Tn desde la API
     }));
   }, [prodResult]);
 
@@ -105,7 +105,7 @@ export const SummaryView: React.FC = () => {
       return acc;
     }, []).sort((a, b) => b.value - a.value).slice(0, 4).map(p => ({
       ...p,
-      valueTn: p.value * 0.05 // Conversión a Tn
+      valueTn: p.value // Ya es Tn desde la API
     }));
     return breakdown;
   }, [prodResult]);
@@ -218,7 +218,10 @@ export const SummaryView: React.FC = () => {
                         {stockResult?.items.filter(i => i.isProduced).slice(0, 4).map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
                                 <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">TOTAL {item.product}</p>
-                                <p className="text-2xl font-black tracking-tighter">{item.quantity.toLocaleString()}</p>
+                                <p className="text-2xl font-black tracking-tighter">
+                                    {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
+                                </p>
                             </div>
                         )) || (
                             <div className="col-span-4 py-2 text-slate-500 text-xs italic">Datos de stock no disponibles</div>
@@ -275,7 +278,22 @@ export const SummaryView: React.FC = () => {
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" stroke="#64748b" fontSize={11} fontWeight={700} />
                                 <YAxis stroke="#64748b" fontSize={11} />
-                                <Tooltip cursor={{fill: '#f8fafc'}} />
+                                <Tooltip 
+                                    cursor={{fill: '#f8fafc'}}
+                                    content={({ active, payload, label }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="bg-white p-2 border border-slate-200 shadow-md rounded text-xs">
+                                                    <p className="font-bold text-slate-800 mb-1">{label}</p>
+                                                    <p className="text-slate-600">
+                                                        Producción: <span className="font-bold">{payload[0].value?.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn</span>
+                                                    </p>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
                                 <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={60}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} />
@@ -333,13 +351,51 @@ export const SummaryView: React.FC = () => {
                                         outerRadius={70}
                                         paddingAngle={5}
                                         dataKey="valueTn"
-                                        label={({ name, valueTn }) => `${name}: ${valueTn.toFixed(0)} Tn`}
+                                        label={({ name, valueTn, index }) => {
+                                            const machineName = prodResult.byMachine[index].name;
+                                            const machineMetrics = detailedMetrics.filter(m => m.machineName === machineName);
+                                            const avgMetrics = machineMetrics.length > 0 ? {
+                                                oee: machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length,
+                                                rend: machineMetrics.reduce((acc, m) => acc + m.performance, 0) / machineMetrics.length,
+                                                disp: machineMetrics.reduce((acc, m) => acc + m.availability, 0) / machineMetrics.length
+                                            } : { oee: 0, rend: 0, disp: 0 };
+
+                                            return (
+                                                <tspan fontSize={8} fontWeight="bold">
+                                                    {name}: {valueTn.toFixed(0)} Tn
+                                                    (OEE: {(avgMetrics.oee * 100).toFixed(0)}%)
+                                                </tspan>
+                                            );
+                                        }}
                                     >
                                         {prodResult.byMachine.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip 
+                                        content={({ active, payload }) => {
+                                            if (active && payload && payload.length) {
+                                                const data = payload[0].payload;
+                                                const machineMetrics = detailedMetrics.filter(m => m.machineName === data.name);
+                                                const avgMetrics = machineMetrics.length > 0 ? {
+                                                    oee: machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length,
+                                                    rend: machineMetrics.reduce((acc, m) => acc + m.performance, 0) / machineMetrics.length,
+                                                    disp: machineMetrics.reduce((acc, m) => acc + m.availability, 0) / machineMetrics.length
+                                                } : { oee: 0, rend: 0, disp: 0 };
+
+                                                return (
+                                                    <div className="bg-white p-2 border border-slate-200 shadow-md rounded text-[10px]">
+                                                        <p className="font-bold text-slate-800 mb-1">{data.name}</p>
+                                                        <p className="text-slate-600">Prod: <span className="font-bold">{data.valueTn.toFixed(1)} Tn</span></p>
+                                                        <p className="text-slate-500">OEE: {(avgMetrics.oee * 100).toFixed(0)}%</p>
+                                                        <p className="text-slate-500">Rend: {(avgMetrics.rend * 100).toFixed(0)}%</p>
+                                                        <p className="text-slate-500">Disp: {(avgMetrics.disp * 100).toFixed(0)}%</p>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }}
+                                    />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>

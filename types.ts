@@ -55,7 +55,7 @@ export interface ShiftMetric {
 export interface ProductionStats {
   totalBags: number;
   totalTn: number; 
-  byShift: { name: string; value: number; target: number }[];
+  byShift: { name: string; value: number; valueTn: number; valueBags: number; target: number }[];
   byMachine: { name: string; value: number; valueTn: number }[]; 
   byMachineProduct: { name: string; [key: string]: number | string }[];
   details: ShiftMetric[];
