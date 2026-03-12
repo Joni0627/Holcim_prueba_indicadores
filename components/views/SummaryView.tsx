@@ -177,7 +177,7 @@ export const SummaryView: React.FC = () => {
 
   const producedStock = useMemo(() => {
     if (!stockResult?.items) return [];
-    const order = ["CEMENTO MAESTRO", "CEMENTO CPF 40", "CEMENTO RAPIDO", "CEMENTO CPF 30"];
+    const order = ["CEMENTO MAESTRO", "CEMENTO CPF 40", "CEMENTO RAPIDO", "CEMENTO CPC 30"];
     return stockResult.items
       .filter(i => i.isProduced)
       .sort((a, b) => {

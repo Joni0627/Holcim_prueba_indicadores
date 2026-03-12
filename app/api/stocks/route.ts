@@ -136,7 +136,7 @@ export async function GET(req: Request) {
         "CEMENTO MAESTRO",
         "CEMENTO CPF 40",
         "CEMENTO RAPIDO",
-        "CEMENTO CPF 30"
+        "CEMENTO CPC 30"
     ]);
 
     const stockMap: Record<string, { displayName: string, qty: number, tn: number, isProduced: boolean, date: string }> = {};
