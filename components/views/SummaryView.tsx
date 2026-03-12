@@ -195,24 +195,33 @@ export const SummaryView: React.FC = () => {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#f8fafc'
+        backgroundColor: '#f8fafc',
+        width: 1200, // Fixed width for consistent layout
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('l', 'mm', 'a4'); // Cambiado a landscape para mejor distribución
+      const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
       const imgProps = pdf.getImageProperties(imgData);
-      const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
-      const width = imgProps.width * ratio;
-      const height = imgProps.height * ratio;
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
       
-      // Centrar en la hoja
-      const x = (pdfWidth - width) / 2;
-      const y = (pdfHeight - height) / 2;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      // Add subsequent pages if needed
+      while (heightLeft > 0) {
+        position -= pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
       
-      pdf.addImage(imgData, 'PNG', x, y, width, height);
       const pdfBlob = pdf.output('blob');
       const file = new File([pdfBlob], `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.pdf`, { type: 'application/pdf' });
 
@@ -475,101 +484,74 @@ export const SummaryView: React.FC = () => {
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className="flex flex-col h-full">
-                        <div className="h-1/2">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={prodResult.byMachine}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={85}
-                                        paddingAngle={5}
-                                        dataKey="valueTn"
-                                        labelLine={true}
-                                        label={({ name, valueTn, index, cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                                            const RADIAN = Math.PI / 180;
-                                            const radius = outerRadius + 20;
-                                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                                            
-                                            const machineName = prodResult.byMachine[index].name;
-                                            const machineMetrics = detailedMetrics.filter(m => m.machineName === machineName);
+                    <div className="flex-grow">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                layout="vertical"
+                                data={prodResult.byMachine}
+                                margin={{ top: 5, right: 60, left: 20, bottom: 5 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                                <XAxis type="number" hide />
+                                <YAxis 
+                                    dataKey="name" 
+                                    type="category" 
+                                    axisLine={false} 
+                                    tickLine={false}
+                                    width={100}
+                                    tick={{ fontSize: 11, fontWeight: 700, fill: '#475569' }}
+                                />
+                                <Tooltip 
+                                    cursor={{ fill: '#f8fafc' }}
+                                    content={({ active, payload }) => {
+                                        if (active && payload && payload.length) {
+                                            const data = payload[0].payload;
+                                            const machineMetrics = detailedMetrics.filter(m => m.machineName === data.name);
                                             const avgMetrics = machineMetrics.length > 0 ? {
                                                 oee: machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length,
-                                            } : { oee: 0 };
-
+                                                rend: machineMetrics.reduce((acc, m) => acc + m.performance, 0) / machineMetrics.length,
+                                                disp: machineMetrics.reduce((acc, m) => acc + m.availability, 0) / machineMetrics.length
+                                            } : { oee: 0, rend: 0, disp: 0 };
                                             return (
-                                                <text 
-                                                    x={x} 
-                                                    y={y} 
-                                                    fill="#334155" 
-                                                    textAnchor={x > cx ? 'start' : 'end'} 
-                                                    dominantBaseline="central"
-                                                    fontSize={9}
-                                                    fontWeight="bold"
-                                                >
-                                                    {name.split(' ')[0]}: {valueTn.toFixed(0)}T ({(avgMetrics.oee * 100).toFixed(0)}%)
-                                                </text>
+                                                <div className="bg-white p-2 border border-slate-200 shadow-md rounded text-[10px]">
+                                                    <p className="font-bold text-slate-800 mb-1">{data.name}</p>
+                                                    <p className="text-blue-600 font-bold">Prod: {data.valueTn.toFixed(0)} Tn</p>
+                                                    <p className="text-slate-500">OEE: {(avgMetrics.oee * 100).toFixed(0)}%</p>
+                                                    <p className="text-slate-500">Rend: {(avgMetrics.rend * 100).toFixed(0)}%</p>
+                                                    <p className="text-slate-500">Disp: {(avgMetrics.disp * 100).toFixed(0)}%</p>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <Bar dataKey="valueTn" radius={[0, 4, 4, 0]} barSize={40}>
+                                    {prodResult.byMachine.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                    <LabelList 
+                                        dataKey="valueTn" 
+                                        position="right" 
+                                        content={(props: any) => {
+                                            const { x, y, width, height, value, index } = props;
+                                            const machineName = prodResult.byMachine[index].name;
+                                            const machineMetrics = detailedMetrics.filter(m => m.machineName === machineName);
+                                            const oee = machineMetrics.length > 0 ? (machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length * 100).toFixed(0) : 0;
+                                            return (
+                                                <g>
+                                                    <text x={x + width + 5} y={y + height / 2} fill="#1e293b" dominantBaseline="middle" fontSize={12} fontWeight="black">
+                                                        {value.toFixed(0)} Tn
+                                                    </text>
+                                                    <text x={x + width + 5} y={y + height / 2 + 12} fill="#64748b" dominantBaseline="middle" fontSize={9} fontWeight="bold">
+                                                        OEE: {oee}%
+                                                    </text>
+                                                </g>
                                             );
                                         }}
-                                    >
-                                        {prodResult.byMachine.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip 
-                                        content={({ active, payload }) => {
-                                            if (active && payload && payload.length) {
-                                                const data = payload[0].payload;
-                                                const machineMetrics = detailedMetrics.filter(m => m.machineName === data.name);
-                                                const avgMetrics = machineMetrics.length > 0 ? {
-                                                    oee: machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length,
-                                                    rend: machineMetrics.reduce((acc, m) => acc + m.performance, 0) / machineMetrics.length,
-                                                    disp: machineMetrics.reduce((acc, m) => acc + m.availability, 0) / machineMetrics.length
-                                                } : { oee: 0, rend: 0, disp: 0 };
-
-                                                return (
-                                                    <div className="bg-white p-2 border border-slate-200 shadow-md rounded text-[10px]">
-                                                        <p className="font-bold text-slate-800 mb-1">{data.name}</p>
-                                                        <p className="text-slate-600">Prod: <span className="font-bold">{data.valueTn.toFixed(1)} Tn</span></p>
-                                                        <p className="text-slate-500">OEE: {(avgMetrics.oee * 100).toFixed(0)}%</p>
-                                                        <p className="text-slate-500">Rend: {(avgMetrics.rend * 100).toFixed(0)}%</p>
-                                                        <p className="text-slate-500">Disp: {(avgMetrics.disp * 100).toFixed(0)}%</p>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        }}
                                     />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        
-                        <div className="h-1/2 overflow-auto mt-4">
-                            <table className="w-full text-xs">
-                                <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-tighter">
-                                    <tr>
-                                        <th className="px-2 py-2 text-left">Máquina</th>
-                                        <th className="px-2 py-2 text-right">Toneladas</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {prodResult.byMachine.map((m, i) => (
-                                        <tr key={m.name} className="hover:bg-slate-50">
-                                            <td className="px-2 py-2 flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full" style={{backgroundColor: COLORS[i % COLORS.length]}}></span>
-                                                <span className="font-bold text-slate-700">{m.name}</span>
-                                            </td>
-                                            <td className="px-2 py-2 text-right font-mono font-bold text-slate-800">
-                                                {m.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 ) : (
                     <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
