@@ -96,6 +96,8 @@ export const SummaryView: React.FC = () => {
     end: new Date()
   });
 
+  const [isSharing, setIsSharing] = useState(false);
+
   // Queries with React Query for caching and optimization
   const { data: downtimeResult, isLoading: loadingDowntimes } = useQuery({
     queryKey: ['downtimes', dateRange.start.toISOString(), dateRange.end.toISOString()],
@@ -188,15 +190,16 @@ export const SummaryView: React.FC = () => {
 
   const handleShare = async () => {
     const element = document.getElementById('summary-view-content');
-    if (!element) return;
+    if (!element || isSharing) return;
 
+    setIsSharing(true);
     try {
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#f8fafc',
-        width: 1200, // Fixed width for consistent layout
+        windowWidth: 1200,
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -210,11 +213,9 @@ export const SummaryView: React.FC = () => {
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Add first page
       pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
       heightLeft -= pdfHeight;
 
-      // Add subsequent pages if needed
       while (heightLeft > 0) {
         position -= pdfHeight;
         pdf.addPage();
@@ -223,25 +224,43 @@ export const SummaryView: React.FC = () => {
       }
       
       const pdfBlob = pdf.output('blob');
-      const file = new File([pdfBlob], `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.pdf`, { type: 'application/pdf' });
+      const fileName = `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-      if (navigator.share) {
-        await navigator.share({
-          files: [file],
-          title: 'Reporte de Producción',
-          text: 'Adjunto reporte de producción generado desde la App.'
-        });
+      // Try sharing first
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Reporte de Producción',
+            text: 'Adjunto reporte de producción.'
+          });
+        } catch (shareError) {
+          // If user cancelled or share failed, fallback to download
+          console.log('Share failed or cancelled, falling back to download');
+          downloadFile(pdfBlob, fileName);
+        }
       } else {
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = file.name;
-        link.click();
-        URL.revokeObjectURL(url);
+        // Fallback to direct download
+        downloadFile(pdfBlob, fileName);
       }
     } catch (error) {
       console.error('Error sharing PDF:', error);
+      alert('Hubo un error al generar el reporte. Por favor intente de nuevo.');
+    } finally {
+      setIsSharing(false);
     }
+  };
+
+  const downloadFile = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Helper para obtener métricas promedio por turno
@@ -269,11 +288,12 @@ export const SummaryView: React.FC = () => {
             </div>
             <button 
                 onClick={handleShare}
-                className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors flex items-center gap-2 px-3 text-xs font-bold shadow-sm border border-blue-100"
+                disabled={isSharing}
+                className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 text-xs font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100'}`}
                 title="Compartir Reporte PDF"
             >
-                <Share2 size={16} />
-                <span className="hidden sm:inline">Compartir PDF</span>
+                {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
+                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir PDF'}</span>
             </button>
         </div>
         <DateFilter onFilterChange={handleFilterChange} />
@@ -477,81 +497,48 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[450px] flex flex-col">
+            <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-auto min-h-[450px] flex flex-col">
                 <div className="flex items-center gap-2 mb-6">
                     <Activity className="text-blue-500" size={20} />
-                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora (Tn)</h3>
+                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className="flex-grow">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                                layout="vertical"
-                                data={prodResult.byMachine}
-                                margin={{ top: 5, right: 60, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                                <XAxis type="number" hide />
-                                <YAxis 
-                                    dataKey="name" 
-                                    type="category" 
-                                    axisLine={false} 
-                                    tickLine={false}
-                                    width={100}
-                                    tick={{ fontSize: 11, fontWeight: 700, fill: '#475569' }}
-                                />
-                                <Tooltip 
-                                    cursor={{ fill: '#f8fafc' }}
-                                    content={({ active, payload }) => {
-                                        if (active && payload && payload.length) {
-                                            const data = payload[0].payload;
-                                            const machineMetrics = detailedMetrics.filter(m => m.machineName === data.name);
-                                            const avgMetrics = machineMetrics.length > 0 ? {
-                                                oee: machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length,
-                                                rend: machineMetrics.reduce((acc, m) => acc + m.performance, 0) / machineMetrics.length,
-                                                disp: machineMetrics.reduce((acc, m) => acc + m.availability, 0) / machineMetrics.length
-                                            } : { oee: 0, rend: 0, disp: 0 };
-                                            return (
-                                                <div className="bg-white p-2 border border-slate-200 shadow-md rounded text-[10px]">
-                                                    <p className="font-bold text-slate-800 mb-1">{data.name}</p>
-                                                    <p className="text-blue-600 font-bold">Prod: {data.valueTn.toFixed(0)} Tn</p>
-                                                    <p className="text-slate-500">OEE: {(avgMetrics.oee * 100).toFixed(0)}%</p>
-                                                    <p className="text-slate-500">Rend: {(avgMetrics.rend * 100).toFixed(0)}%</p>
-                                                    <p className="text-slate-500">Disp: {(avgMetrics.disp * 100).toFixed(0)}%</p>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    }}
-                                />
-                                <Bar dataKey="valueTn" radius={[0, 4, 4, 0]} barSize={40}>
-                                    {prodResult.byMachine.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                    <LabelList 
-                                        dataKey="valueTn" 
-                                        position="right" 
-                                        content={(props: any) => {
-                                            const { x, y, width, height, value, index } = props;
-                                            const machineName = prodResult.byMachine[index].name;
-                                            const machineMetrics = detailedMetrics.filter(m => m.machineName === machineName);
-                                            const oee = machineMetrics.length > 0 ? (machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length * 100).toFixed(0) : 0;
-                                            return (
-                                                <g>
-                                                    <text x={x + width + 5} y={y + height / 2} fill="#1e293b" dominantBaseline="middle" fontSize={12} fontWeight="black">
-                                                        {value.toFixed(0)} Tn
-                                                    </text>
-                                                    <text x={x + width + 5} y={y + height / 2 + 12} fill="#64748b" dominantBaseline="middle" fontSize={9} fontWeight="bold">
-                                                        OEE: {oee}%
-                                                    </text>
-                                                </g>
-                                            );
-                                        }}
-                                    />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow">
+                        {prodResult.byMachine.map((m, i) => {
+                            const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
+                            const avg = machineMetrics.length > 0 ? {
+                                oee: machineMetrics.reduce((acc, curr) => acc + curr.oee, 0) / machineMetrics.length,
+                                rend: machineMetrics.reduce((acc, curr) => acc + curr.performance, 0) / machineMetrics.length,
+                                disp: machineMetrics.reduce((acc, curr) => acc + curr.availability, 0) / machineMetrics.length
+                            } : { oee: 0, rend: 0, disp: 0 };
+
+                            return (
+                                <div key={m.name} className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col justify-between hover:border-blue-200 transition-colors">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-tight">{m.name}</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-4xl font-black text-slate-800 tracking-tighter">{m.valueTn.toFixed(0)}</span>
+                                            <span className="text-sm font-bold text-slate-400">Tn</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-6 grid grid-cols-3 gap-1 border-t border-slate-200 pt-4">
+                                        <div className="text-center">
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">OEE</p>
+                                            <p className="text-sm font-black text-blue-600">{(avg.oee * 100).toFixed(0)}%</p>
+                                        </div>
+                                        <div className="text-center border-x border-slate-200">
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Disp</p>
+                                            <p className="text-sm font-black text-emerald-600">{(avg.disp * 100).toFixed(0)}%</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Rend</p>
+                                            <p className="text-sm font-black text-amber-600">{(avg.rend * 100).toFixed(0)}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 ) : (
                     <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
