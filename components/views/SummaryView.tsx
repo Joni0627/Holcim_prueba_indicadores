@@ -173,6 +173,19 @@ export const SummaryView: React.FC = () => {
 
   const detailedMetrics = prodResult?.details || [];
 
+  const producedStock = useMemo(() => {
+    if (!stockResult?.items) return [];
+    const order = ["CEMENTO MAESTRO", "CEMENTO CPF 40", "CEMENTO RAPIDO", "CEMENTO CPF 30"];
+    return stockResult.items
+      .filter(i => i.isProduced)
+      .sort((a, b) => {
+        const nameA = a.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const nameB = b.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return order.indexOf(nameA) - order.indexOf(nameB);
+      })
+      .slice(0, 4);
+  }, [stockResult]);
+
   const handleShare = async () => {
     const element = document.getElementById('summary-view-content');
     if (!element) return;
@@ -186,12 +199,20 @@ export const SummaryView: React.FC = () => {
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
+      const pdf = new jsPDF('l', 'mm', 'a4'); // Cambiado a landscape para mejor distribución
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const imgProps = pdf.getImageProperties(imgData);
+      const ratio = Math.min(pdfWidth / imgProps.width, pdfHeight / imgProps.height);
+      const width = imgProps.width * ratio;
+      const height = imgProps.height * ratio;
+      
+      // Centrar en la hoja
+      const x = (pdfWidth - width) / 2;
+      const y = (pdfHeight - height) / 2;
+      
+      pdf.addImage(imgData, 'PNG', x, y, width, height);
       const pdfBlob = pdf.output('blob');
       const file = new File([pdfBlob], `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.pdf`, { type: 'application/pdf' });
 
@@ -295,31 +316,26 @@ export const SummaryView: React.FC = () => {
                     )}
                 </div>
 
-                {/* Gauge Charts (OEE, Disp, Rend) */}
-                <div className="bg-white p-4 rounded-lg shadow-lg border border-slate-100">
-                    <div className="grid grid-cols-1 gap-2">
-                        <div className="h-24">
-                            <GaugeChart 
-                                value={detailedMetrics.reduce((acc, m) => acc + m.oee, 0) / (detailedMetrics.length || 1)} 
-                                label="OEE Total" 
-                                color="#3b82f6" 
-                            />
+                {/* OEE / Disp % / Rend % Cards */}
+                <div className="bg-white p-4 rounded-lg shadow-lg border border-slate-100 space-y-3">
+                    <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
+                        <p className="text-[10px] font-bold uppercase text-blue-400 tracking-wider">OEE Total</p>
+                        <p className="text-3xl font-black text-blue-600">
+                            {(detailedMetrics.reduce((acc, m) => acc + m.oee, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-emerald-50 p-3 rounded-md border border-emerald-100">
+                            <p className="text-[10px] font-bold uppercase text-emerald-400 tracking-wider">Disp %</p>
+                            <p className="text-2xl font-black text-emerald-600">
+                                {(detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                            </p>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="h-24">
-                                <GaugeChart 
-                                    value={detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1)} 
-                                    label="Disp %" 
-                                    color="#10b981" 
-                                />
-                            </div>
-                            <div className="h-24">
-                                <GaugeChart 
-                                    value={detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1)} 
-                                    label="Rend %" 
-                                    color="#f59e0b" 
-                                />
-                            </div>
+                        <div className="bg-amber-50 p-3 rounded-md border border-amber-100">
+                            <p className="text-[10px] font-bold uppercase text-amber-400 tracking-wider">Rend %</p>
+                            <p className="text-2xl font-black text-amber-600">
+                                {(detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -335,7 +351,7 @@ export const SummaryView: React.FC = () => {
                         <Clock size={16} />
                     </div>
                     <div className="bg-slate-800 text-white p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                        {stockResult?.items.filter(i => i.isProduced).slice(0, 4).map(item => (
+                        {producedStock.length > 0 ? producedStock.map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
                                 <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight">{item.product}</p>
                                 <p className="text-xl font-black tracking-tighter">
@@ -343,7 +359,7 @@ export const SummaryView: React.FC = () => {
                                     <span className="text-[10px] font-bold text-slate-500 ml-1">Tn</span>
                                 </p>
                             </div>
-                        )) || (
+                        )) : (
                             <div className="col-span-4 py-2 text-slate-500 text-xs italic">Datos de stock no disponibles</div>
                         )}
                     </div>
@@ -467,11 +483,17 @@ export const SummaryView: React.FC = () => {
                                         data={prodResult.byMachine}
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={40}
-                                        outerRadius={70}
+                                        innerRadius={60}
+                                        outerRadius={85}
                                         paddingAngle={5}
                                         dataKey="valueTn"
-                                        label={({ name, valueTn, index }) => {
+                                        labelLine={true}
+                                        label={({ name, valueTn, index, cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                                            const RADIAN = Math.PI / 180;
+                                            const radius = outerRadius + 20;
+                                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                            
                                             const machineName = prodResult.byMachine[index].name;
                                             const machineMetrics = detailedMetrics.filter(m => m.machineName === machineName);
                                             const avgMetrics = machineMetrics.length > 0 ? {
@@ -479,9 +501,17 @@ export const SummaryView: React.FC = () => {
                                             } : { oee: 0 };
 
                                             return (
-                                                <tspan fontSize={7} fontWeight="bold">
+                                                <text 
+                                                    x={x} 
+                                                    y={y} 
+                                                    fill="#334155" 
+                                                    textAnchor={x > cx ? 'start' : 'end'} 
+                                                    dominantBaseline="central"
+                                                    fontSize={9}
+                                                    fontWeight="bold"
+                                                >
                                                     {name.split(' ')[0]}: {valueTn.toFixed(0)}T ({(avgMetrics.oee * 100).toFixed(0)}%)
-                                                </tspan>
+                                                </text>
                                             );
                                         }}
                                     >
