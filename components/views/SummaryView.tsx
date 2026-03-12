@@ -1,8 +1,10 @@
 
 import React, { useState, useMemo } from 'react';
-import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity, Clock } from 'lucide-react';
+import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity, Clock, Share2, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { fetchDowntimes, fetchProductionStats, fetchStocks } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
 import { DateFilter } from '../DateFilter';
@@ -31,6 +33,61 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       );
     }
     return null;
+};
+
+const GaugeChart = ({ value, label, color = "#3b82f6" }: { value: number, label: string, color?: string }) => {
+    const data = [
+        { name: 'value', value: value * 100 },
+        { name: 'remaining', value: 100 - (value * 100) }
+    ];
+    
+    // Needle calculation for 180 degree gauge
+    const angle = 180 - (value * 180);
+    const rad = (angle * Math.PI) / 180;
+    const length = 45;
+    const x = 50 + length * Math.cos(rad);
+    const y = 100 - length * Math.sin(rad);
+
+    return (
+        <div className="flex flex-col items-center justify-center h-full w-full relative">
+            <ResponsiveContainer width="100%" height={100}>
+                <PieChart>
+                    <Pie
+                        data={data}
+                        cx="50%"
+                        cy="100%"
+                        startAngle={180}
+                        endAngle={0}
+                        innerRadius={35}
+                        outerRadius={55}
+                        paddingAngle={0}
+                        dataKey="value"
+                        stroke="none"
+                    >
+                        <Cell fill={color} opacity={0.2} />
+                        <Cell fill="#f1f5f9" />
+                    </Pie>
+                </PieChart>
+            </ResponsiveContainer>
+            
+            {/* Needle SVG Overlay */}
+            <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                <line 
+                    x1="50" y1="100" 
+                    x2={x} y2={y} 
+                    stroke="#1e293b" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                />
+                <circle cx="50" cy="100" r="3" fill="#1e293b" />
+            </svg>
+
+            <div className="mt-[-30px] text-center">
+                <p className="text-xl font-black text-slate-800">{(value * 100).toFixed(0)}%</p>
+                <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider font-mono">{label}</p>
+            </div>
+        </div>
+    );
 };
 
 export const SummaryView: React.FC = () => {
@@ -116,6 +173,47 @@ export const SummaryView: React.FC = () => {
 
   const detailedMetrics = prodResult?.details || [];
 
+  const handleShare = async () => {
+    const element = document.getElementById('summary-view-content');
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#f8fafc'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      const pdfBlob = pdf.output('blob');
+      const file = new File([pdfBlob], `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.pdf`, { type: 'application/pdf' });
+
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: 'Reporte de Producción',
+          text: 'Adjunto reporte de producción generado desde la App.'
+        });
+      } else {
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.name;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Error sharing PDF:', error);
+    }
+  };
+
   // Helper para obtener métricas promedio por turno
   const getShiftMetrics = (shiftName: string) => {
     const shiftMetrics = detailedMetrics.filter(m => m.shift === shiftName);
@@ -134,14 +232,25 @@ export const SummaryView: React.FC = () => {
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-3">
-            <Calendar className="text-slate-400" size={24} />
-            <h1 className="text-2xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
+        <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+                <Calendar className="text-slate-400" size={24} />
+                <h1 className="text-2xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
+            </div>
+            <button 
+                onClick={handleShare}
+                className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors flex items-center gap-2 px-3 text-xs font-bold shadow-sm border border-blue-100"
+                title="Compartir Reporte PDF"
+            >
+                <Share2 size={16} />
+                <span className="hidden sm:inline">Compartir PDF</span>
+            </button>
         </div>
         <DateFilter onFilterChange={handleFilterChange} />
       </div>
 
-      {isLoading ? (
+      <div id="summary-view-content" className="space-y-6">
+        {isLoading ? (
            <div className="h-96 flex flex-col items-center justify-center text-slate-400">
               <Loader2 className="animate-spin mb-2" size={48} />
               <p className="text-lg font-medium">Sincronizando con Planta...</p>
@@ -172,7 +281,7 @@ export const SummaryView: React.FC = () => {
                         <div key={prod.name} className="space-y-1">
                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
                                 <span>{prod.name}</span>
-                                <span>{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn</span>
+                                <span>{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
                             </div>
                             <div className="h-2 bg-blue-900/50 rounded-full overflow-hidden">
                                 <div 
@@ -186,20 +295,31 @@ export const SummaryView: React.FC = () => {
                     )}
                 </div>
 
-                {/* Disp % / Rend % Card */}
-                <div className="bg-blue-600 text-white p-6 rounded-lg shadow-lg">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="text-xs font-bold uppercase text-blue-200">Disp %</p>
-                            <p className="text-2xl font-black">
-                                {(detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
-                            </p>
+                {/* Gauge Charts (OEE, Disp, Rend) */}
+                <div className="bg-white p-4 rounded-lg shadow-lg border border-slate-100">
+                    <div className="grid grid-cols-1 gap-2">
+                        <div className="h-24">
+                            <GaugeChart 
+                                value={detailedMetrics.reduce((acc, m) => acc + m.oee, 0) / (detailedMetrics.length || 1)} 
+                                label="OEE Total" 
+                                color="#3b82f6" 
+                            />
                         </div>
-                        <div>
-                            <p className="text-xs font-bold uppercase text-blue-200">Rend %</p>
-                            <p className="text-2xl font-black">
-                                {(detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
-                            </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="h-24">
+                                <GaugeChart 
+                                    value={detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1)} 
+                                    label="Disp %" 
+                                    color="#10b981" 
+                                />
+                            </div>
+                            <div className="h-24">
+                                <GaugeChart 
+                                    value={detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1)} 
+                                    label="Rend %" 
+                                    color="#f59e0b" 
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -217,10 +337,10 @@ export const SummaryView: React.FC = () => {
                     <div className="bg-slate-800 text-white p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         {stockResult?.items.filter(i => i.isProduced).slice(0, 4).map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
-                                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">TOTAL {item.product}</p>
-                                <p className="text-2xl font-black tracking-tighter">
+                                <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight">{item.product}</p>
+                                <p className="text-xl font-black tracking-tighter">
                                     {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
+                                    <span className="text-[10px] font-bold text-slate-500 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) || (
@@ -356,14 +476,11 @@ export const SummaryView: React.FC = () => {
                                             const machineMetrics = detailedMetrics.filter(m => m.machineName === machineName);
                                             const avgMetrics = machineMetrics.length > 0 ? {
                                                 oee: machineMetrics.reduce((acc, m) => acc + m.oee, 0) / machineMetrics.length,
-                                                rend: machineMetrics.reduce((acc, m) => acc + m.performance, 0) / machineMetrics.length,
-                                                disp: machineMetrics.reduce((acc, m) => acc + m.availability, 0) / machineMetrics.length
-                                            } : { oee: 0, rend: 0, disp: 0 };
+                                            } : { oee: 0 };
 
                                             return (
-                                                <tspan fontSize={8} fontWeight="bold">
-                                                    {name}: {valueTn.toFixed(0)} Tn
-                                                    (OEE: {(avgMetrics.oee * 100).toFixed(0)}%)
+                                                <tspan fontSize={7} fontWeight="bold">
+                                                    {name.split(' ')[0]}: {valueTn.toFixed(0)}T ({(avgMetrics.oee * 100).toFixed(0)}%)
                                                 </tspan>
                                             );
                                         }}
@@ -416,7 +533,7 @@ export const SummaryView: React.FC = () => {
                                                 <span className="font-bold text-slate-700">{m.name}</span>
                                             </td>
                                             <td className="px-2 py-2 text-right font-mono font-bold text-slate-800">
-                                                {m.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
+                                                {m.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn
                                             </td>
                                         </tr>
                                     ))}
@@ -431,6 +548,7 @@ export const SummaryView: React.FC = () => {
 
         </div>
       )}
+      </div>
 
     </div>
   );
