@@ -480,14 +480,10 @@ export const SummaryView: React.FC = () => {
             </div>
 
             <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-auto min-h-[450px] flex flex-col">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center mb-6">
                     <div className="flex items-center gap-2">
                         <Cpu className="text-blue-600" size={20} />
                         <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">En tiempo real</span>
                     </div>
                 </div>
                 
@@ -510,16 +506,16 @@ export const SummaryView: React.FC = () => {
                                     className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group flex flex-col overflow-hidden"
                                 >
                                     {/* Card Header */}
-                                    <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{m.name}</span>
-                                        <Activity size={12} className="text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <div className="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                        <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{m.name}</span>
+                                        <Activity size={12} className="text-blue-600" />
                                     </div>
 
                                     {/* Main Value Area */}
                                     <div className="p-5 flex-grow flex flex-col">
-                                        <div className="bg-slate-900 rounded-2xl p-5 mb-5 relative overflow-hidden shadow-inner group-hover:bg-blue-950 transition-colors duration-500">
+                                        <div className="bg-slate-900 rounded-2xl p-5 mb-5 relative overflow-hidden shadow-lg group-hover:bg-blue-950 transition-colors duration-500">
                                             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-400/10 transition-colors"></div>
-                                            <p className="text-slate-500 text-[9px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
+                                            <p className="text-slate-400 text-[9px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-5xl font-black text-white tracking-tighter">
                                                     {m.valueTn.toFixed(0)}
@@ -528,19 +524,37 @@ export const SummaryView: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* KPIs Grid */}
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <div className="text-center p-2 rounded-xl bg-blue-50/50 border border-blue-100/50 group-hover:bg-blue-100/50 transition-colors">
-                                                <p className="text-[8px] font-bold text-blue-400 uppercase mb-0.5">OEE</p>
-                                                <p className="text-sm font-black text-blue-700">{(avg.oee * 100).toFixed(0)}%</p>
+                                        {/* KPIs Grid - Modernized */}
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-blue-600 rounded-full" 
+                                                        style={{ width: `${Math.min(avg.oee * 100, 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">OEE</p>
+                                                <p className="text-sm font-black text-blue-600">{(avg.oee * 100).toFixed(0)}%</p>
                                             </div>
-                                            <div className="text-center p-2 rounded-xl bg-emerald-50/50 border border-emerald-100/50 group-hover:bg-emerald-100/50 transition-colors">
-                                                <p className="text-[8px] font-bold text-emerald-400 uppercase mb-0.5">Disp</p>
-                                                <p className="text-sm font-black text-emerald-700">{(avg.disp * 100).toFixed(0)}%</p>
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-emerald-500 rounded-full" 
+                                                        style={{ width: `${Math.min(avg.disp * 100, 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Disp</p>
+                                                <p className="text-sm font-black text-emerald-600">{(avg.disp * 100).toFixed(0)}%</p>
                                             </div>
-                                            <div className="text-center p-2 rounded-xl bg-amber-50/50 border border-amber-100/50 group-hover:bg-amber-100/50 transition-colors">
-                                                <p className="text-[8px] font-bold text-amber-400 uppercase mb-0.5">Rend</p>
-                                                <p className="text-sm font-black text-amber-700">{(avg.rend * 100).toFixed(0)}%</p>
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-amber-500 rounded-full" 
+                                                        style={{ width: `${Math.min(avg.rend * 100, 100)}%` }}
+                                                    />
+                                                </div>
+                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Rend</p>
+                                                <p className="text-sm font-black text-amber-600">{(avg.rend * 100).toFixed(0)}%</p>
                                             </div>
                                         </div>
                                     </div>
