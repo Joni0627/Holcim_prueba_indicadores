@@ -307,8 +307,9 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Desglose por Producto */}
+                {/* TN por PRODUCTO */}
                 <div className="bg-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-600 pb-2">TN por PRODUCTO</h3>
                     {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
                         <div key={prod.name} className="space-y-1">
                             <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
@@ -327,8 +328,9 @@ export const SummaryView: React.FC = () => {
                     )}
                 </div>
 
-                {/* OEE / Disp % / Rend % Cards */}
-                <div className="bg-white p-4 rounded-lg shadow-lg border border-slate-100 space-y-3">
+                {/* RENDIMIENTO GLOBAL */}
+                <div className="bg-white p-5 rounded-lg shadow-lg border border-slate-100 space-y-4">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 border-b border-slate-50 pb-2">RENDIMIENTO GLOBAL</h3>
                     <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
                         <p className="text-[10px] font-bold uppercase text-blue-400 tracking-wider">OEE Total</p>
                         <p className="text-3xl font-black text-blue-600">
@@ -377,12 +379,13 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* Downtime Horizontal Chart */}
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[400px] flex flex-col">
-                    <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
+                <div className="bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 h-[400px] flex flex-col relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-red-500/10 transition-colors"></div>
+                    <div className="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3 relative z-10">
                         <AlertTriangle className="text-red-500" size={18} />
-                        <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Análisis de Paradas Principales</h3>
+                        <h3 className="font-bold text-slate-200 uppercase text-xs tracking-widest">Análisis de Paradas Principales</h3>
                     </div>
-                    <div className="flex-grow">
+                    <div className="flex-grow relative z-10">
                         {downtimes.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
@@ -390,19 +393,26 @@ export const SummaryView: React.FC = () => {
                                     layout="vertical"
                                     margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
                                 >
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#1e293b" />
                                     <XAxis type="number" hide />
                                     <YAxis
                                         type="category"
                                         dataKey="reason"
-                                        stroke="#64748b"
+                                        stroke="#94a3b8"
                                         fontSize={10}
                                         width={180}
-                                        tick={{ fill: '#475569', fontWeight: 600 }}
+                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
                                         tickFormatter={(val) => val.length > 25 ? `${val.substring(0,25)}...` : val}
                                     />
-                                    <Tooltip content={<CustomTooltip />} cursor={{fill: '#f8fafc'}} />
-                                    <Bar dataKey="durationMinutes" fill="#f87171" radius={[0, 4, 4, 0]} barSize={15} />
+                                    <Tooltip 
+                                        content={<CustomTooltip />} 
+                                        cursor={{fill: 'rgba(255,255,255,0.05)'}} 
+                                    />
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={15}>
+                                        {downtimes.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
+                                        ))}
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
@@ -413,16 +423,17 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* BOTTOM ROW - Shift & Palletizer */}
-            <div className="lg:col-span-7 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[450px] flex flex-col">
-                <div className="flex items-center gap-2 mb-6">
+            <div className="lg:col-span-7 bg-slate-50 p-6 rounded-lg shadow-sm border border-slate-200 h-[480px] flex flex-col relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-full bg-white/40 backdrop-blur-[2px] pointer-events-none"></div>
+                <div className="flex items-center gap-2 mb-6 relative z-10">
                     <TrendingUp className="text-emerald-500" size={20} />
                     <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Turno (Tn)</h3>
                 </div>
-                <div className="flex-grow">
+                <div className="flex-grow relative z-10">
                     {shiftData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
                                 <XAxis dataKey="name" stroke="#64748b" fontSize={11} fontWeight={700} />
                                 <YAxis stroke="#64748b" fontSize={11} />
                                 <Tooltip 
@@ -479,7 +490,7 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-auto min-h-[450px] flex flex-col">
+            <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[480px] flex flex-col">
                 <div className="flex items-center mb-6">
                     <div className="flex items-center gap-2">
                         <Cpu className="text-blue-600" size={20} />
