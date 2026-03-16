@@ -362,7 +362,7 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-9 flex flex-col gap-6 h-full">
                 
                 {/* Stock Section */}
-                <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-lg shadow-xl border border-slate-700 overflow-hidden">
+                <div className="bg-gradient-to-br from-slate-950 to-blue-900 rounded-lg shadow-xl border border-slate-800 overflow-hidden">
                     <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 text-white px-6 py-2 flex justify-between items-center shadow-lg">
                         <h3 className="font-black uppercase tracking-widest text-sm">Stock a las 06:00 hs.</h3>
                         <Clock size={16} />
@@ -383,9 +383,9 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* Downtime Horizontal Chart */}
-                <div className="flex-1 bg-gradient-to-br from-slate-950 to-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-red-500/10 transition-colors"></div>
-                    <div className="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3 relative z-10">
+                <div className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-400/10 transition-colors"></div>
+                    <div className="flex items-center gap-2 mb-4 border-b border-slate-800/50 pb-3 relative z-10">
                         <AlertTriangle className="text-red-500" size={18} />
                         <h3 className="font-bold text-slate-200 uppercase text-xs tracking-widest">Análisis de Paradas Principales</h3>
                     </div>
@@ -427,9 +427,9 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* BOTTOM ROW - Shift & Palletizer */}
-            <div className="lg:col-span-7 bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col relative overflow-hidden group">
+            <div className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
-                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
                     <TrendingUp className="text-emerald-500" size={20} />
                     <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción por Turno (Tn)</h3>
                 </div>
@@ -494,8 +494,8 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col">
-                <div className="flex items-center mb-6 border-b border-slate-800 pb-3">
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col">
+                <div className="flex items-center mb-6 border-b border-slate-800/50 pb-3">
                     <div className="flex items-center gap-2">
                         <Cpu className="text-blue-400" size={20} />
                         <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
