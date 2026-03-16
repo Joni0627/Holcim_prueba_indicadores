@@ -291,71 +291,75 @@ export const SummaryView: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* LEFT COLUMN (KPIs) - 3/12 */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-3 flex flex-col gap-6 h-full">
                 
                 {/* Producción Total Card */}
-                <div className="bg-blue-600 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group">
+                <div className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-slate-800 flex flex-col justify-center">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <PackageCheck size={120} />
                     </div>
-                    <p className="text-blue-100 font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
+                    <p className="text-blue-300 font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
                     <div className="flex items-baseline gap-2">
                         <h2 className="text-5xl font-black tracking-tighter">
                             {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
-                        <span className="text-2xl font-bold text-blue-200">Tn</span>
+                        <span className="text-2xl font-bold text-blue-400">Tn</span>
                     </div>
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div className="bg-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-600 pb-2">TN por PRODUCTO</h3>
-                    {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
-                        <div key={prod.name} className="space-y-1">
-                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
-                                <span>{prod.name}</span>
-                                <span>{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
+                <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4 border border-blue-800/50 flex flex-col justify-center">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-800/30 pb-2">TN por PRODUCTO</h3>
+                    <div className="space-y-4">
+                        {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
+                            <div key={prod.name} className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
+                                    <span className="text-blue-100">{prod.name}</span>
+                                    <span className="text-white">{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
+                                </div>
+                                <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-blue-400 rounded-full" 
+                                        style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
+                                    />
+                                </div>
                             </div>
-                            <div className="h-2 bg-blue-900/50 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-red-500 rounded-full" 
-                                    style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
-                                />
-                            </div>
-                        </div>
-                    )) : (
-                        <p className="text-xs text-blue-300 italic">Sin datos de productos</p>
-                    )}
+                        )) : (
+                            <p className="text-xs text-blue-300 italic">Sin datos de productos</p>
+                        )}
+                    </div>
                 </div>
 
                 {/* RENDIMIENTO GLOBAL */}
-                <div className="bg-white p-5 rounded-lg shadow-lg border border-slate-100 space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1 border-b border-slate-50 pb-2">RENDIMIENTO GLOBAL</h3>
-                    <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
-                        <p className="text-[10px] font-bold uppercase text-blue-400 tracking-wider">OEE Total</p>
-                        <p className="text-3xl font-black text-blue-600">
-                            {(detailedMetrics.reduce((acc, m) => acc + m.oee, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
-                        </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-emerald-50 p-3 rounded-md border border-emerald-100">
-                            <p className="text-[10px] font-bold uppercase text-emerald-400 tracking-wider">Disp %</p>
-                            <p className="text-2xl font-black text-emerald-600">
-                                {(detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                <div className="flex-1 bg-gradient-to-br from-blue-700 to-blue-500 p-5 rounded-lg shadow-lg border border-blue-400/30 space-y-4 text-white flex flex-col justify-center">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100/60 mb-1 border-b border-blue-500/30 pb-2">RENDIMIENTO GLOBAL</h3>
+                    <div className="space-y-3">
+                        <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
+                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">OEE Total</p>
+                            <p className="text-3xl font-black text-white">
+                                {(detailedMetrics.reduce((acc, m) => acc + m.oee, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
                             </p>
                         </div>
-                        <div className="bg-amber-50 p-3 rounded-md border border-amber-100">
-                            <p className="text-[10px] font-bold uppercase text-amber-400 tracking-wider">Rend %</p>
-                            <p className="text-2xl font-black text-amber-600">
-                                {(detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
-                            </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
+                                <p className="text-[10px] font-bold uppercase text-emerald-300 tracking-wider">Disp %</p>
+                                <p className="text-2xl font-black text-white">
+                                    {(detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                                </p>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
+                                <p className="text-[10px] font-bold uppercase text-amber-300 tracking-wider">Rend %</p>
+                                <p className="text-2xl font-black text-white">
+                                    {(detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* RIGHT COLUMN (Stock & Downtime) - 9/12 */}
-            <div className="lg:col-span-9 space-y-6">
+            <div className="lg:col-span-9 flex flex-col gap-6 h-full">
                 
                 {/* Stock Section */}
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
@@ -379,7 +383,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* Downtime Horizontal Chart */}
-                <div className="bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 h-[400px] flex flex-col relative overflow-hidden group">
+                <div className="flex-1 bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-red-500/10 transition-colors"></div>
                     <div className="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3 relative z-10">
                         <AlertTriangle className="text-red-500" size={18} />
