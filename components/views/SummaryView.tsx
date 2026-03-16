@@ -1,8 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
-import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity, Clock, Share2, Download } from 'lucide-react';
+import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity, Clock, Share2, Download, Cpu } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'motion/react';
 import html2canvas from 'html2canvas';
 import { fetchDowntimes, fetchProductionStats, fetchStocks } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
@@ -479,13 +480,19 @@ export const SummaryView: React.FC = () => {
             </div>
 
             <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-auto min-h-[450px] flex flex-col">
-                <div className="flex items-center gap-2 mb-6">
-                    <Activity className="text-blue-500" size={20} />
-                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                        <Cpu className="text-blue-600" size={20} />
+                        <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">En tiempo real</span>
+                    </div>
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-grow">
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
                             const avg = machineMetrics.length > 0 ? {
@@ -495,29 +502,49 @@ export const SummaryView: React.FC = () => {
                             } : { oee: 0, rend: 0, disp: 0 };
 
                             return (
-                                <div key={m.name} className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col justify-between hover:border-blue-200 transition-colors">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-tight">{m.name}</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-4xl font-black text-slate-800 tracking-tighter">{m.valueTn.toFixed(0)}</span>
-                                            <span className="text-sm font-bold text-slate-400">Tn</span>
+                                <motion.div 
+                                    key={m.name} 
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i * 0.1 }}
+                                    className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group flex flex-col overflow-hidden"
+                                >
+                                    {/* Card Header */}
+                                    <div className="px-5 py-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/30">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{m.name}</span>
+                                        <Activity size={12} className="text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+
+                                    {/* Main Value Area */}
+                                    <div className="p-5 flex-grow flex flex-col">
+                                        <div className="bg-slate-900 rounded-2xl p-5 mb-5 relative overflow-hidden shadow-inner group-hover:bg-blue-950 transition-colors duration-500">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-400/10 transition-colors"></div>
+                                            <p className="text-slate-500 text-[9px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-5xl font-black text-white tracking-tighter">
+                                                    {m.valueTn.toFixed(0)}
+                                                </span>
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tn</span>
+                                            </div>
+                                        </div>
+
+                                        {/* KPIs Grid */}
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div className="text-center p-2 rounded-xl bg-blue-50/50 border border-blue-100/50 group-hover:bg-blue-100/50 transition-colors">
+                                                <p className="text-[8px] font-bold text-blue-400 uppercase mb-0.5">OEE</p>
+                                                <p className="text-sm font-black text-blue-700">{(avg.oee * 100).toFixed(0)}%</p>
+                                            </div>
+                                            <div className="text-center p-2 rounded-xl bg-emerald-50/50 border border-emerald-100/50 group-hover:bg-emerald-100/50 transition-colors">
+                                                <p className="text-[8px] font-bold text-emerald-400 uppercase mb-0.5">Disp</p>
+                                                <p className="text-sm font-black text-emerald-700">{(avg.disp * 100).toFixed(0)}%</p>
+                                            </div>
+                                            <div className="text-center p-2 rounded-xl bg-amber-50/50 border border-amber-100/50 group-hover:bg-amber-100/50 transition-colors">
+                                                <p className="text-[8px] font-bold text-amber-400 uppercase mb-0.5">Rend</p>
+                                                <p className="text-sm font-black text-amber-700">{(avg.rend * 100).toFixed(0)}%</p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="mt-6 grid grid-cols-3 gap-1 border-t border-slate-200 pt-4">
-                                        <div className="text-center">
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">OEE</p>
-                                            <p className="text-sm font-black text-blue-600">{(avg.oee * 100).toFixed(0)}%</p>
-                                        </div>
-                                        <div className="text-center border-x border-slate-200">
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Disp</p>
-                                            <p className="text-sm font-black text-emerald-600">{(avg.disp * 100).toFixed(0)}%</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">Rend</p>
-                                            <p className="text-sm font-black text-amber-600">{(avg.rend * 100).toFixed(0)}%</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
                     </div>
