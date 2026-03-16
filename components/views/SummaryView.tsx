@@ -4,7 +4,6 @@ import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, Circle
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { fetchDowntimes, fetchProductionStats, fetchStocks } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
 import { DateFilter } from '../DateFilter';
@@ -203,29 +202,11 @@ export const SummaryView: React.FC = () => {
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const response = await fetch(imgData);
+      const blob = await response.blob();
       
-      const imgProps = pdf.getImageProperties(imgData);
-      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position -= pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdfHeight;
-      }
-      
-      const pdfBlob = pdf.output('blob');
-      const fileName = `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.pdf`;
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+      const fileName = `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
 
       // Try sharing first
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -238,15 +219,15 @@ export const SummaryView: React.FC = () => {
         } catch (shareError) {
           // If user cancelled or share failed, fallback to download
           console.log('Share failed or cancelled, falling back to download');
-          downloadFile(pdfBlob, fileName);
+          downloadFile(blob, fileName);
         }
       } else {
         // Fallback to direct download
-        downloadFile(pdfBlob, fileName);
+        downloadFile(blob, fileName);
       }
     } catch (error) {
-      console.error('Error sharing PDF:', error);
-      alert('Hubo un error al generar el reporte. Por favor intente de nuevo.');
+      console.error('Error sharing Image:', error);
+      alert('Hubo un error al generar la imagen. Por favor intente de nuevo.');
     } finally {
       setIsSharing(false);
     }
@@ -290,10 +271,10 @@ export const SummaryView: React.FC = () => {
                 onClick={handleShare}
                 disabled={isSharing}
                 className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 text-xs font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100'}`}
-                title="Compartir Reporte PDF"
+                title="Compartir Imagen"
             >
                 {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
-                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir PDF'}</span>
+                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir Imagen'}</span>
             </button>
         </div>
         <DateFilter onFilterChange={handleFilterChange} />
