@@ -319,7 +319,7 @@ export const SummaryView: React.FC = () => {
                                 </div>
                                 <div className="h-2 bg-black/20 rounded-full overflow-hidden">
                                     <div 
-                                        className="h-full bg-blue-400 rounded-full" 
+                                        className="h-full bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]" 
                                         style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
                                     />
                                 </div>
@@ -362,18 +362,18 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-9 flex flex-col gap-6 h-full">
                 
                 {/* Stock Section */}
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="bg-green-500 text-white px-6 py-2 flex justify-between items-center">
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-lg shadow-xl border border-slate-700 overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 text-white px-6 py-2 flex justify-between items-center shadow-lg">
                         <h3 className="font-black uppercase tracking-widest text-sm">Stock a las 06:00 hs.</h3>
                         <Clock size={16} />
                     </div>
-                    <div className="bg-slate-800 text-white p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         {producedStock.length > 0 ? producedStock.map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
                                 <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight">{item.product}</p>
-                                <p className="text-xl font-black tracking-tighter">
+                                <p className="text-xl font-black tracking-tighter text-white">
                                     {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-[10px] font-bold text-slate-500 ml-1">Tn</span>
+                                    <span className="text-[10px] font-bold text-emerald-500 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) : (
@@ -383,7 +383,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* Downtime Horizontal Chart */}
-                <div className="flex-1 bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
+                <div className="flex-1 bg-gradient-to-br from-slate-950 to-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-red-500/10 transition-colors"></div>
                     <div className="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3 relative z-10">
                         <AlertTriangle className="text-red-500" size={18} />
@@ -397,7 +397,7 @@ export const SummaryView: React.FC = () => {
                                     layout="vertical"
                                     margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
                                 >
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#1e293b" />
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                                     <XAxis type="number" hide />
                                     <YAxis
                                         type="category"
@@ -420,35 +420,35 @@ export const SummaryView: React.FC = () => {
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="h-full flex items-center justify-center text-slate-400 italic text-sm">Sin registros de paros</div>
+                            <div className="h-full flex items-center justify-center text-slate-500 italic text-sm">Sin registros de paros</div>
                         )}
                     </div>
                 </div>
             </div>
 
             {/* BOTTOM ROW - Shift & Palletizer */}
-            <div className="lg:col-span-7 bg-slate-50 p-6 rounded-lg shadow-sm border border-slate-200 h-[480px] flex flex-col relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-full bg-white/40 backdrop-blur-[2px] pointer-events-none"></div>
-                <div className="flex items-center gap-2 mb-6 relative z-10">
+            <div className="lg:col-span-7 bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
+                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800 pb-3">
                     <TrendingUp className="text-emerald-500" size={20} />
-                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Turno (Tn)</h3>
+                    <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción por Turno (Tn)</h3>
                 </div>
                 <div className="flex-grow relative z-10">
                     {shiftData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
-                                <XAxis dataKey="name" stroke="#64748b" fontSize={11} fontWeight={700} />
-                                <YAxis stroke="#64748b" fontSize={11} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} fontWeight={700} />
+                                <YAxis stroke="#94a3b8" fontSize={11} />
                                 <Tooltip 
-                                    cursor={{fill: '#f8fafc'}}
+                                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
                                     content={({ active, payload, label }) => {
                                         if (active && payload && payload.length) {
                                             return (
-                                                <div className="bg-white p-2 border border-slate-200 shadow-md rounded text-xs">
-                                                    <p className="font-bold text-slate-800 mb-1">{label}</p>
-                                                    <p className="text-slate-600">
-                                                        Producción: <span className="font-bold">{payload[0].value?.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn</span>
+                                                <div className="bg-slate-900 p-3 border border-slate-700 shadow-2xl rounded-lg text-xs">
+                                                    <p className="font-bold text-white mb-1">{label}</p>
+                                                    <p className="text-slate-400">
+                                                        Producción: <span className="font-bold text-emerald-400">{payload[0].value?.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn</span>
                                                     </p>
                                                 </div>
                                             );
@@ -458,7 +458,7 @@ export const SummaryView: React.FC = () => {
                                 />
                                 <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={60}>
                                     {shiftData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} />
+                                        <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
                                     ))}
                                     <LabelList 
                                         dataKey="valueTn" 
@@ -469,16 +469,16 @@ export const SummaryView: React.FC = () => {
                                             const metrics = getShiftMetrics(shiftName);
                                             return (
                                                 <g>
-                                                    <text x={x + width / 2} y={y - 5} fill="#1e293b" textAnchor="middle" fontSize={11} fontWeight="black">
+                                                    <text x={x + width / 2} y={y - 5} fill="#ffffff" textAnchor="middle" fontSize={11} fontWeight="black">
                                                         {value.toFixed(0)} Tn
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 18} fill="#64748b" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 18} fill="#94a3b8" textAnchor="middle" fontSize={9} fontWeight="bold">
                                                         OEE: {(metrics.oee * 100).toFixed(0)}%
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 28} fill="#64748b" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 28} fill="#94a3b8" textAnchor="middle" fontSize={9} fontWeight="bold">
                                                         Rend: {(metrics.rend * 100).toFixed(0)}%
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 38} fill="#64748b" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 38} fill="#94a3b8" textAnchor="middle" fontSize={9} fontWeight="bold">
                                                         Disp: {(metrics.disp * 100).toFixed(0)}%
                                                     </text>
                                                 </g>
@@ -489,16 +489,16 @@ export const SummaryView: React.FC = () => {
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-slate-400">Sin datos de turnos</div>
+                        <div className="h-full flex items-center justify-center text-slate-500">Sin datos de turnos</div>
                     )}
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 h-[480px] flex flex-col">
-                <div className="flex items-center mb-6">
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 to-slate-950 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col">
+                <div className="flex items-center mb-6 border-b border-slate-800 pb-3">
                     <div className="flex items-center gap-2">
-                        <Cpu className="text-blue-600" size={20} />
-                        <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
+                        <Cpu className="text-blue-400" size={20} />
+                        <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
                     </div>
                 </div>
                 
@@ -518,58 +518,58 @@ export const SummaryView: React.FC = () => {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }}
-                                    className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all group flex flex-col overflow-hidden"
+                                    className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-lg hover:shadow-blue-900/40 transition-all group flex flex-col overflow-hidden"
                                 >
                                     {/* Card Header */}
-                                    <div className="px-5 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                                        <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{m.name}</span>
-                                        <Activity size={12} className="text-blue-600" />
+                                    <div className="px-5 py-3 border-b border-slate-700 flex justify-between items-center bg-black/20">
+                                        <span className="text-xs font-black text-blue-400 uppercase tracking-widest">{m.name}</span>
+                                        <Activity size={12} className="text-emerald-500" />
                                     </div>
 
                                     {/* Main Value Area */}
                                     <div className="p-5 flex-grow flex flex-col">
-                                        <div className="bg-slate-900 rounded-2xl p-5 mb-5 relative overflow-hidden shadow-lg group-hover:bg-blue-950 transition-colors duration-500">
-                                            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-400/10 transition-colors"></div>
-                                            <p className="text-slate-400 text-[9px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
+                                        <div className="bg-slate-950 rounded-2xl p-5 mb-5 relative overflow-hidden shadow-2xl group-hover:bg-blue-950 transition-colors duration-500 border border-slate-800">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-400/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-400/10 transition-colors"></div>
+                                            <p className="text-slate-500 text-[9px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-5xl font-black text-white tracking-tighter">
                                                     {m.valueTn.toFixed(0)}
                                                 </span>
-                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tn</span>
+                                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tn</span>
                                             </div>
                                         </div>
 
                                         {/* KPIs Grid - Modernized */}
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden">
+                                                <div className="w-full h-1.5 bg-slate-900 rounded-full mb-2 overflow-hidden">
                                                     <div 
-                                                        className="h-full bg-blue-600 rounded-full" 
+                                                        className="h-full bg-blue-500 rounded-full" 
                                                         style={{ width: `${Math.min(avg.oee * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase">OEE</p>
-                                                <p className="text-sm font-black text-blue-600">{(avg.oee * 100).toFixed(0)}%</p>
+                                                <p className="text-[8px] font-bold text-slate-500 uppercase">OEE</p>
+                                                <p className="text-sm font-black text-blue-400">{(avg.oee * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden">
+                                                <div className="w-full h-1.5 bg-slate-900 rounded-full mb-2 overflow-hidden">
                                                     <div 
                                                         className="h-full bg-emerald-500 rounded-full" 
                                                         style={{ width: `${Math.min(avg.disp * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Disp</p>
+                                                <p className="text-[8px] font-bold text-slate-500 uppercase">Disp</p>
                                                 <p className="text-sm font-black text-emerald-600">{(avg.disp * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden">
+                                                <div className="w-full h-1.5 bg-slate-900 rounded-full mb-2 overflow-hidden">
                                                     <div 
                                                         className="h-full bg-amber-500 rounded-full" 
                                                         style={{ width: `${Math.min(avg.rend * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-slate-400 uppercase">Rend</p>
-                                                <p className="text-sm font-black text-amber-600">{(avg.rend * 100).toFixed(0)}%</p>
+                                                <p className="text-[8px] font-bold text-slate-500 uppercase">Rend</p>
+                                                <p className="text-sm font-black text-amber-400">{(avg.rend * 100).toFixed(0)}%</p>
                                             </div>
                                         </div>
                                     </div>
