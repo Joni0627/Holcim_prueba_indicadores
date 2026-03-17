@@ -204,16 +204,20 @@ export const SummaryView: React.FC = () => {
           const el = clonedDoc.getElementById('summary-view-content');
           if (el) {
             el.style.padding = '40px';
-            el.style.width = '1400px';
-            el.style.display = 'flex';
-            el.style.flexDirection = 'column';
-            el.style.gap = '32px';
-            el.style.backgroundColor = '#0f172a'; // Ensure dark background
+            el.style.width = '1600px'; // Wider for better horizontal space
+            el.style.backgroundColor = '#0f172a';
             
-            // Force all charts to have a much larger minimum height for the screenshot
+            // Target specific chart containers to make them much taller
+            const downtimeContainer = el.querySelector('[data-chart="downtime"]');
+            if (downtimeContainer) (downtimeContainer as HTMLElement).style.minHeight = '800px';
+            
+            const shiftContainer = el.querySelector('[data-chart="shift"]');
+            if (shiftContainer) (shiftContainer as HTMLElement).style.minHeight = '800px';
+
+            // Ensure charts inside them also grow
             const containers = el.querySelectorAll('.recharts-responsive-container');
             containers.forEach((c: any) => {
-                c.style.minHeight = '650px';
+                c.style.minHeight = '700px';
             });
           }
         }
@@ -317,10 +321,10 @@ export const SummaryView: React.FC = () => {
                     </div>
                     <p className="text-blue-300 font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
                     <div className="flex items-baseline gap-2">
-                        <h2 className="text-5xl font-black tracking-tighter">
+                        <h2 className="text-6xl font-black tracking-tighter">
                             {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
-                        <span className="text-2xl font-bold text-blue-400">Tn</span>
+                        <span className="text-3xl font-bold text-blue-400">Tn</span>
                     </div>
                 </div>
 
@@ -400,7 +404,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* Downtime Horizontal Chart */}
-                <div className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
+                <div data-chart="downtime" className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-400/10 transition-colors"></div>
                     <div className="flex items-center gap-2 mb-4 border-b border-slate-800/50 pb-3 relative z-10">
                         <AlertTriangle className="text-red-500" size={18} />
@@ -420,16 +424,16 @@ export const SummaryView: React.FC = () => {
                                         type="category"
                                         dataKey="reason"
                                         stroke="#94a3b8"
-                                        fontSize={12}
-                                        width={160}
-                                        tick={{ fill: '#e2e8f0', fontWeight: 700 }}
-                                        tickFormatter={(val) => val.length > 30 ? `${val.substring(0,30)}...` : val}
+                                        fontSize={14}
+                                        width={180}
+                                        tick={{ fill: '#e2e8f0', fontWeight: 800 }}
+                                        tickFormatter={(val) => val.length > 35 ? `${val.substring(0,35)}...` : val}
                                     />
                                     <Tooltip 
                                         content={<CustomTooltip />} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={32}>
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={40}>
                                         {downtimes.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
                                         ))}
@@ -450,7 +454,7 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* BOTTOM ROW - Shift & Palletizer */}
-            <div className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full relative overflow-hidden group">
+            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
                 <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
                     <TrendingUp className="text-emerald-500" size={20} />
@@ -461,8 +465,8 @@ export const SummaryView: React.FC = () => {
                         <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={14} fontWeight={800} />
-                                <YAxis stroke="#94a3b8" fontSize={14} />
+                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={16} fontWeight={900} />
+                                <YAxis stroke="#94a3b8" fontSize={16} />
                                 <Tooltip 
                                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
                                     content={({ active, payload, label }) => {
@@ -479,7 +483,7 @@ export const SummaryView: React.FC = () => {
                                         return null;
                                     }}
                                 />
-                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={100}>
+                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={120}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
                                     ))}
