@@ -195,74 +195,57 @@ export const SummaryView: React.FC = () => {
     setIsSharing(true);
     try {
       const canvas = await html2canvas(element, {
-        scale: 2, // Scale 2 is enough for high quality without making the file too large for sharing
+        scale: 2, 
         useCORS: true,
         logging: false,
         backgroundColor: '#0f172a',
-        windowWidth: 1200, 
+        windowWidth: 1400, // Ensure lg: grid classes are active
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('summary-view-content');
           if (el) {
-            // Force a vertical "PDF-like" layout for the capture
-            el.style.display = 'flex';
-            el.style.flexDirection = 'column';
-            el.style.width = '1200px';
-            el.style.padding = '60px';
-            el.style.gap = '50px';
+            el.style.width = '1400px';
+            el.style.padding = '32px';
             el.style.backgroundColor = '#0f172a';
             
-            // Make all major sections full width and tall
-            const sections = el.querySelectorAll('.lg\\:col-span-7, .lg\\:col-span-5, .flex-1');
-            sections.forEach((s: any) => {
-                s.style.width = '100%';
-                s.style.minHeight = '600px';
-                s.style.flex = 'none';
-            });
-
-            // Specific heights for charts to ensure legibility
+            // Increase height of specific chart containers for the capture
             const downtimeContainer = el.querySelector('[data-chart="downtime"]');
-            if (downtimeContainer) (downtimeContainer as HTMLElement).style.minHeight = '900px';
+            if (downtimeContainer) (downtimeContainer as HTMLElement).style.minHeight = '600px';
             
             const shiftContainer = el.querySelector('[data-chart="shift"]');
-            if (shiftContainer) (shiftContainer as HTMLElement).style.minHeight = '900px';
+            if (shiftContainer) (shiftContainer as HTMLElement).style.minHeight = '700px';
 
-            // Ensure recharts containers grow to fill the space
+            // Ensure recharts containers grow
             const containers = el.querySelectorAll('.recharts-responsive-container');
             containers.forEach((c: any) => {
-                c.style.minHeight = '800px';
+                c.style.minHeight = '500px';
             });
-
-            // Adjust grid layout to be single column
-            const grid = el.querySelector('.grid');
-            if (grid) {
-                (grid as HTMLElement).style.display = 'flex';
-                (grid as HTMLElement).style.flexDirection = 'column';
-                (grid as HTMLElement).style.gap = '50px';
-            }
           }
         }
       });
       
-      const imgData = canvas.toDataURL('image/png', 0.8); // Slightly compress to ensure it's shareable
+      const imgData = canvas.toDataURL('image/png', 0.9);
       const response = await fetch(imgData);
       const blob = await response.blob();
       
       const fileName = `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
 
-      // Use a more robust sharing check
-      const canShareFiles = navigator.canShare && navigator.canShare({ files: [file] });
-      
-      if (navigator.share && (canShareFiles || !navigator.canShare)) {
+      // Standard sharing logic
+      if (navigator.share) {
         try {
-          await navigator.share({
-            files: canShareFiles ? [file] : undefined,
+          // Check if file sharing is supported
+          const data: ShareData = {
             title: 'Reporte de Producción',
             text: `Reporte de producción ${formatDate(dateRange.start)}`,
-            url: !canShareFiles ? window.location.href : undefined
-          });
+          };
+
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            data.files = [file];
+          }
+
+          await navigator.share(data);
         } catch (shareError) {
-          // If user cancelled, don't download. If it failed, download.
+          // Only download if it wasn't a user cancellation
           if ((shareError as any).name !== 'AbortError') {
             downloadFile(blob, fileName);
           }
