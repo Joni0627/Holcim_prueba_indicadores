@@ -48,12 +48,9 @@ export const AdminPanel = () => {
           <ShieldCheck className="text-emerald-400" size={32} />
         </div>
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-            Panel de Gestión <span className="text-emerald-500">Usuarios</span>
+          <h1 className="text-3xl font-black tracking-tight text-emerald-500">
+            Panel de Gestión Usuarios
           </h1>
-          <p className="text-slate-500 text-sm font-medium uppercase tracking-widest mt-1">
-            Control de Acceso y Whitelist
-          </p>
         </div>
       </div>
 
