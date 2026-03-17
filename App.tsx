@@ -29,6 +29,8 @@ function App() {
 
   const { user } = useUser();
   const isAdmin = (user?.publicMetadata as { role?: string })?.role === 'admin';
+  const isOwner = user?.primaryEmailAddress?.emailAddress === "joni0627@gmail.com";
+  const canAccessAdmin = isAdmin || isOwner;
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
@@ -49,7 +51,7 @@ function App() {
       case 'downtime': return <DowntimeView />;
       case 'palletizers': return <PalletizerView />;
       case 'breakage': return <BreakageView />;
-      case 'admin': return isAdmin ? <AdminPanel /> : <SummaryView />;
+      case 'admin': return canAccessAdmin ? <AdminPanel /> : <SummaryView />;
       default: return <SummaryView />;
     }
   };
@@ -148,7 +150,7 @@ function App() {
           <div className={`pt-6 mt-6 border-t border-slate-800 ${isCollapsed ? 'border-t-0 pt-2 mt-2' : ''}`}>
             {!isCollapsed && <p className="px-4 text-xs font-semibold text-slate-500 uppercase mb-2 tracking-wider animate-in fade-in">Sistema</p>}
             
-            {isAdmin && (
+            {canAccessAdmin && (
               <button
                 onClick={() => {
                   setCurrentView('admin');
@@ -183,7 +185,7 @@ function App() {
               <p className="text-sm font-medium text-white whitespace-nowrap">{user?.fullName || 'Usuario'}</p>
               <p className="text-xs text-emerald-500/60 flex items-center gap-1 whitespace-nowrap">
                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                 {isAdmin ? 'Administrador' : 'Operador'}
+                 {canAccessAdmin ? 'Administrador' : 'Operador'}
               </p>
             </div>
           </div>

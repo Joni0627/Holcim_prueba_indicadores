@@ -12,7 +12,13 @@ export async function POST(req: Request) {
 
     // Check if the user has the 'admin' role in publicMetadata
     const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
-    if (role !== "admin") {
+    
+    // Get user details to check email (bootstrapping admin)
+    const user = await clerkClient.users.getUser(userId);
+    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const isOwner = primaryEmail === "joni0627@gmail.com";
+
+    if (role !== "admin" && !isOwner) {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
