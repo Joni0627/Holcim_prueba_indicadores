@@ -209,15 +209,32 @@ export const SummaryView: React.FC = () => {
             
             // Increase height of specific chart containers for the capture
             const downtimeContainer = el.querySelector('[data-chart="downtime"]');
-            if (downtimeContainer) (downtimeContainer as HTMLElement).style.minHeight = '600px';
+            if (downtimeContainer) {
+                (downtimeContainer as HTMLElement).style.height = '800px';
+                (downtimeContainer as HTMLElement).style.display = 'flex';
+                (downtimeContainer as HTMLElement).style.flexDirection = 'column';
+            }
             
             const shiftContainer = el.querySelector('[data-chart="shift"]');
-            if (shiftContainer) (shiftContainer as HTMLElement).style.minHeight = '700px';
+            if (shiftContainer) {
+                (shiftContainer as HTMLElement).style.height = '800px';
+                (shiftContainer as HTMLElement).style.display = 'flex';
+                (shiftContainer as HTMLElement).style.flexDirection = 'column';
+            }
 
-            // Ensure recharts containers grow
+            // Target the inner wrappers to force them to take all space
+            const wrappers = el.querySelectorAll('[data-chart-wrapper]');
+            wrappers.forEach((w: any) => {
+                w.style.flex = '1';
+                w.style.height = '100%';
+                w.style.minHeight = '600px';
+            });
+
+            // Ensure recharts containers grow and fill
             const containers = el.querySelectorAll('.recharts-responsive-container');
             containers.forEach((c: any) => {
-                c.style.minHeight = '500px';
+                c.style.height = '100%';
+                c.style.minHeight = '600px';
             });
           }
         }
@@ -416,7 +433,7 @@ export const SummaryView: React.FC = () => {
                         <AlertTriangle className="text-red-500" size={18} />
                         <h3 className="font-bold text-slate-200 uppercase text-xs tracking-widest">Análisis de Paradas Principales</h3>
                     </div>
-                    <div className="flex-grow relative z-10">
+                    <div data-chart-wrapper className="flex-grow relative z-10">
                         {downtimes.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%" debounce={50}>
                                 <BarChart
@@ -430,16 +447,16 @@ export const SummaryView: React.FC = () => {
                                         type="category"
                                         dataKey="reason"
                                         stroke="#94a3b8"
-                                        fontSize={14}
-                                        width={180}
-                                        tick={{ fill: '#e2e8f0', fontWeight: 800 }}
-                                        tickFormatter={(val) => val.length > 35 ? `${val.substring(0,35)}...` : val}
+                                        fontSize={16}
+                                        width={200}
+                                        tick={{ fill: '#e2e8f0', fontWeight: 900 }}
+                                        tickFormatter={(val) => val.length > 40 ? `${val.substring(0,40)}...` : val}
                                     />
                                     <Tooltip 
                                         content={<CustomTooltip />} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={40}>
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={50}>
                                         {downtimes.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
                                         ))}
@@ -466,13 +483,13 @@ export const SummaryView: React.FC = () => {
                     <TrendingUp className="text-emerald-500" size={20} />
                     <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción por Turno (Tn)</h3>
                 </div>
-                <div className="flex-grow relative z-10">
+                <div data-chart-wrapper className="flex-grow relative z-10">
                     {shiftData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={16} fontWeight={900} />
-                                <YAxis stroke="#94a3b8" fontSize={16} />
+                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={18} fontWeight={900} />
+                                <YAxis stroke="#94a3b8" fontSize={18} />
                                 <Tooltip 
                                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
                                     content={({ active, payload, label }) => {
@@ -489,7 +506,7 @@ export const SummaryView: React.FC = () => {
                                         return null;
                                     }}
                                 />
-                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={120}>
+                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={140}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
                                     ))}
