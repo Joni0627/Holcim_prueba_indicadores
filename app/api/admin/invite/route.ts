@@ -28,8 +28,9 @@ export async function POST(req: Request) {
       return new NextResponse("Email is required", { status: 400 });
     }
 
-    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || "";
-    const signUpUrl = `${origin}/sign-up`;
+    const host = req.headers.get('host');
+    const protocol = host?.includes('localhost') ? 'http' : 'https';
+    const origin = req.headers.get('origin') || `${protocol}://${host}`;
 
     // Create the invitation using Clerk Backend SDK
     const invitation = await clerkClient.invitations.createInvitation({
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
       publicMetadata: {
         role: "user", // Default role for invited users
       },
+      ignoreExisting: true, // If user already exists, don't fail
     });
 
     return NextResponse.json(invitation);

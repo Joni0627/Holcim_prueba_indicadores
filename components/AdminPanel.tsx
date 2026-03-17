@@ -21,13 +21,17 @@ export const AdminPanel = () => {
   const [message, setMessage] = useState('');
   
   const [users, setUsers] = useState<ClerkUser[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [isInvitationsLoading, setIsInvitationsLoading] = useState(true);
 
   useEffect(() => {
     fetchUsers();
+    fetchInvitations();
   }, []);
 
   const fetchUsers = async () => {
+    setIsUsersLoading(true);
     try {
       const response = await fetch('/api/admin/users');
       if (response.ok) {
@@ -38,6 +42,34 @@ export const AdminPanel = () => {
       console.error('Error fetching users:', err);
     } finally {
       setIsUsersLoading(false);
+    }
+  };
+
+  const fetchInvitations = async () => {
+    setIsInvitationsLoading(true);
+    try {
+      const response = await fetch('/api/admin/invitations');
+      if (response.ok) {
+        const data = await response.json();
+        setInvitations(data);
+      }
+    } catch (err) {
+      console.error('Error fetching invitations:', err);
+    } finally {
+      setIsInvitationsLoading(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string) => {
+    try {
+      const response = await fetch(`/api/admin/invitations?invitationId=${invitationId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        fetchInvitations();
+      }
+    } catch (err) {
+      console.error('Error revoking invitation:', err);
     }
   };
 
@@ -80,8 +112,9 @@ export const AdminPanel = () => {
       setStatus('success');
       setMessage(`Invitación enviada con éxito a ${email}`);
       setEmail('');
-      // Refresh user list to see if they appear (though they won't until they sign up)
+      // Refresh user list and invitations
       fetchUsers();
+      fetchInvitations();
     } catch (err: any) {
       setStatus('error');
       setMessage(err.message || 'Ocurrió un error inesperado');
@@ -189,6 +222,49 @@ export const AdminPanel = () => {
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* Pending Invitations Card */}
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[400px]">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="text-amber-400" size={20} />
+                <h3 className="text-lg font-bold text-white">Invitaciones Pendientes</h3>
+              </div>
+              <button 
+                onClick={fetchInvitations}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-all"
+                title="Refrescar invitaciones"
+              >
+                <Loader2 className={isInvitationsLoading ? "animate-spin" : ""} size={14} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {isInvitationsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-amber-500" size={24} />
+                </div>
+              ) : invitations.length === 0 ? (
+                <p className="text-center py-8 text-slate-500 text-sm italic">No hay invitaciones pendientes.</p>
+              ) : (
+                invitations.map((inv) => (
+                  <div key={inv.id} className="bg-slate-950/50 border border-slate-800/50 rounded-xl p-3 flex items-center justify-between group">
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{inv.email}</p>
+                      <p className="text-slate-500 text-[10px]">{new Date(inv.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <button 
+                      onClick={() => handleRevokeInvitation(inv.id)}
+                      className="text-red-400/50 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                      title="Revocar invitación"
+                    >
+                      <AlertCircle size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
