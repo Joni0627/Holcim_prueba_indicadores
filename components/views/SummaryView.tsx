@@ -195,17 +195,25 @@ export const SummaryView: React.FC = () => {
     setIsSharing(true);
     try {
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 3, // Higher scale for better quality
         useCORS: true,
         logging: false,
-        backgroundColor: '#0f172a', // Match the dark theme background
-        windowWidth: 1400,
+        backgroundColor: '#0f172a',
+        windowWidth: 1200, // Narrower window width for the clone to make charts look "bigger" relative to the container
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('summary-view-content');
           if (el) {
-            el.style.padding = '20px';
-            el.style.width = '1400px';
-            el.style.height = 'auto';
+            el.style.padding = '32px';
+            el.style.width = '1200px';
+            el.style.display = 'flex';
+            el.style.flexDirection = 'column';
+            el.style.gap = '24px';
+            
+            // Force all charts to have a good minimum height for the screenshot
+            const containers = el.querySelectorAll('.recharts-responsive-container');
+            containers.forEach((c: any) => {
+                c.style.minHeight = '350px';
+            });
           }
         }
       });
@@ -378,10 +386,10 @@ export const SummaryView: React.FC = () => {
                     <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         {producedStock.length > 0 ? producedStock.map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
-                                <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight">{item.product}</p>
-                                <p className="text-xl font-black tracking-tighter text-white">
+                                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 leading-tight">{item.product}</p>
+                                <p className="text-2xl font-black tracking-tighter text-white">
                                     {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-[10px] font-bold text-emerald-500 ml-1">Tn</span>
+                                    <span className="text-xs font-bold text-emerald-500 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) : (
@@ -411,19 +419,25 @@ export const SummaryView: React.FC = () => {
                                         type="category"
                                         dataKey="reason"
                                         stroke="#94a3b8"
-                                        fontSize={10}
-                                        width={180}
-                                        tick={{ fill: '#94a3b8', fontWeight: 600 }}
-                                        tickFormatter={(val) => val.length > 25 ? `${val.substring(0,25)}...` : val}
+                                        fontSize={12}
+                                        width={200}
+                                        tick={{ fill: '#e2e8f0', fontWeight: 700 }}
+                                        tickFormatter={(val) => val.length > 30 ? `${val.substring(0,30)}...` : val}
                                     />
                                     <Tooltip 
                                         content={<CustomTooltip />} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={15}>
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={25}>
                                         {downtimes.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
                                         ))}
+                                        <LabelList 
+                                            dataKey="durationMinutes" 
+                                            position="right" 
+                                            formatter={(val: number) => `${val} min`}
+                                            style={{ fill: '#cbd5e1', fontSize: '10px', fontWeight: 'bold' }}
+                                        />
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
@@ -435,7 +449,7 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* BOTTOM ROW - Shift & Palletizer */}
-            <div className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col relative overflow-hidden group">
+            <div className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
                 <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
                     <TrendingUp className="text-emerald-500" size={20} />
@@ -446,8 +460,8 @@ export const SummaryView: React.FC = () => {
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} fontWeight={700} />
-                                <YAxis stroke="#94a3b8" fontSize={11} />
+                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} fontWeight={800} />
+                                <YAxis stroke="#94a3b8" fontSize={12} />
                                 <Tooltip 
                                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
                                     content={({ active, payload, label }) => {
@@ -464,7 +478,7 @@ export const SummaryView: React.FC = () => {
                                         return null;
                                     }}
                                 />
-                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={60}>
+                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={80}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
                                     ))}
@@ -477,16 +491,16 @@ export const SummaryView: React.FC = () => {
                                             const metrics = getShiftMetrics(shiftName);
                                             return (
                                                 <g>
-                                                    <text x={x + width / 2} y={y - 5} fill="#ffffff" textAnchor="middle" fontSize={11} fontWeight="black">
+                                                    <text x={x + width / 2} y={y - 8} fill="#ffffff" textAnchor="middle" fontSize={14} fontWeight="black">
                                                         {value.toFixed(0)} Tn
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 18} fill="#94a3b8" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 24} fill="#cbd5e1" textAnchor="middle" fontSize={10} fontWeight="bold">
                                                         OEE: {(metrics.oee * 100).toFixed(0)}%
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 28} fill="#94a3b8" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 36} fill="#94a3b8" textAnchor="middle" fontSize={10} fontWeight="bold">
                                                         Rend: {(metrics.rend * 100).toFixed(0)}%
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 38} fill="#94a3b8" textAnchor="middle" fontSize={9} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 48} fill="#94a3b8" textAnchor="middle" fontSize={10} fontWeight="bold">
                                                         Disp: {(metrics.disp * 100).toFixed(0)}%
                                                     </text>
                                                 </g>
@@ -502,7 +516,7 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 lg:h-[480px] min-h-[480px] flex flex-col">
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full">
                 <div className="flex items-center mb-6 border-b border-slate-800/50 pb-3">
                     <div className="flex items-center gap-2">
                         <Cpu className="text-blue-400" size={20} />
