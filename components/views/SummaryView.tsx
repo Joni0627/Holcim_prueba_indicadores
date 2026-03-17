@@ -97,6 +97,17 @@ export const SummaryView: React.FC = () => {
   });
 
   const [isSharing, setIsSharing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check for mobile on mount and resize
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Queries with React Query for caching and optimization
   const { data: downtimeResult, isLoading: loadingDowntimes } = useQuery({
@@ -140,13 +151,28 @@ export const SummaryView: React.FC = () => {
       .slice(0, 10);
   }, [downtimeResult]);
 
+  const detailedMetrics = prodResult?.details || [];
+
   const shiftData = useMemo(() => {
     if (!prodResult?.byShift) return [];
-    return prodResult.byShift.map(s => ({
-        ...s,
-        valueTn: s.valueTn // Ya viene en Tn desde la API
-    }));
-  }, [prodResult]);
+    return prodResult.byShift.map(s => {
+        const shiftMetrics = detailedMetrics.filter(m => m.shift === s.name);
+        const count = shiftMetrics.length;
+        const metrics = count > 0 ? {
+            disp: shiftMetrics.reduce((acc, m) => acc + m.availability, 0) / count,
+            rend: shiftMetrics.reduce((acc, m) => acc + m.performance, 0) / count,
+            oee: shiftMetrics.reduce((acc, m) => acc + m.oee, 0) / count
+        } : { disp: 0, rend: 0, oee: 0 };
+
+        return {
+            ...s,
+            valueTn: s.valueTn,
+            oee: Math.round(metrics.oee * 100),
+            disp: Math.round(metrics.disp * 100),
+            rend: Math.round(metrics.rend * 100)
+        };
+    });
+  }, [prodResult, detailedMetrics]);
 
   const productBreakdown = useMemo(() => {
     if (!prodResult?.byMachineProduct) return [];
@@ -172,8 +198,6 @@ export const SummaryView: React.FC = () => {
   const maxProductValue = useMemo(() => 
     Math.max(...productBreakdown.map(p => p.valueTn), 1), 
   [productBreakdown]);
-
-  const detailedMetrics = prodResult?.details || [];
 
   const producedStock = useMemo(() => {
     if (!stockResult?.items) return [];
@@ -361,10 +385,10 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto overflow-hidden">
+    <div className="space-y-6 w-full overflow-x-hidden px-0">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4 px-2">
         <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
                 <Calendar className="text-slate-400" size={24} />
@@ -383,7 +407,7 @@ export const SummaryView: React.FC = () => {
         <DateFilter onFilterChange={handleFilterChange} />
       </div>
 
-      <div id="summary-view-content" className="space-y-6">
+      <div id="summary-view-content" className="space-y-6 w-full overflow-x-hidden px-2">
         {isLoading ? (
            <div className="h-96 flex flex-col items-center justify-center text-slate-400">
               <Loader2 className="animate-spin mb-2" size={48} />
@@ -472,7 +496,7 @@ export const SummaryView: React.FC = () => {
                     <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         {producedStock.length > 0 ? producedStock.map(item => (
                             <div key={item.id} className="border-r border-slate-700 last:border-0">
-                                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1 leading-tight">{item.product}</p>
+                                <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight truncate" title={item.product}>{item.product}</p>
                                 <p className="text-2xl font-black tracking-tighter text-white">
                                     {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     <span className="text-xs font-bold text-emerald-500 ml-1">Tn</span>
@@ -505,10 +529,13 @@ export const SummaryView: React.FC = () => {
                                         type="category"
                                         dataKey="reason"
                                         stroke="#94a3b8"
-                                        fontSize={16}
-                                        width={200}
+                                        fontSize={isMobile ? 10 : 16}
+                                        width={isMobile ? 80 : 200}
                                         tick={{ fill: '#e2e8f0', fontWeight: 900 }}
-                                        tickFormatter={(val) => val.length > 40 ? `${val.substring(0,40)}...` : val}
+                                        tickFormatter={(val) => {
+                                            const maxLen = isMobile ? 15 : 40;
+                                            return val.length > maxLen ? `${val.substring(0, maxLen)}...` : val;
+                                        }}
                                     />
                                     <Tooltip 
                                         content={<CustomTooltip />} 
@@ -535,65 +562,34 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* Producción por Turno (Tn) */}
-            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
+            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[450px] flex flex-col h-full relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
                 <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
                     <TrendingUp className="text-emerald-500" size={20} />
-                    <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción por Turno (Tn)</h3>
+                    <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
                 <div data-chart-wrapper className="flex-grow relative z-10">
                     {shiftData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" debounce={50}>
-                            <BarChart data={shiftData} margin={{ top: 60, right: 30, left: 0, bottom: 20 }}>
+                            <BarChart data={shiftData} margin={{ top: 20, right: isMobile ? 10 : 30, left: isMobile ? -20 : 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={18} fontWeight={900} />
-                                <YAxis stroke="#94a3b8" fontSize={18} />
+                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={isMobile ? 10 : 14} fontWeight={900} />
+                                <YAxis yAxisId="left" stroke="#3b82f6" fontSize={isMobile ? 10 : 14} label={isMobile ? undefined : { value: 'Tn', angle: -90, position: 'insideLeft', fill: '#3b82f6', fontSize: 12 }} />
+                                <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={isMobile ? 10 : 14} domain={[0, 110]} label={isMobile ? undefined : { value: '%', angle: 90, position: 'insideRight', fill: '#10b981', fontSize: 12 }} />
                                 <Tooltip 
                                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                                    content={({ active, payload, label }) => {
-                                        if (active && payload && payload.length) {
-                                            return (
-                                                <div className="bg-slate-900 p-3 border border-slate-700 shadow-2xl rounded-lg text-xs">
-                                                    <p className="font-bold text-white mb-1">{label}</p>
-                                                    <p className="text-slate-400">
-                                                        Producción: <span className="font-bold text-emerald-400">{payload[0].value?.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn</span>
-                                                    </p>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    }}
+                                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
+                                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
                                 />
-                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={180}>
-                                    {shiftData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
-                                    ))}
-                                    <LabelList 
-                                        dataKey="valueTn" 
-                                        position="top" 
-                                        content={(props: any) => {
-                                            const { x, y, width, value, index } = props;
-                                            const shiftName = shiftData[index].name;
-                                            const metrics = getShiftMetrics(shiftName);
-                                            return (
-                                                <g>
-                                                    <text x={x + width / 2} y={y - 10} fill="#ffffff" textAnchor="middle" fontSize={16} fontWeight="black">
-                                                        {value.toFixed(0)} Tn
-                                                    </text>
-                                                    <text x={x + width / 2} y={y - 28} fill="#cbd5e1" textAnchor="middle" fontSize={12} fontWeight="bold">
-                                                        OEE: {(metrics.oee * 100).toFixed(0)}%
-                                                    </text>
-                                                    <text x={x + width / 2} y={y - 42} fill="#94a3b8" textAnchor="middle" fontSize={11} fontWeight="bold">
-                                                        Rend: {(metrics.rend * 100).toFixed(0)}%
-                                                    </text>
-                                                    <text x={x + width / 2} y={y - 54} fill="#94a3b8" textAnchor="middle" fontSize={11} fontWeight="bold">
-                                                        Disp: {(metrics.disp * 100).toFixed(0)}%
-                                                    </text>
-                                                </g>
-                                            );
-                                        }}
-                                    />
+                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }} />
+                                <Bar yAxisId="left" dataKey="valueTn" name="Producción (Tn)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40}>
+                                    <LabelList dataKey="valueTn" position="top" fill="#ffffff" fontSize={12} fontWeight="bold" />
                                 </Bar>
+                                <Bar yAxisId="right" dataKey="oee" name="OEE %" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20}>
+                                    <LabelList dataKey="oee" position="top" fill="#10b981" fontSize={10} fontWeight="bold" formatter={(val: any) => `${val}%`} />
+                                </Bar>
+                                <Bar yAxisId="right" dataKey="disp" name="Disp %" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
+                                <Bar yAxisId="right" dataKey="rend" name="Rend %" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
@@ -621,11 +617,8 @@ export const SummaryView: React.FC = () => {
                             } : { oee: 0, rend: 0, disp: 0 };
 
                             return (
-                                <motion.div 
+                                <div 
                                     key={m.name} 
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.1 }}
                                     className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-lg hover:shadow-blue-900/40 transition-all group flex flex-col overflow-hidden"
                                 >
                                     {/* Card Header */}
@@ -681,7 +674,7 @@ export const SummaryView: React.FC = () => {
                                             </div>
                                         </div>
                                     </div>
-                                </motion.div>
+                                </div>
                             );
                         })}
                     </div>
