@@ -203,16 +203,17 @@ export const SummaryView: React.FC = () => {
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('summary-view-content');
           if (el) {
-            el.style.padding = '32px';
-            el.style.width = '1200px';
+            el.style.padding = '40px';
+            el.style.width = '1400px';
             el.style.display = 'flex';
             el.style.flexDirection = 'column';
-            el.style.gap = '24px';
+            el.style.gap = '32px';
+            el.style.backgroundColor = '#0f172a'; // Ensure dark background
             
-            // Force all charts to have a good minimum height for the screenshot
+            // Force all charts to have a much larger minimum height for the screenshot
             const containers = el.querySelectorAll('.recharts-responsive-container');
             containers.forEach((c: any) => {
-                c.style.minHeight = '350px';
+                c.style.minHeight = '650px';
             });
           }
         }
@@ -325,11 +326,11 @@ export const SummaryView: React.FC = () => {
 
                 {/* TN por PRODUCTO */}
                 <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4 border border-blue-800/50 flex flex-col justify-center">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-800/30 pb-2">TN por PRODUCTO</h3>
+                    <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-800/30 pb-2">TN por PRODUCTO</h3>
                     <div className="space-y-4">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
                             <div key={prod.name} className="space-y-1">
-                                <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
+                                <div className="flex justify-between text-[12px] font-bold uppercase tracking-tight">
                                     <span className="text-blue-100">{prod.name}</span>
                                     <span className="text-white">{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
                                 </div>
@@ -419,16 +420,16 @@ export const SummaryView: React.FC = () => {
                                         type="category"
                                         dataKey="reason"
                                         stroke="#94a3b8"
-                                        fontSize={10}
-                                        width={120}
+                                        fontSize={12}
+                                        width={160}
                                         tick={{ fill: '#e2e8f0', fontWeight: 700 }}
-                                        tickFormatter={(val) => val.length > 20 ? `${val.substring(0,20)}...` : val}
+                                        tickFormatter={(val) => val.length > 30 ? `${val.substring(0,30)}...` : val}
                                     />
                                     <Tooltip 
                                         content={<CustomTooltip />} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={25}>
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={32}>
                                         {downtimes.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
                                         ))}
@@ -436,7 +437,7 @@ export const SummaryView: React.FC = () => {
                                             dataKey="durationMinutes" 
                                             position="right" 
                                             formatter={(val: number) => `${val} min`}
-                                            style={{ fill: '#cbd5e1', fontSize: '10px', fontWeight: 'bold' }}
+                                            style={{ fill: '#cbd5e1', fontSize: '12px', fontWeight: 'bold' }}
                                         />
                                     </Bar>
                                 </BarChart>
@@ -460,8 +461,8 @@ export const SummaryView: React.FC = () => {
                         <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} fontWeight={800} />
-                                <YAxis stroke="#94a3b8" fontSize={12} />
+                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={14} fontWeight={800} />
+                                <YAxis stroke="#94a3b8" fontSize={14} />
                                 <Tooltip 
                                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
                                     content={({ active, payload, label }) => {
@@ -478,7 +479,7 @@ export const SummaryView: React.FC = () => {
                                         return null;
                                     }}
                                 />
-                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={80}>
+                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={100}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
                                     ))}
@@ -491,16 +492,16 @@ export const SummaryView: React.FC = () => {
                                             const metrics = getShiftMetrics(shiftName);
                                             return (
                                                 <g>
-                                                    <text x={x + width / 2} y={y - 8} fill="#ffffff" textAnchor="middle" fontSize={14} fontWeight="black">
+                                                    <text x={x + width / 2} y={y - 10} fill="#ffffff" textAnchor="middle" fontSize={16} fontWeight="black">
                                                         {value.toFixed(0)} Tn
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 24} fill="#cbd5e1" textAnchor="middle" fontSize={10} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 28} fill="#cbd5e1" textAnchor="middle" fontSize={12} fontWeight="bold">
                                                         OEE: {(metrics.oee * 100).toFixed(0)}%
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 36} fill="#94a3b8" textAnchor="middle" fontSize={10} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 42} fill="#94a3b8" textAnchor="middle" fontSize={11} fontWeight="bold">
                                                         Rend: {(metrics.rend * 100).toFixed(0)}%
                                                     </text>
-                                                    <text x={x + width / 2} y={y - 48} fill="#94a3b8" textAnchor="middle" fontSize={10} fontWeight="bold">
+                                                    <text x={x + width / 2} y={y - 54} fill="#94a3b8" textAnchor="middle" fontSize={11} fontWeight="bold">
                                                         Disp: {(metrics.disp * 100).toFixed(0)}%
                                                     </text>
                                                 </g>
