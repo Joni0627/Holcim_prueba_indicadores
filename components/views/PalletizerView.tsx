@@ -80,7 +80,7 @@ export const PalletizerView: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 overflow-x-hidden">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-800">Rendimiento Paletizadoras</h2>
@@ -114,7 +114,7 @@ export const PalletizerView: React.FC = () => {
                         
                         {/* OEE Gauge */}
                         <div className="relative h-[250px] flex flex-col items-center justify-center">
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" debounce={50}>
                                 <PieChart>
                                     <Pie
                                         data={gaugeData}

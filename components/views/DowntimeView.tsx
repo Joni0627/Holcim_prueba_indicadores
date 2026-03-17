@@ -88,7 +88,7 @@ export const DowntimeView: React.FC = () => {
   }, [filteredDowntimes]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-12 overflow-x-hidden">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Análisis de Paros</h2>
@@ -144,16 +144,16 @@ export const DowntimeView: React.FC = () => {
                         Ranking Top 10 Motivos (Pareto)
                     </h3>
                     {filteredDowntimes.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <BarChart data={[...filteredDowntimes].sort((a,b) => b.durationMinutes - a.durationMinutes).slice(0, 10)} layout="vertical" margin={{top:5, right:30, left:20, bottom:5}}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                 <XAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={formatMinutes} />
                                 <YAxis 
                                     type="category" 
                                     dataKey="reason" 
-                                    width={180} 
-                                    style={{fontSize: '11px', fontWeight: 500, fill: '#475569'}} 
-                                    tickFormatter={(val) => val.length > 25 ? `${val.substring(0,25)}...` : val}
+                                    width={120} 
+                                    style={{fontSize: '10px', fontWeight: 500, fill: '#475569'}} 
+                                    tickFormatter={(val) => val.length > 20 ? `${val.substring(0,20)}...` : val}
                                 />
                                 <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomBarTooltip />} />
                                 <Bar dataKey="durationMinutes" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={24}>
@@ -171,7 +171,7 @@ export const DowntimeView: React.FC = () => {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[500px] flex flex-col">
                     <h3 className="font-semibold text-slate-800 mb-4">Distribución por Causa SAP</h3>
                     {pieData.length > 0 ? (
-                         <ResponsiveContainer width="100%" height="100%">
+                         <ResponsiveContainer width="100%" height="100%" debounce={50}>
                              <PieChart>
                                  <Pie
                                      data={pieData}

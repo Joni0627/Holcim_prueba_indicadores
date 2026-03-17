@@ -199,7 +199,7 @@ function App() {
         />
       )}
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen scroll-smooth">
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden h-screen scroll-smooth">
         {renderView()}
       </main>
     </div>

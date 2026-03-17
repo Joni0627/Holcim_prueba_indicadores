@@ -275,7 +275,7 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto overflow-x-hidden">
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
@@ -407,7 +407,7 @@ export const SummaryView: React.FC = () => {
                     </div>
                     <div className="flex-grow relative z-10">
                         {downtimes.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" debounce={50}>
                                 <BarChart
                                     data={downtimes}
                                     layout="vertical"
@@ -419,10 +419,10 @@ export const SummaryView: React.FC = () => {
                                         type="category"
                                         dataKey="reason"
                                         stroke="#94a3b8"
-                                        fontSize={12}
-                                        width={200}
+                                        fontSize={10}
+                                        width={120}
                                         tick={{ fill: '#e2e8f0', fontWeight: 700 }}
-                                        tickFormatter={(val) => val.length > 30 ? `${val.substring(0,30)}...` : val}
+                                        tickFormatter={(val) => val.length > 20 ? `${val.substring(0,20)}...` : val}
                                     />
                                     <Tooltip 
                                         content={<CustomTooltip />} 
@@ -457,7 +457,7 @@ export const SummaryView: React.FC = () => {
                 </div>
                 <div className="flex-grow relative z-10">
                     {shiftData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" debounce={50}>
                             <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} fontWeight={800} />
