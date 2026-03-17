@@ -198,8 +198,16 @@ export const SummaryView: React.FC = () => {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#f8fafc',
-        windowWidth: 1200,
+        backgroundColor: '#0f172a', // Match the dark theme background
+        windowWidth: 1400,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById('summary-view-content');
+          if (el) {
+            el.style.padding = '20px';
+            el.style.width = '1400px';
+            el.style.height = 'auto';
+          }
+        }
       });
       
       const imgData = canvas.toDataURL('image/png');
@@ -215,7 +223,7 @@ export const SummaryView: React.FC = () => {
           await navigator.share({
             files: [file],
             title: 'Reporte de Producción',
-            text: 'Adjunto reporte de producción.'
+            text: `Reporte de producción ${formatDate(dateRange.start)}`
           });
         } catch (shareError) {
           // If user cancelled or share failed, fallback to download
@@ -494,7 +502,7 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 h-[480px] flex flex-col">
+            <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 lg:h-[480px] min-h-[480px] flex flex-col">
                 <div className="flex items-center mb-6 border-b border-slate-800/50 pb-3">
                     <div className="flex items-center gap-2">
                         <Cpu className="text-blue-400" size={20} />
@@ -503,7 +511,7 @@ export const SummaryView: React.FC = () => {
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-grow">
+                    <div className={`grid gap-6 flex-grow items-start ${prodResult.byMachine.length === 1 ? 'grid-cols-1 max-w-md mx-auto w-full' : 'grid-cols-1 sm:grid-cols-2'}`}>
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
                             const avg = machineMetrics.length > 0 ? {
