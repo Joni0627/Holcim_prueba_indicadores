@@ -121,8 +121,8 @@ export const AdminPanel = () => {
 
         {/* Info Card */}
         <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
               <ShieldCheck className="text-emerald-500" size={20} />
               Seguridad del Sistema
             </h3>
@@ -133,7 +133,7 @@ export const AdminPanel = () => {
                 'Asignación automática de roles básicos.',
                 'Auditoría de accesos en tiempo real.'
               ].map((item, i) => (
-                <li key={i} className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+                <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   {item}
                 </li>
