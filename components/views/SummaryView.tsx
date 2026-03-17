@@ -259,24 +259,40 @@ export const SummaryView: React.FC = () => {
                 w.style.minHeight = '320px';
             });
 
-            // Force the actual Recharts SVG and wrapper to be large
+            // Force the actual Recharts SVG and wrapper to be large but without distortion
             const rechartsWrappers = el.querySelectorAll('.recharts-wrapper');
             rechartsWrappers.forEach((rw: any) => {
-                rw.style.height = '380px !important';
-                rw.style.width = '100% !important';
+                rw.style.height = '420px';
+                rw.style.width = '100%';
+                rw.style.display = 'block';
             });
 
             const rechartsSurfaces = el.querySelectorAll('.recharts-surface');
             rechartsSurfaces.forEach((rs: any) => {
-                rs.style.height = '380px !important';
-                rs.style.width = '100% !important';
+                rs.style.height = '420px';
+                rs.style.width = '100%';
             });
 
             // Ensure recharts containers grow and fill
             const containers = el.querySelectorAll('.recharts-responsive-container');
             containers.forEach((c: any) => {
-                c.style.height = '380px';
-                c.style.minHeight = '380px';
+                c.style.height = '420px';
+                c.style.minHeight = '420px';
+                c.style.width = '100%';
+                c.style.display = 'block';
+            });
+
+            // Trigger a resize event in the cloned window to help Recharts re-render
+            if (clonedDoc.defaultView) {
+                clonedDoc.defaultView.dispatchEvent(new Event('resize'));
+            }
+
+            // Special fix for labels: sometimes they are hidden if the container is too small
+            // We ensure the chart wrapper has enough top padding
+            const chartWrappers = el.querySelectorAll('[data-chart-wrapper]');
+            chartWrappers.forEach((cw: any) => {
+                cw.style.paddingTop = '40px';
+                cw.style.marginTop = '0px';
             });
           }
         }
@@ -345,7 +361,7 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto overflow-x-hidden">
+    <div className="space-y-6 max-w-[1600px] mx-auto overflow-hidden">
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
@@ -518,8 +534,8 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            {/* BOTTOM ROW - Shift & Palletizer */}
-            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full relative overflow-hidden group">
+            {/* Producción por Turno (Tn) */}
+            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
                 <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
                     <TrendingUp className="text-emerald-500" size={20} />
@@ -528,7 +544,7 @@ export const SummaryView: React.FC = () => {
                 <div data-chart-wrapper className="flex-grow relative z-10">
                     {shiftData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%" debounce={50}>
-                            <BarChart data={shiftData} margin={{ top: 40, right: 30, left: 0, bottom: 20 }}>
+                            <BarChart data={shiftData} margin={{ top: 60, right: 30, left: 0, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis dataKey="name" stroke="#94a3b8" fontSize={18} fontWeight={900} />
                                 <YAxis stroke="#94a3b8" fontSize={18} />
