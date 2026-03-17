@@ -227,14 +227,27 @@ export const SummaryView: React.FC = () => {
             wrappers.forEach((w: any) => {
                 w.style.flex = '1';
                 w.style.height = '100%';
-                w.style.minHeight = '600px';
+                w.style.minHeight = '700px';
+            });
+
+            // Force the actual Recharts SVG and wrapper to be large
+            const rechartsWrappers = el.querySelectorAll('.recharts-wrapper');
+            rechartsWrappers.forEach((rw: any) => {
+                rw.style.height = '700px !important';
+                rw.style.width = '100% !important';
+            });
+
+            const svgs = el.querySelectorAll('.recharts-surface');
+            svgs.forEach((s: any) => {
+                s.style.height = '700px !important';
+                s.style.width = '100% !important';
             });
 
             // Ensure recharts containers grow and fill
             const containers = el.querySelectorAll('.recharts-responsive-container');
             containers.forEach((c: any) => {
-                c.style.height = '100%';
-                c.style.minHeight = '600px';
+                c.style.height = '700px';
+                c.style.minHeight = '700px';
             });
           }
         }
@@ -456,7 +469,7 @@ export const SummaryView: React.FC = () => {
                                         content={<CustomTooltip />} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={50}>
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={60}>
                                         {downtimes.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
                                         ))}
@@ -506,7 +519,7 @@ export const SummaryView: React.FC = () => {
                                         return null;
                                     }}
                                 />
-                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={140}>
+                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={160}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
                                     ))}
