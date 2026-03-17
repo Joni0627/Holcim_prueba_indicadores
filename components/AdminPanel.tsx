@@ -204,9 +204,18 @@ export const AdminPanel = () => {
                 <Users className="text-blue-400" size={24} />
                 <h2 className="text-xl font-bold text-white">Usuarios Activos</h2>
               </div>
-              <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold">
-                {users.length} Total
-              </span>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={fetchUsers}
+                  className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 transition-all"
+                  title="Refrescar lista"
+                >
+                  <Loader2 className={isUsersLoading ? "animate-spin" : ""} size={18} />
+                </button>
+                <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold">
+                  {users.length} Total
+                </span>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">

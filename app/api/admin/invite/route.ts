@@ -28,10 +28,13 @@ export async function POST(req: Request) {
       return new NextResponse("Email is required", { status: 400 });
     }
 
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || "";
+    const signUpUrl = `${origin}/sign-up`;
+
     // Create the invitation using Clerk Backend SDK
     const invitation = await clerkClient.invitations.createInvitation({
       emailAddress: email,
-      redirectUrl: process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL || "/",
+      redirectUrl: origin, // Redirect to home after sign up
       publicMetadata: {
         role: "user", // Default role for invited users
       },
