@@ -235,9 +235,20 @@ export const SummaryView: React.FC = () => {
             leftCards.forEach((c: any) => {
                 c.style.height = 'auto';
                 c.style.minHeight = '70px';
-                c.style.padding = '10px';
+                c.style.padding = '12px';
                 c.style.flex = '0 0 auto';
                 c.style.marginBottom = '10px';
+                
+                // Adjust font sizes inside left cards to prevent overflow
+                const mainTitle = c.querySelector('h2');
+                if (mainTitle) {
+                    mainTitle.style.fontSize = '48px'; // Reduced from 6xl (60px)
+                    mainTitle.style.lineHeight = '1';
+                }
+                const subValue = c.querySelector('span');
+                if (subValue && subValue.innerText === 'Tn') {
+                    subValue.style.fontSize = '20px'; // Reduced from 3xl
+                }
             });
 
             // Target the inner wrappers to force them to take all space
