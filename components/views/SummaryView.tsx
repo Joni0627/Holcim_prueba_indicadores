@@ -561,40 +561,69 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            {/* Producción por Turno (Tn) */}
-            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[450px] flex flex-col h-full relative overflow-hidden group">
+            {/* Producción por Turno (Tabla) */}
+            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
                 <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
-                    <TrendingUp className="text-emerald-500" size={20} />
+                    <TableProperties className="text-emerald-500" size={20} />
                     <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
-                <div data-chart-wrapper className="flex-grow relative z-10">
+                <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
                     {shiftData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%" debounce={50}>
-                            <BarChart data={shiftData} margin={{ top: 20, right: isMobile ? 10 : 30, left: isMobile ? -20 : 0, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                                <XAxis dataKey="name" stroke="#94a3b8" fontSize={isMobile ? 10 : 14} fontWeight={900} />
-                                <YAxis yAxisId="left" stroke="#3b82f6" fontSize={isMobile ? 10 : 14} label={isMobile ? undefined : { value: 'Tn', angle: -90, position: 'insideLeft', fill: '#3b82f6', fontSize: 12 }} />
-                                <YAxis yAxisId="right" orientation="right" stroke="#10b981" fontSize={isMobile ? 10 : 14} domain={[0, 110]} label={isMobile ? undefined : { value: '%', angle: 90, position: 'insideRight', fill: '#10b981', fontSize: 12 }} />
-                                <Tooltip 
-                                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
-                                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
-                                />
-                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px' }} />
-                                <Bar yAxisId="left" dataKey="valueTn" name="Producción (Tn)" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40}>
-                                    <LabelList dataKey="valueTn" position="top" fill="#ffffff" fontSize={12} fontWeight="bold" />
-                                </Bar>
-                                <Bar yAxisId="right" dataKey="oee" name="OEE %" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20}>
-                                    <LabelList dataKey="oee" position="top" fill="#10b981" fontSize={10} fontWeight="bold" formatter={(val: any) => `${val}%`} />
-                                </Bar>
-                                <Bar yAxisId="right" dataKey="disp" name="Disp %" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={20} />
-                                <Bar yAxisId="right" dataKey="rend" name="Rend %" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={20} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-800">
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Turno</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-blue-400 text-right">Producción (Tn)</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 text-right">OEE %</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-amber-500 text-right">Disp %</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-indigo-400 text-right">Rend %</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800/50">
+                                {shiftData.map((shift, idx) => (
+                                    <tr key={shift.name} className="hover:bg-white/5 transition-colors group/row">
+                                        <td className="py-4 px-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: SHIFT_COLORS[idx % SHIFT_COLORS.length] }}></div>
+                                                <span className="text-sm font-black text-white uppercase tracking-tight">{shift.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-2 text-right">
+                                            <span className="text-lg font-black text-white tracking-tighter">
+                                                {shift.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                                        </td>
+                                        <td className="py-4 px-2 text-right">
+                                            <div className="inline-flex flex-col items-end">
+                                                <span className="text-sm font-black text-emerald-400">{shift.oee}%</span>
+                                                <div className="w-12 h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                                                    <div className="h-full bg-emerald-500" style={{ width: `${shift.oee}%` }}></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-2 text-right">
+                                            <span className="text-sm font-bold text-amber-400">{shift.disp}%</span>
+                                        </td>
+                                        <td className="py-4 px-2 text-right">
+                                            <span className="text-sm font-bold text-indigo-300">{shift.rend}%</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-slate-500">Sin datos de turnos</div>
+                        <div className="h-full flex items-center justify-center text-slate-500 italic">Sin datos de turnos</div>
                     )}
+                </div>
+                
+                {/* Footer decorativo para la tabla */}
+                <div className="mt-4 pt-4 border-t border-slate-800/50 flex justify-between items-center relative z-10">
+                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Resumen Operativo</p>
+                    <div className="flex gap-1">
+                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-slate-700"></div>)}
+                    </div>
                 </div>
             </div>
 
