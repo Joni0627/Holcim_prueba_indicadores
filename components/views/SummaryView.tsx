@@ -207,47 +207,65 @@ export const SummaryView: React.FC = () => {
             el.style.padding = '32px';
             el.style.backgroundColor = '#0f172a';
             
-            // Increase height of specific chart containers for the capture
+            // Adjust heights of specific chart containers for the capture to be more compact
             const downtimeContainer = el.querySelector('[data-chart="downtime"]');
             if (downtimeContainer) {
-                (downtimeContainer as HTMLElement).style.height = '800px';
+                (downtimeContainer as HTMLElement).style.height = '420px';
+                (downtimeContainer as HTMLElement).style.minHeight = '420px';
                 (downtimeContainer as HTMLElement).style.display = 'flex';
                 (downtimeContainer as HTMLElement).style.flexDirection = 'column';
+                (downtimeContainer as HTMLElement).style.padding = '10px';
+                (downtimeContainer as HTMLElement).style.backgroundColor = 'rgba(15, 23, 42, 0.5)';
+                (downtimeContainer as HTMLElement).style.border = '1px solid rgba(51, 65, 85, 0.5)';
             }
             
             const shiftContainer = el.querySelector('[data-chart="shift"]');
             if (shiftContainer) {
-                (shiftContainer as HTMLElement).style.height = '800px';
+                (shiftContainer as HTMLElement).style.height = '420px';
+                (shiftContainer as HTMLElement).style.minHeight = '420px';
                 (shiftContainer as HTMLElement).style.display = 'flex';
                 (shiftContainer as HTMLElement).style.flexDirection = 'column';
+                (shiftContainer as HTMLElement).style.padding = '10px';
+                (shiftContainer as HTMLElement).style.backgroundColor = 'rgba(15, 23, 42, 0.5)';
+                (shiftContainer as HTMLElement).style.border = '1px solid rgba(51, 65, 85, 0.5)';
             }
+
+            // Compact the left column cards
+            const leftCards = el.querySelectorAll('[data-card="left"]');
+            leftCards.forEach((c: any) => {
+                c.style.height = 'auto';
+                c.style.minHeight = '70px';
+                c.style.padding = '10px';
+                c.style.flex = '0 0 auto';
+                c.style.marginBottom = '10px';
+            });
 
             // Target the inner wrappers to force them to take all space
             const wrappers = el.querySelectorAll('[data-chart-wrapper]');
             wrappers.forEach((w: any) => {
                 w.style.flex = '1';
                 w.style.height = '100%';
-                w.style.minHeight = '700px';
+                w.style.minHeight = '320px';
             });
 
             // Force the actual Recharts SVG and wrapper to be large
             const rechartsWrappers = el.querySelectorAll('.recharts-wrapper');
             rechartsWrappers.forEach((rw: any) => {
-                rw.style.height = '700px !important';
+                rw.style.height = '380px !important';
                 rw.style.width = '100% !important';
             });
 
-            const svgs = el.querySelectorAll('.recharts-surface');
-            svgs.forEach((s: any) => {
-                s.style.height = '700px !important';
-                s.style.width = '100% !important';
+            const rechartsSurfaces = el.querySelectorAll('.recharts-surface');
+            rechartsSurfaces.forEach((rs: any) => {
+                rs.style.height = '380px !important';
+                rs.style.width = '100% !important';
             });
 
             // Ensure recharts containers grow and fill
             const containers = el.querySelectorAll('.recharts-responsive-container');
             containers.forEach((c: any) => {
-                c.style.height = '700px';
-                c.style.minHeight = '700px';
+                c.style.height = '380px';
+                c.style.minHeight = '380px';
             });
           }
         }
@@ -351,7 +369,7 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-3 flex flex-col gap-6 h-full">
                 
                 {/* Producción Total Card */}
-                <div className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-slate-800 flex flex-col justify-center">
+                <div data-card="left" className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-slate-800 flex flex-col justify-center">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <PackageCheck size={120} />
                     </div>
@@ -365,7 +383,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4 border border-blue-800/50 flex flex-col justify-center">
+                <div data-card="left" className="flex-1 bg-gradient-to-br from-blue-900 to-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4 border border-blue-800/50 flex flex-col justify-center">
                     <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-800/30 pb-2">TN por PRODUCTO</h3>
                     <div className="space-y-4">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
@@ -388,7 +406,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* RENDIMIENTO GLOBAL */}
-                <div className="flex-1 bg-gradient-to-br from-blue-700 to-blue-500 p-5 rounded-lg shadow-lg border border-blue-400/30 space-y-4 text-white flex flex-col justify-center">
+                <div data-card="left" className="flex-1 bg-gradient-to-br from-blue-700 to-blue-500 p-5 rounded-lg shadow-lg border border-blue-400/30 space-y-4 text-white flex flex-col justify-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100/60 mb-1 border-b border-blue-500/30 pb-2">RENDIMIENTO GLOBAL</h3>
                     <div className="space-y-3">
                         <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
@@ -469,7 +487,7 @@ export const SummaryView: React.FC = () => {
                                         content={<CustomTooltip />} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={60}>
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={70}>
                                         {downtimes.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
                                         ))}
@@ -519,7 +537,7 @@ export const SummaryView: React.FC = () => {
                                         return null;
                                     }}
                                 />
-                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={160}>
+                                <Bar dataKey="valueTn" radius={[4, 4, 0, 0]} barSize={180}>
                                     {shiftData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={SHIFT_COLORS[index % SHIFT_COLORS.length]} fillOpacity={0.9} />
                                     ))}
