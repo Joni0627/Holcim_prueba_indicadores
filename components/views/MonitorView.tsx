@@ -144,7 +144,9 @@ const CircularProgress: React.FC<{ value: number, label: string, size?: number, 
           transition={{ 
             duration: 2, 
             ease: [0.4, 0, 0.2, 1],
-            delay: 0.2
+            delay: 0.2,
+            repeat: Infinity,
+            repeatDelay: 8
           }}
           strokeLinecap="round"
           filter="url(#glow)"
@@ -164,7 +166,13 @@ const CircularProgress: React.FC<{ value: number, label: string, size?: number, 
             opacity: [0, 0.3, 0]
           }}
           transition={{ 
-            strokeDashoffset: { duration: 2, ease: [0.4, 0, 0.2, 1], delay: 0.2 },
+            strokeDashoffset: { 
+              duration: 2, 
+              ease: [0.4, 0, 0.2, 1], 
+              delay: 0.2,
+              repeat: Infinity,
+              repeatDelay: 8
+            },
             opacity: { duration: 3, repeat: Infinity, ease: "easeInOut" }
           }}
           strokeLinecap="round"
@@ -394,11 +402,11 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
       <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
         {/* KPI Header Section */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-6">
-          <div className="flex items-center gap-12">
+          <div className="flex-1 flex items-center gap-8">
             {/* Global KPIs */}
-            <div className="flex flex-col items-center gap-2">
+            <div className="bg-slate-900/40 p-3 rounded-3xl border border-slate-800/50 shadow-inner flex flex-col items-center gap-2">
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">KPIs Globales</span>
-              <div className="flex items-center gap-6 bg-slate-900/40 p-3 rounded-3xl border border-slate-800/50 shadow-inner">
+              <div className="flex items-center gap-6">
                 <div className="flex flex-col items-center">
                   <CircularProgress value={globalKPIs.oee} label="OEE" size={85} strokeWidth={10} color="text-emerald-400" />
                 </div>
@@ -419,7 +427,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 <div key={m.id} className="flex-1 bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-2 shadow-xl">
                   <div className="flex justify-between items-center w-full border-b border-slate-800 pb-1.5">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                      {m.id.split('-')[1] || m.id}
+                      {m.id}
                     </span>
                     <div className="flex flex-col items-end">
                       <span className="text-[12px] font-black text-emerald-400 tracking-tighter leading-none">
@@ -436,34 +444,37 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               ))}
             </div>
 
-            {/* Top 10 Downtimes Chart (Relocated) */}
-            <div className="w-[320px] bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50">
+            {/* Top 10 Downtimes List (Relocated) */}
+            <div className="w-[380px] bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50">
               <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] mb-2 flex items-center gap-2">
-                <AlertCircle size={12} /> Top 10 Paros (Min)
+                <AlertCircle size={12} /> Ranking de Paros (Minutos)
               </p>
-              <div className="flex-1 w-full min-h-[100px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={top10Downtimes}
-                    layout="vertical"
-                    margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
-                  >
-                    <XAxis type="number" hide />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category" 
-                      width={120} 
-                      tick={{ fill: '#94a3b8', fontSize: 8, fontWeight: 'black' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Bar dataKey="duration" radius={[0, 4, 4, 0]}>
-                      {top10Downtimes.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#ef444480'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="flex-1 overflow-y-auto no-scrollbar pr-1 max-h-[100px]">
+                <table className="w-full text-[9px] border-collapse">
+                  <thead>
+                    <tr className="text-slate-500 uppercase font-black border-b border-slate-800">
+                      <th className="text-left pb-1">Motivo / HAC</th>
+                      <th className="text-right pb-1">Min</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {top10Downtimes.map((d, idx) => (
+                      <tr key={idx} className="border-b border-slate-800/30 last:border-0 hover:bg-white/5 transition-colors">
+                        <td className="py-1 text-slate-300 font-bold truncate max-w-[240px]" title={d.fullName}>
+                          {d.name}
+                        </td>
+                        <td className="py-1 text-right text-red-400 font-black">
+                          {d.duration}
+                        </td>
+                      </tr>
+                    ))}
+                    {top10Downtimes.length === 0 && (
+                      <tr>
+                        <td colSpan={2} className="py-4 text-center text-slate-500 italic">Sin paros registrados</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
