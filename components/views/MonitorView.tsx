@@ -139,12 +139,37 @@ const CircularProgress: React.FC<{ value: number, label: string, size?: number, 
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.5, ease: "easeInOut" }}
-          className={color}
+          initial={{ strokeDashoffset: circumference, opacity: 0.5 }}
+          animate={{ strokeDashoffset: offset, opacity: 1 }}
+          transition={{ 
+            duration: 2, 
+            ease: [0.4, 0, 0.2, 1],
+            delay: 0.2
+          }}
           strokeLinecap="round"
           filter="url(#glow)"
+          className={color}
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference, opacity: 0 }}
+          animate={{ 
+            strokeDashoffset: offset,
+            opacity: [0, 0.3, 0]
+          }}
+          transition={{ 
+            strokeDashoffset: { duration: 2, ease: [0.4, 0, 0.2, 1], delay: 0.2 },
+            opacity: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+          }}
+          strokeLinecap="round"
+          filter="url(#glow)"
+          className={`${color} blur-[4px]`}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -371,61 +396,94 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <div className="flex items-center justify-between border-b border-slate-800 pb-6">
           <div className="flex items-center gap-12">
             {/* Global KPIs */}
-            <div className="flex items-center gap-8">
-              <div className="flex flex-col items-center">
-                <CircularProgress value={globalKPIs.oee} label="OEE GLOBAL" size={90} strokeWidth={10} color="text-emerald-400" />
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="flex flex-col items-center gap-1">
-                  <CircularProgress value={globalKPIs.availability} label="DISPONIBILIDAD" size={60} strokeWidth={6} color="text-blue-400" />
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">KPIs Globales</span>
+              <div className="flex items-center gap-6 bg-slate-900/40 p-3 rounded-3xl border border-slate-800/50 shadow-inner">
+                <div className="flex flex-col items-center">
+                  <CircularProgress value={globalKPIs.oee} label="OEE" size={85} strokeWidth={10} color="text-emerald-400" />
                 </div>
-                <div className="flex flex-col items-center gap-1">
-                  <CircularProgress value={globalKPIs.performance} label="RENDIMIENTO" size={60} strokeWidth={6} color="text-amber-400" />
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col items-center gap-1">
+                    <CircularProgress value={globalKPIs.availability} label="DISP" size={55} strokeWidth={6} color="text-blue-400" />
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <CircularProgress value={globalKPIs.performance} label="REND" size={55} strokeWidth={6} color="text-amber-400" />
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Machine KPIs & Totalizers */}
-            <div className="flex-1 flex items-center gap-4 border-l border-slate-800 pl-12">
+            <div className="flex-1 flex items-center gap-3 border-l border-slate-800 pl-8">
               {machineKPIs.map(m => (
-                <div key={m.id} className="flex-1 bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-3 shadow-xl">
-                  <div className="flex justify-between items-center w-full border-b border-slate-800 pb-2">
-                    <span className="text-[10px] font-black text-slate-200 uppercase tracking-widest">
-                      {m.id}
+                <div key={m.id} className="flex-1 bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-2 shadow-xl">
+                  <div className="flex justify-between items-center w-full border-b border-slate-800 pb-1.5">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      {m.id.split('-')[1] || m.id}
                     </span>
                     <div className="flex flex-col items-end">
-                      <span className="text-[14px] font-black text-emerald-400 tracking-tighter leading-none">
+                      <span className="text-[12px] font-black text-emerald-400 tracking-tighter leading-none">
                         {Math.floor(m.totalTn).toLocaleString()}
                       </span>
-                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">TOTAL TN</span>
+                      <span className="text-[6px] font-black text-slate-500 uppercase tracking-tighter">TOTAL TN</span>
                     </div>
                   </div>
-                  <div className="flex gap-4">
-                    <CircularProgress value={m.oee} label="OEE" size={48} strokeWidth={5} color="text-emerald-500" />
-                    <CircularProgress value={m.availability} label="DISP" size={48} strokeWidth={5} color="text-blue-500" />
-                    <CircularProgress value={m.performance} label="REND" size={48} strokeWidth={5} color="text-amber-500" />
+                  <div className="flex gap-3">
+                    <CircularProgress value={m.oee} label="OEE" size={42} strokeWidth={5} color="text-emerald-500" />
+                    <CircularProgress value={m.availability} label="DISP" size={42} strokeWidth={5} color="text-blue-500" />
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Top 10 Downtimes Chart (Relocated) */}
+            <div className="w-[320px] bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50">
+              <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] mb-2 flex items-center gap-2">
+                <AlertCircle size={12} /> Top 10 Paros (Min)
+              </p>
+              <div className="flex-1 w-full min-h-[100px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={top10Downtimes}
+                    layout="vertical"
+                    margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <XAxis type="number" hide />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      width={120} 
+                      tick={{ fill: '#94a3b8', fontSize: 8, fontWeight: 'black' }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Bar dataKey="duration" radius={[0, 4, 4, 0]}>
+                      {top10Downtimes.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#ef444480'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
           
-          {/* Left Column: Ranking & Top Downtimes */}
+          {/* Left Column: Ranking */}
           <div className="col-span-4 flex flex-col gap-6 overflow-hidden">
             
-            {/* Ranking Card */}
-            <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col h-[45%]">
-              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                <Trophy size={100} />
+            {/* Ranking Card (Expanded) */}
+            <div className="flex-1 bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col">
+              <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                <Trophy size={150} />
               </div>
-              <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-xs mb-4 flex items-center gap-2">
-                <Trophy size={14} /> Ranking de Producción
+              <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-sm mb-6 flex items-center gap-3">
+                <Trophy size={18} /> Ranking de Producción por Turno
               </p>
               
-              <div className="flex-1 flex flex-col gap-2 overflow-y-auto no-scrollbar">
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
                 {prodResult?.byShift && prodResult.byShift.length > 0 ? (
                   [...prodResult.byShift]
                     .sort((a, b) => b.valueTn - a.valueTn)
@@ -434,34 +492,34 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       return (
                         <div 
                           key={shift.name} 
-                          className={`relative group transition-all duration-500 p-3 rounded-xl border ${
+                          className={`relative group transition-all duration-500 p-5 rounded-2xl border ${
                             isTop 
-                              ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
+                              ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)]' 
                               : 'bg-slate-800/30 border-slate-700/50'
                           }`}
                         >
                           <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] ${
-                                idx === 0 ? 'bg-amber-500 text-slate-900' : 
+                            <div className="flex items-center gap-5">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm ${
+                                idx === 0 ? 'bg-amber-500 text-slate-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' : 
                                 idx === 1 ? 'bg-slate-300 text-slate-900' : 
                                 idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-400'
                               }`}>
                                 {idx + 1}
                               </div>
                               <div>
-                                <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-white text-base' : 'text-slate-400 text-xs'}`}>
+                                <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-white text-xl' : 'text-slate-400 text-sm'}`}>
                                   {shift.name.split('.')[1] || shift.name}
                                 </p>
-                                <p className="text-[9px] font-bold text-red-500/70 uppercase tracking-tighter">
+                                <p className="text-[11px] font-bold text-red-500/70 uppercase tracking-tighter mt-1">
                                   Paros: {downtimeByShift[shift.name] || 0} min
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={`font-black tracking-tighter ${isTop ? 'text-emerald-400 text-xl' : 'text-slate-300 text-base'}`}>
+                              <p className={`font-black tracking-tighter ${isTop ? 'text-emerald-400 text-3xl' : 'text-slate-300 text-xl'}`}>
                                 {Math.floor(shift.valueTn).toLocaleString()}
-                                <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                                <span className="text-xs font-bold text-slate-500 ml-1 uppercase">Tn</span>
                               </p>
                             </div>
                           </div>
@@ -473,45 +531,6 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     <p className="text-slate-500 italic text-sm">Calculando ranking...</p>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Top 10 Downtimes Chart */}
-            <div className="flex-1 bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-red-400 font-black uppercase tracking-[0.2em] text-xs flex items-center gap-2">
-                  <AlertCircle size={14} /> Top 10 Paros (Minutos)
-                </p>
-              </div>
-              <div className="flex-1 w-full min-h-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={top10Downtimes}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-                    <XAxis type="number" hide />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category" 
-                      width={180} 
-                      tick={{ fill: '#cbd5e1', fontSize: 10, fontWeight: 'black' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '10px' }}
-                      itemStyle={{ color: '#ef4444', fontWeight: 'bold' }}
-                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    />
-                    <Bar dataKey="duration" radius={[0, 4, 4, 0]}>
-                      {top10Downtimes.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#ef444480'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
               </div>
             </div>
           </div>
