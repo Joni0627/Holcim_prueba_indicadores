@@ -309,10 +309,11 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const allDowntimesOrdered = useMemo(() => {
     return [...downtimeResult]
       .sort((a, b) => b.durationMinutes - a.durationMinutes)
+      .slice(0, 10)
       .map((d, idx) => ({
         rank: idx + 1,
         shift: getVisualShift(d.startTime || '00:00').split('.')[1] || getVisualShift(d.startTime || '00:00'),
-        hac: d.downtimeType || 'S/HAC',
+        hac: d.hac || 'S/HAC',
         reason: d.reason.length > 35 ? d.reason.substring(0, 35) + '...' : d.reason,
         fullName: d.reason,
         duration: d.durationMinutes,
@@ -418,34 +419,34 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
+      <div className="flex-1 p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 overflow-hidden min-h-0">
         {/* KPI Header Section */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-6">
-          <div className="flex-1 flex items-center gap-8">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4 lg:pb-6 flex-shrink-0">
+          <div className="flex-1 flex items-center gap-4 lg:gap-8 overflow-x-auto no-scrollbar">
             {/* Global KPIs */}
-            <div className="bg-slate-900/40 p-3 rounded-3xl border border-slate-800/50 shadow-inner flex flex-col items-center gap-2">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">KPIs Globales</span>
-              <div className="flex items-center gap-6">
+            <div className="bg-slate-800/60 p-3 rounded-3xl border border-slate-700/50 shadow-inner flex flex-col items-center gap-2 flex-shrink-0">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">KPIs Globales</span>
+              <div className="flex items-center gap-4 lg:gap-6">
                 <div className="flex flex-col items-center">
-                  <CircularProgress value={globalKPIs.oee} label="OEE" size={85} strokeWidth={10} color="text-emerald-400" />
+                  <CircularProgress value={globalKPIs.oee} label="OEE" size={75} strokeWidth={8} color="text-emerald-400" />
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 lg:gap-4">
                   <div className="flex flex-col items-center gap-1">
-                    <CircularProgress value={globalKPIs.availability} label="DISP" size={55} strokeWidth={6} color="text-blue-400" />
+                    <CircularProgress value={globalKPIs.availability} label="DISP" size={50} strokeWidth={5} color="text-blue-400" />
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <CircularProgress value={globalKPIs.performance} label="REND" size={55} strokeWidth={6} color="text-amber-400" />
+                    <CircularProgress value={globalKPIs.performance} label="REND" size={50} strokeWidth={5} color="text-amber-400" />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Machine KPIs & Totalizers */}
-            <div className="flex-1 flex items-center gap-3 border-l border-slate-800 pl-8">
+            <div className="flex-1 flex items-center gap-3 border-l border-slate-800 pl-4 lg:pl-8">
               {machineKPIs.map(m => (
-                <div key={m.id} className="flex-1 bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-2 shadow-xl">
+                <div key={m.id} className="flex-1 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-2 shadow-xl min-w-[140px]">
                   <div className="flex justify-between items-center w-full border-b border-slate-800 pb-1.5">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
                       {m.id}
                     </span>
                     <div className="flex flex-col items-end">
@@ -455,17 +456,17 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       <span className="text-[6px] font-black text-slate-500 uppercase tracking-tighter">TOTAL TN</span>
                     </div>
                   </div>
-                  <div className="flex gap-3">
-                    <CircularProgress value={m.oee} label="OEE" size={42} strokeWidth={5} color="text-emerald-500" />
-                    <CircularProgress value={m.availability} label="DISP" size={42} strokeWidth={5} color="text-blue-500" />
-                    <CircularProgress value={m.performance} label="REND" size={42} strokeWidth={5} color="text-amber-500" />
+                  <div className="flex gap-2 lg:gap-3">
+                    <CircularProgress value={m.oee} label="OEE" size={38} strokeWidth={4} color="text-emerald-500" />
+                    <CircularProgress value={m.availability} label="DISP" size={38} strokeWidth={4} color="text-blue-500" />
+                    <CircularProgress value={m.performance} label="REND" size={38} strokeWidth={4} color="text-amber-500" />
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Top Downtimes List (Relocated) */}
-            <div className="w-[450px] bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50">
+            <div className="w-[400px] bg-slate-800/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50 flex-shrink-0">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] flex items-center gap-2">
                   <AlertCircle size={12} /> Ranking de Paros (Minutos)
