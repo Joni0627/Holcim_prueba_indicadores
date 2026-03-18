@@ -192,6 +192,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
   const [currentStockIndex, setCurrentStockIndex] = useState(0);
+  const [currentDowntimePage, setCurrentDowntimePage] = useState(0);
   const today = useMemo(() => new Date(), []);
 
   // Update clock every second
@@ -213,6 +214,14 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const timer = setInterval(() => {
       setCurrentStockIndex((prev) => (prev + 1));
     }, 8000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Cycle downtime pages every 10 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDowntimePage((prev) => prev + 1);
+    }, 10000);
     return () => clearInterval(timer);
   }, []);
 
@@ -297,17 +306,27 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     return result;
   }, [downtimeResult]);
 
-  const top10Downtimes = useMemo(() => {
+  const allDowntimesOrdered = useMemo(() => {
     return [...downtimeResult]
       .sort((a, b) => b.durationMinutes - a.durationMinutes)
-      .slice(0, 10)
-      .map(d => ({
-        name: `${d.downtimeType || 'S/HAC'}: ${d.reason.length > 25 ? d.reason.substring(0, 25) + '...' : d.reason}`,
+      .map((d, idx) => ({
+        rank: idx + 1,
+        shift: getVisualShift(d.startTime || '00:00').split('.')[1] || getVisualShift(d.startTime || '00:00'),
+        hac: d.downtimeType || 'S/HAC',
+        reason: d.reason.length > 35 ? d.reason.substring(0, 35) + '...' : d.reason,
         fullName: d.reason,
         duration: d.durationMinutes,
         machine: d.machineId
       }));
   }, [downtimeResult]);
+
+  const ITEMS_PER_PAGE = 5;
+  const paginatedDowntimes = useMemo(() => {
+    if (allDowntimesOrdered.length === 0) return [];
+    const totalPages = Math.ceil(allDowntimesOrdered.length / ITEMS_PER_PAGE);
+    const page = currentDowntimePage % totalPages;
+    return allDowntimesOrdered.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+  }, [allDowntimesOrdered, currentDowntimePage]);
 
   const globalKPIs = useMemo(() => {
     if (!prodResult?.details || prodResult.details.length === 0) return { oee: 0, availability: 0, performance: 0 };
@@ -439,38 +458,52 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                   <div className="flex gap-3">
                     <CircularProgress value={m.oee} label="OEE" size={42} strokeWidth={5} color="text-emerald-500" />
                     <CircularProgress value={m.availability} label="DISP" size={42} strokeWidth={5} color="text-blue-500" />
+                    <CircularProgress value={m.performance} label="REND" size={42} strokeWidth={5} color="text-amber-500" />
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Top 10 Downtimes List (Relocated) */}
-            <div className="w-[380px] bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50">
-              <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] mb-2 flex items-center gap-2">
-                <AlertCircle size={12} /> Ranking de Paros (Minutos)
-              </p>
-              <div className="flex-1 overflow-y-auto no-scrollbar pr-1 max-h-[100px]">
+            {/* Top Downtimes List (Relocated) */}
+            <div className="w-[450px] bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] flex items-center gap-2">
+                  <AlertCircle size={12} /> Ranking de Paros (Minutos)
+                </p>
+                {allDowntimesOrdered.length > ITEMS_PER_PAGE && (
+                  <span className="text-[8px] font-bold text-slate-500 uppercase">
+                    Pág {(currentDowntimePage % Math.ceil(allDowntimesOrdered.length / ITEMS_PER_PAGE)) + 1} / {Math.ceil(allDowntimesOrdered.length / ITEMS_PER_PAGE)}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 overflow-hidden">
                 <table className="w-full text-[9px] border-collapse">
                   <thead>
                     <tr className="text-slate-500 uppercase font-black border-b border-slate-800">
-                      <th className="text-left pb-1">Motivo / HAC</th>
+                      <th className="text-left pb-1 w-6">#</th>
+                      <th className="text-left pb-1">Turno</th>
+                      <th className="text-left pb-1">HAC</th>
+                      <th className="text-left pb-1">Motivo</th>
                       <th className="text-right pb-1">Min</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {top10Downtimes.map((d, idx) => (
+                    {paginatedDowntimes.map((d, idx) => (
                       <tr key={idx} className="border-b border-slate-800/30 last:border-0 hover:bg-white/5 transition-colors">
-                        <td className="py-1 text-slate-300 font-bold truncate max-w-[240px]" title={d.fullName}>
-                          {d.name}
+                        <td className="py-1.5 text-slate-500 font-black">{d.rank}</td>
+                        <td className="py-1.5 text-slate-400 font-bold uppercase">{d.shift}</td>
+                        <td className="py-1.5 text-blue-400 font-black">{d.hac}</td>
+                        <td className="py-1.5 text-slate-300 font-bold truncate max-w-[180px]" title={d.fullName}>
+                          {d.reason}
                         </td>
-                        <td className="py-1 text-right text-red-400 font-black">
+                        <td className="py-1.5 text-right text-red-400 font-black">
                           {d.duration}
                         </td>
                       </tr>
                     ))}
-                    {top10Downtimes.length === 0 && (
+                    {paginatedDowntimes.length === 0 && (
                       <tr>
-                        <td colSpan={2} className="py-4 text-center text-slate-500 italic">Sin paros registrados</td>
+                        <td colSpan={5} className="py-4 text-center text-slate-500 italic">Sin paros registrados</td>
                       </tr>
                     )}
                   </tbody>
