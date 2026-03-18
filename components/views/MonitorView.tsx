@@ -113,6 +113,56 @@ const MonitorTimelineBar: React.FC<{
   );
 };
 
+const CircularProgress: React.FC<{ value: number, label: string, size?: number, strokeWidth?: number, color?: string, showValue?: boolean }> = ({ value, label, size = 60, strokeWidth = 6, color = "text-emerald-500", showValue = true }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (value * circumference);
+
+  return (
+    <div className="flex flex-col items-center justify-center relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          className="text-slate-800/50"
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          className={color}
+          strokeLinecap="round"
+          filter="url(#glow)"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        {showValue && <span className="text-[11px] font-black leading-none text-white">{(value * 100).toFixed(0)}%</span>}
+        <span className="text-[7px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{label}</span>
+      </div>
+    </div>
+  );
+};
+
 export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
@@ -167,13 +217,17 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
   const producedStock = useMemo(() => {
     if (!stockResult?.items) return [];
-    const order = ["CEMENTO MAESTRO", "CEMENTO CPF 40", "CEMENTO RAPIDO", "CEMENTO CPC 30"];
+    const order = ["CPF 40", "CPC 30", "MAESTRO", "RAPIDO"];
     return stockResult.items
       .filter(i => i.isProduced)
       .sort((a, b) => {
         const nameA = a.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const nameB = b.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return order.indexOf(nameA) - order.indexOf(nameB);
+        
+        const indexA = order.findIndex(o => nameA.includes(o));
+        const indexB = order.findIndex(o => nameB.includes(o));
+        
+        return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
       });
   }, [stockResult]);
 
@@ -223,12 +277,37 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
       .sort((a, b) => b.durationMinutes - a.durationMinutes)
       .slice(0, 10)
       .map(d => ({
-        name: `${d.machineId.split('-')[1] || d.machineId}: ${d.reason.length > 15 ? d.reason.substring(0, 15) + '...' : d.reason}`,
+        name: `${d.machineId.split('-')[1] || d.machineId}: ${d.reason.length > 25 ? d.reason.substring(0, 25) + '...' : d.reason}`,
         fullName: d.reason,
         duration: d.durationMinutes,
         machine: d.machineId
       }));
   }, [downtimeResult]);
+
+  const globalKPIs = useMemo(() => {
+    if (!prodResult?.details || prodResult.details.length === 0) return { oee: 0, availability: 0, performance: 0 };
+    const count = prodResult.details.length;
+    return {
+      oee: prodResult.details.reduce((acc, curr) => acc + curr.oee, 0) / count,
+      availability: prodResult.details.reduce((acc, curr) => acc + curr.availability, 0) / count,
+      performance: prodResult.details.reduce((acc, curr) => acc + curr.performance, 0) / count,
+    };
+  }, [prodResult]);
+
+  const machineKPIs = useMemo(() => {
+    const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+    return machines.map(m => {
+      const machineDetails = prodResult?.details?.filter(d => d.machineId === m) || [];
+      if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0 };
+      const count = machineDetails.length;
+      return {
+        id: m,
+        oee: machineDetails.reduce((acc, curr) => acc + curr.oee, 0) / count,
+        availability: machineDetails.reduce((acc, curr) => acc + curr.availability, 0) / count,
+        performance: machineDetails.reduce((acc, curr) => acc + curr.performance, 0) / count,
+      };
+    });
+  }, [prodResult]);
 
   const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
 
@@ -245,18 +324,28 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     <div className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden z-[60]">
       
       {/* Discreet Top Stock Bar */}
-      <div className="bg-slate-900/40 border-b border-slate-800/50 px-6 py-1.5 flex items-center gap-8 overflow-x-auto no-scrollbar backdrop-blur-md">
-        <div className="flex items-center gap-2 text-slate-500 shrink-0">
-          <Package size={12} />
-          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Stock Planta</span>
+      <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 border-b border-blue-400/30 px-6 py-4 flex items-center gap-10 overflow-x-auto no-scrollbar shadow-[0_4px_20px_rgba(29,78,216,0.4)] relative z-10">
+        <div className="flex items-center gap-3 text-white shrink-0">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <Package size={24} className="animate-pulse" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Stock Disponible</span>
+            <span className="text-xs font-bold text-white uppercase tracking-widest">Planta Malagueño</span>
+          </div>
         </div>
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-12">
           {producedStock.map(item => (
-            <div key={item.id} className="flex items-center gap-3 shrink-0">
-              <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter">{item.product}</span>
-              <span className="text-xs font-black text-slate-300 tracking-tight">
-                {Math.floor(item.tonnage).toLocaleString()} <span className="text-[9px] text-blue-500/50">Tn</span>
-              </span>
+            <div key={item.id} className="flex items-center gap-6 shrink-0 bg-black/20 px-6 py-2 rounded-2xl border border-white/10 backdrop-blur-md hover:bg-black/30 transition-all">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">{item.product.replace('CEMENTO ', '')}</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-black text-white tracking-tighter leading-none">
+                    {Math.floor(item.tonnage).toLocaleString()}
+                  </span>
+                  <span className="text-sm text-blue-300 font-black uppercase">Tn</span>
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -265,7 +354,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
       <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
         {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-8">
             {onBack && (
               <button 
                 onClick={onBack}
@@ -283,6 +372,36 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Monitor de Producción</h1>
                 <p className="text-emerald-500 font-bold uppercase text-xs tracking-widest mt-1">Expedición Malagueño | Tiempo Real</p>
               </div>
+            </div>
+
+            {/* Global KPIs */}
+            <div className="flex items-center gap-8 border-l border-slate-800 pl-8">
+              <div className="flex flex-col items-center">
+                <CircularProgress value={globalKPIs.oee} label="OEE GLOBAL" size={85} strokeWidth={10} color="text-emerald-400" />
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex flex-col items-center gap-1">
+                  <CircularProgress value={globalKPIs.availability} label="DISPONIBILIDAD" size={55} strokeWidth={6} color="text-blue-400" />
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <CircularProgress value={globalKPIs.performance} label="RENDIMIENTO" size={55} strokeWidth={6} color="text-amber-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Machine KPIs (Cuadrantes) */}
+            <div className="flex items-center gap-4 border-l border-slate-800 pl-8">
+              {machineKPIs.map(m => (
+                <div key={m.id} className="bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-2 shadow-inner">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-1 w-full text-center">
+                    {m.id.split('-')[1] || m.id}
+                  </span>
+                  <div className="flex gap-3">
+                    <CircularProgress value={m.oee} label="OEE" size={42} strokeWidth={5} color="text-emerald-500/90" />
+                    <CircularProgress value={m.availability} label="DISP" size={42} strokeWidth={5} color="text-blue-500/90" />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           <div className="text-right">
@@ -379,8 +498,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     <YAxis 
                       dataKey="name" 
                       type="category" 
-                      width={100} 
-                      tick={{ fill: '#64748b', fontSize: 8, fontWeight: 'bold' }}
+                      width={180} 
+                      tick={{ fill: '#cbd5e1', fontSize: 10, fontWeight: 'black' }}
                       axisLine={false}
                       tickLine={false}
                     />
