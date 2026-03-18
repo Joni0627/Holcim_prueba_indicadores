@@ -269,7 +269,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
       .sort((a, b) => b.durationMinutes - a.durationMinutes)
       .slice(0, 10)
       .map(d => ({
-        name: `${d.machineId.split('-')[1] || d.machineId}: ${d.reason.length > 25 ? d.reason.substring(0, 25) + '...' : d.reason}`,
+        name: `${d.downtimeType || 'S/HAC'}: ${d.reason.length > 25 ? d.reason.substring(0, 25) + '...' : d.reason}`,
         fullName: d.reason,
         duration: d.durationMinutes,
         machine: d.machineId
@@ -386,9 +386,9 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
 
             {/* Machine KPIs & Totalizers */}
-            <div className="flex items-center gap-4 border-l border-slate-800 pl-12">
+            <div className="flex-1 flex items-center gap-4 border-l border-slate-800 pl-12">
               {machineKPIs.map(m => (
-                <div key={m.id} className="bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-3 shadow-xl min-w-[180px]">
+                <div key={m.id} className="flex-1 bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-3 shadow-xl">
                   <div className="flex justify-between items-center w-full border-b border-slate-800 pb-2">
                     <span className="text-[10px] font-black text-slate-200 uppercase tracking-widest">
                       {m.id}
@@ -517,8 +517,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           </div>
 
           {/* Right Column: Timeline */}
-          <div className="col-span-8 bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-8">
+          <div className="col-span-8 bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Clock className="text-indigo-400" size={24} />
                 <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-sm">Cronograma Diario de Operación</p>
@@ -537,9 +537,9 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.5 }}
-                  className="space-y-6"
+                  className="h-full flex flex-col"
                 >
-                  <div className="space-y-4">
+                  <div className="flex-1 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <span className="text-2xl font-black text-white uppercase tracking-[0.3em] whitespace-nowrap">
@@ -556,10 +556,10 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                         ))}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-8">
+                    <div className="flex-1 flex flex-col justify-around min-h-0">
                       {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
                         return (
-                          <div key={machine} className="space-y-2">
+                          <div key={machine} className="w-full">
                             <MonitorTimelineBar 
                               shiftKey={shiftsOrdered[currentShiftIndex]} 
                               machineId={machine} 
