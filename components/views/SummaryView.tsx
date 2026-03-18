@@ -426,16 +426,16 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-3 flex flex-col gap-6 h-full">
                 
                 {/* Producción Total Card */}
-                <div data-card="left" className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-slate-800 flex flex-col justify-center">
+                <div data-card="left" className="flex-1 bg-gradient-to-br from-blue-600 to-blue-400 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-blue-300/30 flex flex-col justify-center">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <PackageCheck size={120} />
                     </div>
-                    <p className="text-blue-300 font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
+                    <p className="text-white font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
                     <div className="flex items-baseline gap-2">
                         <h2 className="text-6xl font-black tracking-tighter">
                             {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
-                        <span className="text-3xl font-bold text-blue-400">Tn</span>
+                        <span className="text-3xl font-bold text-blue-100">Tn</span>
                     </div>
                 </div>
 
@@ -568,30 +568,30 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-7 bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
-                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
-                    <TableProperties className="text-emerald-500" size={20} />
-                    <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
+            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-blue-700 to-blue-500 p-6 rounded-lg shadow-xl border border-blue-400/30 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none"></div>
+                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-white/20 pb-3">
+                    <TableProperties className="text-white" size={20} />
+                    <h3 className="font-bold text-white uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
                 <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-slate-800">
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Turno</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-blue-400 text-right">Producción (Tn)</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-emerald-500 text-right">OEE %</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-amber-500 text-right">Disp %</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-indigo-400 text-right">Rend %</th>
+                                <tr className="border-b border-white/20">
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-blue-100">Turno</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-white text-right">Producción (Tn)</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 text-right">OEE %</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-amber-300 text-right">Disp %</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-indigo-200 text-right">Rend %</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-800/50">
+                            <tbody className="divide-y divide-white/10">
                                 {shiftData.map((shift, idx) => (
-                                    <tr key={shift.name} className="hover:bg-white/5 transition-colors group/row">
+                                    <tr key={shift.name} className="hover:bg-white/10 transition-colors group/row">
                                         <td className="py-4 px-2">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: SHIFT_COLORS[idx % SHIFT_COLORS.length] }}></div>
+                                                <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                                                 <span className="text-sm font-black text-white uppercase tracking-tight">{shift.name}</span>
                                             </div>
                                         </td>
@@ -599,50 +599,50 @@ export const SummaryView: React.FC = () => {
                                             <span className="text-lg font-black text-white tracking-tighter">
                                                 {shift.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                                            <span className="text-[10px] font-bold text-blue-100 ml-1 uppercase">Tn</span>
                                         </td>
                                         <td className="py-4 px-2 text-right">
                                             <div className="inline-flex flex-col items-end">
-                                                <span className="text-sm font-black text-emerald-400">{shift.oee}%</span>
-                                                <div className="w-12 h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                                                    <div className="h-full bg-emerald-500" style={{ width: `${shift.oee}%` }}></div>
+                                                <span className="text-sm font-black text-white">{shift.oee}%</span>
+                                                <div className="w-12 h-1 bg-black/20 rounded-full mt-1 overflow-hidden">
+                                                    <div className="h-full bg-emerald-400" style={{ width: `${shift.oee}%` }}></div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="py-4 px-2 text-right">
-                                            <span className="text-sm font-bold text-amber-400">{shift.disp}%</span>
+                                            <span className="text-sm font-bold text-amber-200">{shift.disp}%</span>
                                         </td>
                                         <td className="py-4 px-2 text-right">
-                                            <span className="text-sm font-bold text-indigo-300">{shift.rend}%</span>
+                                            <span className="text-sm font-bold text-indigo-100">{shift.rend}%</span>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-slate-500 italic">Sin datos de turnos</div>
+                        <div className="h-full flex items-center justify-center text-blue-100/60 italic">Sin datos de turnos</div>
                     )}
                 </div>
                 
                 {/* Footer decorativo para la tabla */}
-                <div className="mt-4 pt-4 border-t border-slate-800/50 flex justify-between items-center relative z-10">
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Resumen Operativo</p>
+                <div className="mt-4 pt-4 border-t border-white/20 flex justify-between items-center relative z-10">
+                    <p className="text-[9px] font-bold text-blue-100 uppercase tracking-widest">Resumen Operativo</p>
                     <div className="flex gap-1">
-                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-slate-700"></div>)}
+                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-white/30"></div>)}
                     </div>
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full">
-                <div className="flex items-center mb-6 border-b border-slate-800/50 pb-3">
+            <div className="lg:col-span-5 bg-gradient-to-br from-blue-600 to-blue-400 p-6 rounded-lg shadow-xl border border-blue-300/30 min-h-[480px] flex flex-col h-full">
+                <div className="flex items-center mb-6 border-b border-white/20 pb-3">
                     <div className="flex items-center gap-2">
-                        <Cpu className="text-blue-400" size={20} />
-                        <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
+                        <Cpu className="text-white" size={20} />
+                        <h3 className="font-bold text-white uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
                     </div>
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className={`grid gap-6 flex-grow items-start ${prodResult.byMachine.length === 1 ? 'grid-cols-1 max-w-md mx-auto w-full' : 'grid-cols-1 sm:grid-cols-2'}`}>
+                    <div className={`grid gap-4 flex-grow items-start ${prodResult.byMachine.length === 1 ? 'grid-cols-1 max-w-md mx-auto w-full' : 'grid-cols-1 xl:grid-cols-2'}`}>
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
                             const avg = machineMetrics.length > 0 ? {
@@ -654,58 +654,58 @@ export const SummaryView: React.FC = () => {
                             return (
                                 <div 
                                     key={m.name} 
-                                    className="bg-slate-800 rounded-2xl border border-slate-700 shadow-lg hover:shadow-blue-900/40 transition-all group flex flex-col overflow-hidden"
+                                    className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg hover:shadow-white/20 transition-all group flex flex-col overflow-hidden"
                                 >
                                     {/* Card Header */}
-                                    <div className="px-5 py-3 border-b border-slate-700 flex justify-between items-center bg-black/20">
-                                        <span className="text-xs font-black text-blue-400 uppercase tracking-widest">{m.name}</span>
-                                        <Activity size={12} className="text-emerald-500" />
+                                    <div className="px-4 py-2 border-b border-white/10 flex justify-between items-center bg-black/10">
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{m.name}</span>
+                                        <Activity size={12} className="text-emerald-300" />
                                     </div>
 
                                     {/* Main Value Area */}
-                                    <div className="p-5 flex-grow flex flex-col">
-                                        <div className="bg-slate-950 rounded-2xl p-5 mb-5 relative overflow-hidden shadow-2xl group-hover:bg-blue-950 transition-colors duration-500 border border-slate-800">
-                                            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-400/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-400/10 transition-colors"></div>
-                                            <p className="text-slate-500 text-[9px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="text-5xl font-black text-white tracking-tighter">
+                                    <div className="p-4 flex-grow flex flex-col">
+                                        <div className="bg-black/20 rounded-2xl p-4 mb-4 relative overflow-hidden shadow-2xl group-hover:bg-black/30 transition-colors duration-500 border border-white/10">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-white/10 transition-colors"></div>
+                                            <p className="text-blue-100/60 text-[8px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-4xl font-black text-white tracking-tighter">
                                                     {m.valueTn.toFixed(0)}
                                                 </span>
-                                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tn</span>
+                                                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">Tn</span>
                                             </div>
                                         </div>
 
                                         {/* KPIs Grid - Modernized */}
-                                        <div className="grid grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-3 gap-2">
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1.5 bg-slate-900 rounded-full mb-2 overflow-hidden">
+                                                <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
                                                     <div 
-                                                        className="h-full bg-blue-500 rounded-full" 
+                                                        className="h-full bg-white" 
                                                         style={{ width: `${Math.min(avg.oee * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase">OEE</p>
-                                                <p className="text-sm font-black text-blue-400">{(avg.oee * 100).toFixed(0)}%</p>
+                                                <p className="text-[7px] font-bold text-blue-100/60 uppercase">OEE</p>
+                                                <p className="text-xs font-black text-white">{(avg.oee * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1.5 bg-slate-900 rounded-full mb-2 overflow-hidden">
+                                                <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
                                                     <div 
-                                                        className="h-full bg-emerald-500 rounded-full" 
+                                                        className="h-full bg-emerald-300" 
                                                         style={{ width: `${Math.min(avg.disp * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase">Disp</p>
-                                                <p className="text-sm font-black text-emerald-600">{(avg.disp * 100).toFixed(0)}%</p>
+                                                <p className="text-[7px] font-bold text-blue-100/60 uppercase">Disp</p>
+                                                <p className="text-xs font-black text-emerald-300">{(avg.disp * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1.5 bg-slate-900 rounded-full mb-2 overflow-hidden">
+                                                <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
                                                     <div 
-                                                        className="h-full bg-amber-500 rounded-full" 
+                                                        className="h-full bg-amber-300" 
                                                         style={{ width: `${Math.min(avg.rend * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[8px] font-bold text-slate-500 uppercase">Rend</p>
-                                                <p className="text-sm font-black text-amber-400">{(avg.rend * 100).toFixed(0)}%</p>
+                                                <p className="text-[7px] font-bold text-blue-100/60 uppercase">Rend</p>
+                                                <p className="text-xs font-black text-amber-300">{(avg.rend * 100).toFixed(0)}%</p>
                                             </div>
                                         </div>
                                     </div>
@@ -714,7 +714,7 @@ export const SummaryView: React.FC = () => {
                         })}
                     </div>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-slate-400">Sin datos de máquinas</div>
+                    <div className="flex-grow flex items-center justify-center text-blue-300/40">Sin datos de máquinas</div>
                 )}
             </div>
 

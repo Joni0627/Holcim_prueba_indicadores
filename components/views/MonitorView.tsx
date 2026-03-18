@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDowntimes, fetchProductionStats, fetchStocks } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
@@ -88,13 +89,22 @@ const MonitorTimelineBar: React.FC<{ shiftKey: string, machineId: string, events
   );
 };
 
-export const MonitorView: React.FC = () => {
+export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
   const today = useMemo(() => new Date(), []);
 
   // Update clock every second
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Cycle shifts every 10 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentShiftIndex((prev) => (prev + 1) % 4);
+    }, 10000);
     return () => clearInterval(timer);
   }, []);
 
@@ -173,13 +183,24 @@ export const MonitorView: React.FC = () => {
       
       {/* Header */}
       <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-emerald-600 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-            <Layout size={32} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-black tracking-tighter uppercase">Monitor de Producción</h1>
-            <p className="text-emerald-500 font-bold uppercase text-sm tracking-widest">Expedición Malagueño | Tiempo Real</p>
+        <div className="flex items-center gap-6">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl transition-all border border-slate-700 group flex items-center gap-2"
+            >
+              <ArrowLeft size={24} className="text-slate-400 group-hover:text-white" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-500 group-hover:text-white">Volver</span>
+            </button>
+          )}
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-600 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+              <Layout size={32} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tighter uppercase">Monitor de Producción</h1>
+              <p className="text-emerald-500 font-bold uppercase text-sm tracking-widest">Expedición Malagueño | Tiempo Real</p>
+            </div>
           </div>
         </div>
         <div className="text-right">
@@ -253,22 +274,43 @@ export const MonitorView: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 space-y-8 overflow-y-auto no-scrollbar pr-2">
-            {shiftsOrdered.map(s => (
-              <div key={s} className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-black text-slate-500 uppercase tracking-[0.3em] whitespace-nowrap">
-                    {SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}
-                  </span>
-                  <div className="flex-grow h-px bg-slate-800"></div>
+          <div className="flex-1 relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div 
+                key={shiftsOrdered[currentShiftIndex]}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.5 }}
+                className="space-y-6"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <span className="text-2xl font-black text-white uppercase tracking-[0.3em] whitespace-nowrap">
+                        {SHIFT_MAP[shiftsOrdered[currentShiftIndex] as keyof typeof SHIFT_MAP].label}
+                      </span>
+                      <div className="h-px w-32 bg-slate-800"></div>
+                    </div>
+                    <div className="flex gap-2">
+                      {shiftsOrdered.map((_, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`h-1.5 rounded-full transition-all duration-500 ${idx === currentShiftIndex ? 'w-8 bg-indigo-500' : 'w-2 bg-slate-800'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-8">
+                    {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, events]) => (
+                      <div key={machine} className="space-y-2">
+                        <MonitorTimelineBar shiftKey={shiftsOrdered[currentShiftIndex]} machineId={machine} events={events} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 gap-4">
-                  {Object.entries(groupedTimeline[s] || {}).map(([machine, events]) => (
-                    <MonitorTimelineBar key={machine} shiftKey={s} machineId={machine} events={events} />
-                  ))}
-                </div>
-              </div>
-            ))}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 

@@ -53,7 +53,7 @@ function App() {
       case 'downtime': return <DowntimeView />;
       case 'palletizers': return <PalletizerView />;
       case 'breakage': return <BreakageView />;
-      case 'monitor': return <MonitorView />;
+      case 'monitor': return <MonitorView onBack={() => setCurrentView('home')} />;
       case 'admin': return canAccessAdmin ? <AdminPanel /> : <SummaryView />;
       default: return <SummaryView />;
     }
