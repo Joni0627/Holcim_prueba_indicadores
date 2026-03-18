@@ -250,23 +250,70 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <div className="col-span-4 flex flex-col gap-6 overflow-hidden">
           
           {/* Ranking Card */}
-          <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col justify-center min-h-[250px]">
-            <div className="absolute top-0 right-0 p-6 opacity-10">
-              <Trophy size={120} />
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col min-h-[320px]">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+              <Trophy size={100} />
             </div>
-            <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-sm mb-4">Ranking del Día</p>
-            {topShift ? (
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-slate-400 uppercase tracking-tight">Turno Destacado</h2>
-                <h3 className="text-6xl font-black text-white tracking-tighter uppercase">{topShift.name}</h3>
-                <div className="flex items-baseline gap-2 mt-4">
-                  <span className="text-4xl font-black text-emerald-400">{topShift.valueTn.toFixed(0)}</span>
-                  <span className="text-xl font-bold text-slate-500 uppercase">Toneladas</span>
+            <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-xs mb-6 flex items-center gap-2">
+              <Trophy size={14} /> Ranking de Producción
+            </p>
+            
+            <div className="flex-1 flex flex-col gap-3">
+              {prodResult?.byShift && prodResult.byShift.length > 0 ? (
+                [...prodResult.byShift]
+                  .sort((a, b) => b.valueTn - a.valueTn)
+                  .map((shift, idx) => {
+                    const isTop = idx === 0;
+                    return (
+                      <div 
+                        key={shift.name} 
+                        className={`relative group transition-all duration-500 p-4 rounded-2xl border ${
+                          isTop 
+                            ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
+                            : 'bg-slate-800/30 border-slate-700/50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
+                              idx === 0 ? 'bg-amber-500 text-slate-900' : 
+                              idx === 1 ? 'bg-slate-300 text-slate-900' : 
+                              idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-400'
+                            }`}>
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-white text-lg' : 'text-slate-400 text-sm'}`}>
+                                {shift.name.split('.')[1] || shift.name}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-black tracking-tighter ${isTop ? 'text-emerald-400 text-2xl' : 'text-slate-300 text-lg'}`}>
+                              {Math.floor(shift.valueTn).toLocaleString()}
+                              <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                            </p>
+                          </div>
+                        </div>
+                        {isTop && (
+                          <div className="absolute -top-2 -right-2">
+                            <motion.div 
+                              animate={{ rotate: [0, 10, -10, 0] }}
+                              transition={{ repeat: Infinity, duration: 2 }}
+                            >
+                              <Trophy size={24} className="text-amber-500 drop-shadow-lg" />
+                            </motion.div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-slate-500 italic text-sm">Calculando ranking...</p>
                 </div>
-              </div>
-            ) : (
-              <p className="text-slate-500 italic">Calculando ranking...</p>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Stock Card */}
@@ -286,13 +333,13 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     transition={{ duration: 0.5 }}
                     className="space-y-4"
                   >
-                    <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                    <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50 flex flex-col items-center text-center">
                       <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">{displayStock.product}</p>
-                      <div className="flex items-baseline gap-2">
-                        <p className="text-6xl font-black tracking-tighter text-white">
+                      <div className="flex items-baseline justify-center gap-2 w-full">
+                        <p className="text-5xl md:text-6xl font-black tracking-tighter text-white leading-none">
                           {Math.floor(displayStock.tonnage).toLocaleString()}
                         </p>
-                        <span className="text-2xl font-bold text-blue-500 uppercase">Tn</span>
+                        <span className="text-xl font-bold text-blue-500 uppercase">Tn</span>
                       </div>
                     </div>
                     
@@ -371,15 +418,6 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           </div>
         </div>
 
-      </div>
-
-      {/* Footer */}
-      <div className="flex justify-between items-center text-[10px] font-bold text-slate-600 uppercase tracking-[0.4em] pt-2 border-t border-slate-800">
-        <p>Sistema de Monitoreo PSC QUBE v2.0</p>
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <p>Conexión Activa | Actualización cada 20 min</p>
-        </div>
       </div>
     </div>
   );
