@@ -249,9 +249,15 @@ export const SummaryView: React.FC = () => {
                 (shiftContainer as HTMLElement).style.minHeight = '420px';
                 (shiftContainer as HTMLElement).style.display = 'flex';
                 (shiftContainer as HTMLElement).style.flexDirection = 'column';
-                (shiftContainer as HTMLElement).style.padding = '10px';
-                (shiftContainer as HTMLElement).style.backgroundColor = 'rgba(15, 23, 42, 0.5)';
+                (shiftContainer as HTMLElement).style.padding = '20px';
+                (shiftContainer as HTMLElement).style.backgroundColor = '#0f172a';
                 (shiftContainer as HTMLElement).style.border = '1px solid rgba(51, 65, 85, 0.5)';
+                
+                const table = shiftContainer.querySelector('table');
+                if (table) {
+                    table.style.width = '100%';
+                    table.style.borderCollapse = 'collapse';
+                }
             }
 
             // Compact the left column cards
@@ -562,13 +568,13 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
+            <div data-chart="shift" className="lg:col-span-7 bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-full bg-blue-500/5 pointer-events-none"></div>
                 <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-800/50 pb-3">
                     <TableProperties className="text-emerald-500" size={20} />
                     <h3 className="font-bold text-slate-200 uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
-                <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
+                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -627,7 +633,7 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full">
+            <div className="lg:col-span-5 bg-slate-900 p-6 rounded-lg shadow-xl border border-slate-800 min-h-[480px] flex flex-col h-full">
                 <div className="flex items-center mb-6 border-b border-slate-800/50 pb-3">
                     <div className="flex items-center gap-2">
                         <Cpu className="text-blue-400" size={20} />
@@ -648,7 +654,7 @@ export const SummaryView: React.FC = () => {
                             return (
                                 <div 
                                     key={m.name} 
-                                    className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-lg hover:shadow-blue-900/40 transition-all group flex flex-col overflow-hidden"
+                                    className="bg-slate-800 rounded-2xl border border-slate-700 shadow-lg hover:shadow-blue-900/40 transition-all group flex flex-col overflow-hidden"
                                 >
                                     {/* Card Header */}
                                     <div className="px-5 py-3 border-b border-slate-700 flex justify-between items-center bg-black/20">

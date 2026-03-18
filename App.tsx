@@ -9,10 +9,11 @@ import { DowntimeView } from './components/views/DowntimeView';
 import { PalletizerView } from './components/views/PalletizerView';
 import { BreakageView } from './components/views/BreakageView';
 import { DailyTimelineView } from './components/views/DailyTimelineView';
+import { MonitorView } from './components/views/MonitorView';
 import { AdminPanel } from './components/AdminPanel';
 import { useUser, UserButton } from '@clerk/nextjs';
 
-type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline' | 'admin';
+type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline' | 'admin' | 'monitor';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
@@ -36,6 +37,7 @@ function App() {
     { id: 'home', label: 'Home', icon: Home },
     { id: 'stocks', label: 'Hoja Stocks', icon: Package },
     { id: 'timeline', label: 'Cronograma Diario', icon: Clock },
+    { id: 'monitor', label: 'Monitor de Planta', icon: LayoutDashboard },
     { id: 'downtime', label: 'Análisis Paros', icon: AlertCircle },
     { id: 'palletizers', label: 'Rendimiento Paletizadora', icon: Activity },
     { id: 'breakage', label: 'Roturas de Sacos', icon: Ban },
@@ -51,6 +53,7 @@ function App() {
       case 'downtime': return <DowntimeView />;
       case 'palletizers': return <PalletizerView />;
       case 'breakage': return <BreakageView />;
+      case 'monitor': return <MonitorView />;
       case 'admin': return canAccessAdmin ? <AdminPanel /> : <SummaryView />;
       default: return <SummaryView />;
     }
