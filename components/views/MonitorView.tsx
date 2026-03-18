@@ -36,9 +36,8 @@ const MonitorTimelineBar: React.FC<{
   shiftKey: string, 
   machineId: string, 
   events: DowntimeEvent[], 
-  longestEvent: DowntimeEvent | null,
-  productionTn?: number
-}> = ({ shiftKey, machineId, events, longestEvent, productionTn }) => {
+  longestEvent: DowntimeEvent | null
+}> = ({ shiftKey, machineId, events, longestEvent }) => {
   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
   if (!config) return null;
   
@@ -83,13 +82,6 @@ const MonitorTimelineBar: React.FC<{
       <div className="flex justify-between items-center px-1">
         <div className="flex items-center gap-3">
           <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{machineId}</span>
-          {productionTn !== undefined && (
-            <div className="flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-tighter">
-                {Math.floor(productionTn)} Tn
-              </span>
-            </div>
-          )}
         </div>
         {longestEvent && (
           <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
@@ -298,13 +290,15 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
     return machines.map(m => {
       const machineDetails = prodResult?.details?.filter(d => d.machineId === m) || [];
-      if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0 };
+      const totalTn = machineDetails.reduce((acc, curr) => acc + (curr.valueTn || 0), 0);
+      if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0, totalTn: 0 };
       const count = machineDetails.length;
       return {
         id: m,
         oee: machineDetails.reduce((acc, curr) => acc + curr.oee, 0) / count,
         availability: machineDetails.reduce((acc, curr) => acc + curr.availability, 0) / count,
         performance: machineDetails.reduce((acc, curr) => acc + curr.performance, 0) / count,
+        totalTn
       };
     });
   }, [prodResult]);
@@ -323,94 +317,97 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   return (
     <div className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden z-[60]">
       
-      {/* Discreet Top Stock Bar */}
-      <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-blue-800 border-b border-blue-400/30 px-6 py-4 flex items-center gap-10 overflow-x-auto no-scrollbar shadow-[0_4px_20px_rgba(29,78,216,0.4)] relative z-10">
-        <div className="flex items-center gap-3 text-white shrink-0">
-          <div className="p-2 bg-white/20 rounded-lg">
-            <Package size={24} className="animate-pulse" />
+      {/* Top Bar: Title, Date, Time, and Stocks */}
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b border-blue-400/30 px-6 py-3 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.4)] relative z-10">
+        <div className="flex items-center gap-6">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10 group flex items-center gap-2"
+            >
+              <ArrowLeft size={18} className="text-white/70 group-hover:text-white" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/70 group-hover:text-white">Volver</span>
+            </button>
+          )}
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-600 rounded-xl shadow-lg">
+              <Layout size={20} className="text-white" />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-white">Monitor de Producción</h1>
+              <p className="text-emerald-400 font-bold uppercase text-[8px] tracking-[0.2em] mt-0.5">Expedición Malagueño | Tiempo Real</p>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">Stock Disponible</span>
-            <span className="text-xs font-bold text-white uppercase tracking-widest">Planta Malagueño</span>
+          <div className="h-8 w-px bg-white/10 mx-2"></div>
+          <div className="flex flex-col items-start">
+            <p className="text-xl font-black tracking-tighter font-mono leading-none text-white">
+              {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+            <p className="text-white/50 font-bold uppercase tracking-widest text-[8px] mt-0.5">
+              {currentTime.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' })}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-12">
-          {producedStock.map(item => (
-            <div key={item.id} className="flex items-center gap-6 shrink-0 bg-black/20 px-6 py-2 rounded-2xl border border-white/10 backdrop-blur-md hover:bg-black/30 transition-all">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-1">{item.product.replace('CEMENTO ', '')}</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-white tracking-tighter leading-none">
+
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
+            {producedStock.map(item => (
+              <div key={item.id} className="flex flex-col items-center bg-black/20 px-4 py-1.5 rounded-xl border border-white/5 backdrop-blur-md">
+                <span className="text-[8px] font-black text-blue-200 uppercase tracking-widest mb-0.5">{item.product.replace('CEMENTO ', '')}</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xl font-black text-white tracking-tighter leading-none">
                     {Math.floor(item.tonnage).toLocaleString()}
                   </span>
-                  <span className="text-sm text-blue-300 font-black uppercase">Tn</span>
+                  <span className="text-[8px] text-blue-300 font-black uppercase">Tn</span>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
       <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
-        {/* Header */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-8">
-            {onBack && (
-              <button 
-                onClick={onBack}
-                className="p-3 bg-slate-800 hover:bg-slate-700 rounded-2xl transition-all border border-slate-700 group flex items-center gap-2"
-              >
-                <ArrowLeft size={24} className="text-slate-400 group-hover:text-white" />
-                <span className="text-xs font-black uppercase tracking-widest text-slate-500 group-hover:text-white">Volver</span>
-              </button>
-            )}
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-emerald-600 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-                <Layout size={32} />
-              </div>
-              <div>
-                <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Monitor de Producción</h1>
-                <p className="text-emerald-500 font-bold uppercase text-xs tracking-widest mt-1">Expedición Malagueño | Tiempo Real</p>
-              </div>
-            </div>
-
+        {/* KPI Header Section */}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-6">
+          <div className="flex items-center gap-12">
             {/* Global KPIs */}
-            <div className="flex items-center gap-8 border-l border-slate-800 pl-8">
+            <div className="flex items-center gap-8">
               <div className="flex flex-col items-center">
-                <CircularProgress value={globalKPIs.oee} label="OEE GLOBAL" size={85} strokeWidth={10} color="text-emerald-400" />
+                <CircularProgress value={globalKPIs.oee} label="OEE GLOBAL" size={90} strokeWidth={10} color="text-emerald-400" />
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex flex-col items-center gap-1">
-                  <CircularProgress value={globalKPIs.availability} label="DISPONIBILIDAD" size={55} strokeWidth={6} color="text-blue-400" />
+                  <CircularProgress value={globalKPIs.availability} label="DISPONIBILIDAD" size={60} strokeWidth={6} color="text-blue-400" />
                 </div>
                 <div className="flex flex-col items-center gap-1">
-                  <CircularProgress value={globalKPIs.performance} label="RENDIMIENTO" size={55} strokeWidth={6} color="text-amber-400" />
+                  <CircularProgress value={globalKPIs.performance} label="RENDIMIENTO" size={60} strokeWidth={6} color="text-amber-400" />
                 </div>
               </div>
             </div>
 
-            {/* Machine KPIs (Cuadrantes) */}
-            <div className="flex items-center gap-4 border-l border-slate-800 pl-8">
+            {/* Machine KPIs & Totalizers */}
+            <div className="flex items-center gap-4 border-l border-slate-800 pl-12">
               {machineKPIs.map(m => (
-                <div key={m.id} className="bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-2 shadow-inner">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-800 pb-1 w-full text-center">
-                    {m.id.split('-')[1] || m.id}
-                  </span>
-                  <div className="flex gap-3">
-                    <CircularProgress value={m.oee} label="OEE" size={42} strokeWidth={5} color="text-emerald-500/90" />
-                    <CircularProgress value={m.availability} label="DISP" size={42} strokeWidth={5} color="text-blue-500/90" />
+                <div key={m.id} className="bg-slate-900/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-3 shadow-xl min-w-[180px]">
+                  <div className="flex justify-between items-center w-full border-b border-slate-800 pb-2">
+                    <span className="text-[10px] font-black text-slate-200 uppercase tracking-widest">
+                      {m.id}
+                    </span>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[14px] font-black text-emerald-400 tracking-tighter leading-none">
+                        {Math.floor(m.totalTn).toLocaleString()}
+                      </span>
+                      <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">TOTAL TN</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <CircularProgress value={m.oee} label="OEE" size={48} strokeWidth={5} color="text-emerald-500" />
+                    <CircularProgress value={m.availability} label="DISP" size={48} strokeWidth={5} color="text-blue-500" />
+                    <CircularProgress value={m.performance} label="REND" size={48} strokeWidth={5} color="text-amber-500" />
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-          <div className="text-right">
-            <p className="text-5xl font-black tracking-tighter font-mono leading-none">
-              {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-1">
-              {currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })}
-            </p>
           </div>
         </div>
 
@@ -561,12 +558,6 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     </div>
                     <div className="grid grid-cols-1 gap-8">
                       {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
-                        // Find production for this machine in this shift from details array
-                        const shiftName = shiftsOrdered[currentShiftIndex];
-                        const machineProd = prodResult?.details?.find(d => 
-                          d.machineId === machine && d.shift === shiftName
-                        )?.valueTn;
-
                         return (
                           <div key={machine} className="space-y-2">
                             <MonitorTimelineBar 
@@ -574,7 +565,6 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                               machineId={machine} 
                               events={data.events} 
                               longestEvent={data.longestEvent}
-                              productionTn={machineProd}
                             />
                           </div>
                         );
