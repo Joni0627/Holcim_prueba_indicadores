@@ -221,7 +221,8 @@ export async function GET(req: Request) {
             availability: disponibilidad,
             performance: rendimiento,
             quality: 1, 
-            oee: oee
+            oee: oee,
+            valueTn: d.weightedRendDenom
         };
     });
 
