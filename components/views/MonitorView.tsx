@@ -31,7 +31,12 @@ const getVisualShift = (startTime: string) => {
     return '1.MAÑANA';
 };
 
-const MonitorTimelineBar: React.FC<{ shiftKey: string, machineId: string, events: DowntimeEvent[] }> = ({ shiftKey, machineId, events }) => {
+const MonitorTimelineBar: React.FC<{ 
+  shiftKey: string, 
+  machineId: string, 
+  events: DowntimeEvent[], 
+  longestEvent: DowntimeEvent | null 
+}> = ({ shiftKey, machineId, events, longestEvent }) => {
   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
   if (!config) return null;
   
@@ -72,11 +77,19 @@ const MonitorTimelineBar: React.FC<{ shiftKey: string, machineId: string, events
   };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
       <div className="flex justify-between items-center px-1">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{machineId}</span>
+        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{machineId}</span>
+        {longestEvent && (
+          <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+            <AlertCircle size={12} className="text-red-500" />
+            <span className="text-[10px] font-bold text-red-500 uppercase tracking-tight">
+              Paro Mayor: {longestEvent.reason} ({longestEvent.durationMinutes} min)
+            </span>
+          </div>
+        )}
       </div>
-      <div className="w-full h-4 bg-slate-800/50 rounded flex overflow-hidden border border-slate-700/30">
+      <div className="w-full h-6 bg-slate-800/50 rounded-lg flex overflow-hidden border border-slate-700/30 shadow-inner">
         {blocks.map((block, idx) => (
           <div 
             key={idx}
@@ -92,6 +105,7 @@ const MonitorTimelineBar: React.FC<{ shiftKey: string, machineId: string, events
 export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
+  const [currentStockIndex, setCurrentStockIndex] = useState(0);
   const today = useMemo(() => new Date(), []);
 
   // Update clock every second
@@ -100,11 +114,19 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Cycle shifts every 10 seconds
+  // Cycle shifts every 15 seconds (increased slightly for readability)
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentShiftIndex((prev) => (prev + 1) % 4);
-    }, 10000);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Cycle stocks every 8 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentStockIndex((prev) => (prev + 1));
+    }, 8000);
     return () => clearInterval(timer);
   }, []);
 
@@ -141,26 +163,35 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         const nameA = a.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const nameB = b.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return order.indexOf(nameA) - order.indexOf(nameB);
-      })
-      .slice(0, 4);
+      });
   }, [stockResult]);
+
+  // Get current stock to display (cycling)
+  const displayStock = useMemo(() => {
+    if (producedStock.length === 0) return null;
+    return producedStock[currentStockIndex % producedStock.length];
+  }, [producedStock, currentStockIndex]);
 
   const groupedTimeline = useMemo(() => {
     const baseMachines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
-    const result: Record<string, Record<string, DowntimeEvent[]>> = {};
+    const result: Record<string, Record<string, { events: DowntimeEvent[], longestEvent: DowntimeEvent | null }>> = {};
     
     Object.keys(SHIFT_MAP).forEach((shift) => {
       result[shift] = {};
       baseMachines.forEach((m) => {
-        result[shift][m] = [];
+        result[shift][m] = { events: [], longestEvent: null };
       });
     });
 
     downtimeResult.forEach((curr) => {
       const visualShift = getVisualShift(curr.startTime || '00:00');
-      if (result[visualShift]) {
-        if (!result[visualShift][curr.machineId]) result[visualShift][curr.machineId] = [];
-        result[visualShift][curr.machineId].push(curr);
+      if (result[visualShift] && result[visualShift][curr.machineId]) {
+        result[visualShift][curr.machineId].events.push(curr);
+        
+        const currentLongest = result[visualShift][curr.machineId].longestEvent;
+        if (!currentLongest || curr.durationMinutes > currentLongest.durationMinutes) {
+          result[visualShift][curr.machineId].longestEvent = curr;
+        }
       }
     });
 
@@ -244,19 +275,40 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-sm">Estado de Stock</p>
               <Package size={20} className="text-slate-600" />
             </div>
-            <div className="space-y-6 flex-grow flex flex-col justify-around">
-              {producedStock.map(item => (
-                <div key={item.id} className="flex justify-between items-end border-b border-slate-800 pb-4 last:border-0">
-                  <div>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">{item.product}</p>
-                    <p className="text-4xl font-black tracking-tighter text-white">
-                      {item.tonnage.toLocaleString()}
-                      <span className="text-lg font-bold text-blue-500 ml-2">Tn</span>
-                    </p>
-                  </div>
-                  <div className="h-12 w-1 bg-emerald-500/30 rounded-full"></div>
-                </div>
-              ))}
+            <div className="flex-grow flex flex-col justify-center relative">
+              <AnimatePresence mode="wait">
+                {displayStock ? (
+                  <motion.div 
+                    key={displayStock.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.5 }}
+                    className="space-y-4"
+                  >
+                    <div className="bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                      <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">{displayStock.product}</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-6xl font-black tracking-tighter text-white">
+                          {Math.floor(displayStock.tonnage).toLocaleString()}
+                        </p>
+                        <span className="text-2xl font-bold text-blue-500 uppercase">Tn</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 justify-center">
+                      {producedStock.map((_, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`h-1 rounded-full transition-all duration-500 ${idx === (currentStockIndex % producedStock.length) ? 'w-8 bg-blue-500' : 'w-2 bg-slate-800'}`}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <p className="text-slate-500 italic text-center">Sin datos de stock</p>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -302,9 +354,14 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-8">
-                    {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, events]) => (
+                    {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => (
                       <div key={machine} className="space-y-2">
-                        <MonitorTimelineBar shiftKey={shiftsOrdered[currentShiftIndex]} machineId={machine} events={events} />
+                        <MonitorTimelineBar 
+                          shiftKey={shiftsOrdered[currentShiftIndex]} 
+                          machineId={machine} 
+                          events={data.events} 
+                          longestEvent={data.longestEvent}
+                        />
                       </div>
                     ))}
                   </div>
