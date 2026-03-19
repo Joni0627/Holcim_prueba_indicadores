@@ -391,14 +391,14 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 w-full overflow-x-hidden px-0">
+    <div className="space-y-6 w-full max-w-full overflow-x-hidden px-0">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4 px-2">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4 px-4">
+        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
                 <Calendar className="text-slate-400" size={24} />
-                <h1 className="text-2xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
+                <h1 className="text-xl md:text-2xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
             </div>
             <button 
                 onClick={handleShare}
@@ -410,10 +410,12 @@ export const SummaryView: React.FC = () => {
                 <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir Imagen'}</span>
             </button>
         </div>
-        <DateFilter onFilterChange={handleFilterChange} />
+        <div className="w-full md:w-auto overflow-x-auto no-scrollbar">
+          <DateFilter onFilterChange={handleFilterChange} />
+        </div>
       </div>
 
-      <div id="summary-view-content" className="space-y-6 w-full overflow-x-hidden px-2">
+      <div id="summary-view-content" className="space-y-6 w-full max-w-full overflow-x-hidden px-2 sm:px-4">
         {isLoading ? (
            <div className="h-96 flex flex-col items-center justify-center text-slate-400">
               <Loader2 className="animate-spin mb-2" size={48} />
@@ -423,24 +425,24 @@ export const SummaryView: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* LEFT COLUMN (KPIs) - 3/12 */}
-            <div className="lg:col-span-3 flex flex-col gap-6 h-full">
+            <div className="lg:col-span-3 flex flex-col gap-6 h-full min-w-0">
                 
                 {/* Producción Total Card */}
-                <div data-card="left" className="flex-1 bg-gradient-to-br from-blue-600 to-blue-400 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-blue-300/30 flex flex-col justify-center">
+                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-gradient-to-br from-blue-600 to-blue-400 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-blue-300/30 flex flex-col justify-center">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <PackageCheck size={120} />
                     </div>
                     <p className="text-white font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
                     <div className="flex items-baseline gap-2">
-                        <h2 className="text-6xl font-black tracking-tighter">
+                        <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter">
                             {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
-                        <span className="text-3xl font-bold text-blue-100">Tn</span>
+                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-100">Tn</span>
                     </div>
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="flex-1 bg-gradient-to-br from-blue-900 to-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4 border border-blue-800/50 flex flex-col justify-center">
+                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-gradient-to-br from-blue-900 to-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4 border border-blue-800/50 flex flex-col justify-center">
                     <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-800/30 pb-2">TN por PRODUCTO</h3>
                     <div className="space-y-4">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
@@ -463,7 +465,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* RENDIMIENTO GLOBAL */}
-                <div data-card="left" className="flex-1 bg-gradient-to-br from-blue-700 to-blue-500 p-5 rounded-lg shadow-lg border border-blue-400/30 space-y-4 text-white flex flex-col justify-center">
+                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-gradient-to-br from-blue-700 to-blue-500 p-5 rounded-lg shadow-lg border border-blue-400/30 space-y-4 text-white flex flex-col justify-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100/60 mb-1 border-b border-blue-500/30 pb-2">RENDIMIENTO GLOBAL</h3>
                     <div className="space-y-3">
                         <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
@@ -491,21 +493,21 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* RIGHT COLUMN (Stock & Downtime) - 9/12 */}
-            <div className="lg:col-span-9 flex flex-col gap-6 h-full">
+            <div className="lg:col-span-9 flex flex-col gap-6 h-full min-w-0">
                 
                 {/* Stock Section */}
-                <div className="bg-gradient-to-br from-slate-950 to-blue-900 rounded-lg shadow-xl border border-slate-800 overflow-hidden">
+                <div className="bg-gradient-to-br from-slate-950 to-blue-900 rounded-lg shadow-xl border border-slate-800 overflow-hidden w-full">
                     <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 text-white px-6 py-2 flex justify-between items-center shadow-lg">
                         <h3 className="font-black uppercase tracking-widest text-sm">Stock a las 06:00 hs.</h3>
                         <Clock size={16} />
                     </div>
-                    <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center overflow-x-hidden">
                         {producedStock.length > 0 ? producedStock.map(item => (
-                            <div key={item.id} className="border-r border-slate-700 last:border-0">
+                            <div key={item.id} className="border-r border-slate-700 last:border-0 px-1">
                                 <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight truncate" title={item.product}>{item.product}</p>
-                                <p className="text-2xl font-black tracking-tighter text-white">
+                                <p className="text-xl md:text-2xl font-black tracking-tighter text-white">
                                     {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-xs font-bold text-emerald-500 ml-1">Tn</span>
+                                    <span className="text-[10px] md:text-xs font-bold text-emerald-500 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) : (
@@ -515,7 +517,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* Downtime Horizontal Chart */}
-                <div data-chart="downtime" className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px]">
+                <div data-chart="downtime" className="flex-1 bg-gradient-to-br from-slate-950 to-blue-900 p-4 md:p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group min-h-[400px] w-full">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-400/10 transition-colors"></div>
                     <div className="flex items-center gap-2 mb-4 border-b border-slate-800/50 pb-3 relative z-10">
                         <AlertTriangle className="text-red-500" size={18} />
@@ -535,8 +537,8 @@ export const SummaryView: React.FC = () => {
                                         type="category"
                                         dataKey="reason"
                                         stroke="#94a3b8"
-                                        fontSize={isMobile ? 10 : 16}
-                                        width={isMobile ? 80 : 200}
+                                        fontSize={isMobile ? 8 : 16}
+                                        width={isMobile ? 60 : 200}
                                         tick={{ fill: '#e2e8f0', fontWeight: 900 }}
                                         tickFormatter={(val) => {
                                             const maxLen = isMobile ? 15 : 40;
@@ -547,15 +549,15 @@ export const SummaryView: React.FC = () => {
                                         content={<CustomTooltip />} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={70}>
+                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={isMobile ? 25 : 70}>
                                         {downtimes.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
                                         ))}
                                         <LabelList 
                                             dataKey="durationMinutes" 
                                             position="right" 
-                                            formatter={(val: number) => `${val} min`}
-                                            style={{ fill: '#cbd5e1', fontSize: '12px', fontWeight: 'bold' }}
+                                            formatter={(val: number) => `${val}m`}
+                                            style={{ fill: '#cbd5e1', fontSize: isMobile ? '9px' : '12px', fontWeight: 'bold' }}
                                         />
                                     </Bar>
                                 </BarChart>
@@ -568,13 +570,13 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-blue-700 to-blue-500 p-6 rounded-lg shadow-xl border border-blue-400/30 min-h-[400px] flex flex-col h-full relative overflow-hidden group">
+            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-blue-700 to-blue-500 p-4 md:p-6 rounded-lg shadow-xl border border-blue-400/30 min-h-[400px] flex flex-col h-full relative overflow-hidden group w-full">
                 <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none"></div>
                 <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-white/20 pb-3">
                     <TableProperties className="text-white" size={20} />
                     <h3 className="font-bold text-white uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
-                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
+                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -633,7 +635,7 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-gradient-to-br from-blue-600 to-blue-400 p-6 rounded-lg shadow-xl border border-blue-300/30 min-h-[480px] flex flex-col h-full">
+            <div className="lg:col-span-5 bg-gradient-to-br from-blue-600 to-blue-400 p-4 md:p-6 rounded-lg shadow-xl border border-blue-300/30 min-h-[480px] flex flex-col h-full w-full">
                 <div className="flex items-center mb-6 border-b border-white/20 pb-3">
                     <div className="flex items-center gap-2">
                         <Cpu className="text-white" size={20} />
@@ -642,7 +644,7 @@ export const SummaryView: React.FC = () => {
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className={`grid gap-4 flex-grow items-start ${prodResult.byMachine.length === 1 ? 'grid-cols-1 max-w-md mx-auto w-full' : 'grid-cols-1 xl:grid-cols-2'}`}>
+                    <div className={`grid gap-4 flex-grow items-start w-full ${prodResult.byMachine.length === 1 ? 'grid-cols-1 max-w-md mx-auto' : 'grid-cols-1 xl:grid-cols-2'}`}>
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
                             const avg = machineMetrics.length > 0 ? {

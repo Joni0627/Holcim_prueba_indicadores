@@ -82,7 +82,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans overflow-x-hidden">
       
       {/* Mobile Header */}
       <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">

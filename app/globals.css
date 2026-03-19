@@ -18,6 +18,11 @@
   --background-end-rgb: 248, 250, 252;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
