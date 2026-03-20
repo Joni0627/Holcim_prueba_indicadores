@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 
@@ -30,6 +31,12 @@ function parseNumber(val: any): number {
 
 export async function GET(req: Request) {
   try {
+    // Seguridad: Verificar autenticación
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const startParam = searchParams.get("start"); 
     const endParam = searchParams.get("end");
@@ -61,8 +68,8 @@ export async function GET(req: Request) {
 
     if (!email || !key || !sheetId) return NextResponse.json({});
 
-    const auth = new JWT({ email, key, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
-    const doc = new GoogleSpreadsheet(sheetId, auth);
+    const authClient = new JWT({ email, key, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
+    const doc = new GoogleSpreadsheet(sheetId, authClient);
     await doc.loadInfo();
 
     const sheetCabecera = doc.sheetsByTitle["PRODUCCION_CABECERA"];

@@ -1,18 +1,8 @@
 
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { DowntimeEvent } from "../../../../types";
-
-function cleanJsonString(str: string): string {
-  if (!str) return "";
-  const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (match && match[1]) return match[1].trim();
-  const firstOpen = str.indexOf('{');
-  const lastClose = str.lastIndexOf('}');
-  if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
-      return str.substring(firstOpen, lastClose + 1);
-  }
-  return str.trim();
-}
+import { generateAIAnalysis } from "../../../../lib/ai";
 
 function generateFallbackAnalysis(downtimes: DowntimeEvent[]) {
     const topDowntime = downtimes?.[0];
@@ -45,27 +35,13 @@ function generateFallbackAnalysis(downtimes: DowntimeEvent[]) {
     };
 }
 
-async function tryGenerateWithModel(model: string, apiKey: string, prompt: string) {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        }),
-      }
-    );
-
-    if (!response.ok) {
-        throw new Error(`GOOGLE_ERROR_${response.status}`);
-    }
-    return response.json();
-}
-
 export async function POST(req: Request) {
   try {
-    const apiKey = process.env.API_KEY;
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { downtimes } = body as { downtimes: DowntimeEvent[] };
 
@@ -76,8 +52,6 @@ export async function POST(req: Request) {
             priority: "low"
         });
     }
-
-    if (!apiKey) return NextResponse.json(generateFallbackAnalysis(downtimes));
 
     const prompt = `
       Actúa como Especialista en Mantenimiento Industrial. Analiza estos paros de planta:
@@ -91,28 +65,16 @@ export async function POST(req: Request) {
       }
     `;
 
-    const modelsToTry = ["gemini-2.0-flash-exp", "gemini-1.5-flash"];
-    let data = null;
+    const analysis = await generateAIAnalysis(prompt);
 
-    for (const model of modelsToTry) {
-        try {
-            data = await tryGenerateWithModel(model, apiKey, prompt);
-            if (data) break;
-        } catch (e) { continue; }
-    }
-
-    if (data) {
-        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (textResponse) {
-            try {
-                return NextResponse.json(JSON.parse(cleanJsonString(textResponse)));
-            } catch (e) { }
-        }
+    if (analysis) {
+        return NextResponse.json(analysis);
     }
 
     return NextResponse.json(generateFallbackAnalysis(downtimes));
 
   } catch (error: any) {
+    console.error("Downtime Analysis Error:", error);
     return NextResponse.json({
          insight: "Error en análisis automático.",
          recommendations: ["Revisar ranking de Pareto"],
