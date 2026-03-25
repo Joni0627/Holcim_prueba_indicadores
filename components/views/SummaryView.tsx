@@ -149,16 +149,16 @@ export const SummaryView: React.FC = () => {
 
         return {
             ...s,
-            valueTn: s.valueTn,
-            hsMarcha: totalHsMarcha,
-            disp: Math.round(metrics.disp * 100),
-            rend: Math.round(metrics.rend * 100),
+            valueTn: s.valueTn || 0,
+            hsMarcha: totalHsMarcha || 0,
+            disp: Math.round((metrics.disp || 0) * 100),
+            rend: Math.round((metrics.rend || 0) * 100),
             breakdown: shiftMetrics.map(m => ({
                 machineName: m.machineName,
                 valueTn: m.valueTn || 0,
                 hsMarcha: m.hsMarcha || 0,
-                disp: Math.round(m.availability * 100),
-                rend: Math.round(m.performance * 100)
+                disp: Math.round((m.availability || 0) * 100),
+                rend: Math.round((m.performance || 0) * 100)
             }))
         };
     });
@@ -447,7 +447,7 @@ export const SummaryView: React.FC = () => {
                             <div key={prod.name} className="space-y-1">
                                 <div className="flex justify-between text-[12px] font-bold uppercase tracking-tight">
                                     <span className="text-slate-600">{prod.name}</span>
-                                    <span className="text-slate-900">{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
+                                    <span className="text-slate-900">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
                                 </div>
                                 <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                     <div 
@@ -479,7 +479,7 @@ export const SummaryView: React.FC = () => {
                             <div key={item.id} className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center group hover:bg-emerald-50 transition-colors">
                                 <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-600 transition-colors truncate w-full" title={item.product}>{item.product}</p>
                                 <p className="text-2xl font-black tracking-tighter text-slate-800">
-                                    {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                     <span className="text-xs font-bold text-slate-400 ml-1">Tn</span>
                                 </p>
                             </div>
@@ -576,13 +576,13 @@ export const SummaryView: React.FC = () => {
                                             </td>
                                             <td className="py-4 px-2 text-right">
                                                 <span className="text-lg font-black text-slate-900 tracking-tighter">
-                                                    {shift.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                                    {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Tn</span>
                                             </td>
                                             <td className="py-4 px-2 text-right">
                                                 <span className="text-lg font-black text-emerald-600 tracking-tighter">
-                                                    {shift.hsMarcha.toFixed(1)}
+                                                    {(shift.hsMarcha || 0).toFixed(1)}
                                                 </span>
                                             </td>
                                             <td className="py-4 px-2 text-right">
@@ -598,11 +598,11 @@ export const SummaryView: React.FC = () => {
                                                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
                                                 <td className="py-2 px-2 text-right">
-                                                    <span className="text-sm font-bold text-slate-700 tracking-tight">{m.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                    <span className="text-sm font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                                                     <span className="text-[9px] font-medium text-slate-400 ml-1">Tn</span>
                                                 </td>
                                                 <td className="py-2 px-2 text-right">
-                                                    <span className="text-sm font-bold text-emerald-600 tracking-tight">{m.hsMarcha.toFixed(1)}</span>
+                                                    <span className="text-sm font-bold text-emerald-600 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                                 </td>
                                                 <td className="py-2 px-2 text-right">
                                                     <span className="text-sm font-bold text-amber-600 tracking-tight">{m.disp}%</span>
@@ -666,7 +666,7 @@ export const SummaryView: React.FC = () => {
                                             <p className="text-blue-100/60 text-[8px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-4xl font-black text-white tracking-tighter">
-                                                    {m.valueTn.toFixed(0)}
+                                                    {(m.valueTn || 0).toFixed(0)}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">Tn</span>
                                             </div>
@@ -682,27 +682,27 @@ export const SummaryView: React.FC = () => {
                                                     />
                                                 </div>
                                                 <p className="text-[7px] font-bold text-blue-100/60 uppercase">OEE</p>
-                                                <p className="text-xs font-black text-white">{(avg.oee * 100).toFixed(0)}%</p>
+                                                <p className="text-xs font-black text-white">{((avg.oee || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
                                                 <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
                                                     <div 
                                                         className="h-full bg-emerald-300" 
-                                                        style={{ width: `${Math.min(avg.disp * 100, 100)}%` }}
+                                                        style={{ width: `${Math.min((avg.disp || 0) * 100, 100)}%` }}
                                                     />
                                                 </div>
                                                 <p className="text-[7px] font-bold text-blue-100/60 uppercase">Disp</p>
-                                                <p className="text-xs font-black text-emerald-300">{(avg.disp * 100).toFixed(0)}%</p>
+                                                <p className="text-xs font-black text-emerald-300">{((avg.disp || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
                                                 <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
                                                     <div 
                                                         className="h-full bg-amber-300" 
-                                                        style={{ width: `${Math.min(avg.rend * 100, 100)}%` }}
+                                                        style={{ width: `${Math.min((avg.rend || 0) * 100, 100)}%` }}
                                                     />
                                                 </div>
                                                 <p className="text-[7px] font-bold text-blue-100/60 uppercase">Rend</p>
-                                                <p className="text-xs font-black text-amber-300">{(avg.rend * 100).toFixed(0)}%</p>
+                                                <p className="text-xs font-black text-amber-300">{((avg.rend || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                         </div>
                                     </div>
