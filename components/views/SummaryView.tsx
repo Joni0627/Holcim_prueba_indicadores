@@ -229,36 +229,36 @@ export const SummaryView: React.FC = () => {
         scale: 2, 
         useCORS: true,
         logging: false,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#ffffff',
         windowWidth: 1400, // Ensure lg: grid classes are active
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('summary-view-content');
           if (el) {
             el.style.width = '1400px';
             el.style.padding = '32px';
-            el.style.backgroundColor = '#0f172a';
+            el.style.backgroundColor = '#ffffff';
             
             // Adjust heights of specific chart containers for the capture to be more compact
             const downtimeContainer = el.querySelector('[data-chart="downtime"]');
             if (downtimeContainer) {
-                (downtimeContainer as HTMLElement).style.height = '420px';
+                (downtimeContainer as HTMLElement).style.height = 'auto';
                 (downtimeContainer as HTMLElement).style.minHeight = '420px';
                 (downtimeContainer as HTMLElement).style.display = 'flex';
                 (downtimeContainer as HTMLElement).style.flexDirection = 'column';
-                (downtimeContainer as HTMLElement).style.padding = '10px';
-                (downtimeContainer as HTMLElement).style.backgroundColor = 'rgba(15, 23, 42, 0.5)';
-                (downtimeContainer as HTMLElement).style.border = '1px solid rgba(51, 65, 85, 0.5)';
+                (downtimeContainer as HTMLElement).style.padding = '20px';
+                (downtimeContainer as HTMLElement).style.backgroundColor = '#ffffff';
+                (downtimeContainer as HTMLElement).style.border = '1px solid #e2e8f0';
             }
             
             const shiftContainer = el.querySelector('[data-chart="shift"]');
             if (shiftContainer) {
-                (shiftContainer as HTMLElement).style.height = '420px';
+                (shiftContainer as HTMLElement).style.height = 'auto';
                 (shiftContainer as HTMLElement).style.minHeight = '420px';
                 (shiftContainer as HTMLElement).style.display = 'flex';
                 (shiftContainer as HTMLElement).style.flexDirection = 'column';
                 (shiftContainer as HTMLElement).style.padding = '20px';
-                (shiftContainer as HTMLElement).style.backgroundColor = '#0f172a';
-                (shiftContainer as HTMLElement).style.border = '1px solid rgba(51, 65, 85, 0.5)';
+                (shiftContainer as HTMLElement).style.backgroundColor = '#ffffff';
+                (shiftContainer as HTMLElement).style.border = '1px solid #e2e8f0';
                 
                 const table = shiftContainer.querySelector('table');
                 if (table) {
@@ -286,50 +286,6 @@ export const SummaryView: React.FC = () => {
                 if (subValue && subValue.innerText === 'Tn') {
                     subValue.style.fontSize = '20px'; // Reduced from 3xl
                 }
-            });
-
-            // Target the inner wrappers to force them to take all space
-            const wrappers = el.querySelectorAll('[data-chart-wrapper]');
-            wrappers.forEach((w: any) => {
-                w.style.flex = '1';
-                w.style.height = '100%';
-                w.style.minHeight = '320px';
-            });
-
-            // Force the actual Recharts SVG and wrapper to be large but without distortion
-            const rechartsWrappers = el.querySelectorAll('.recharts-wrapper');
-            rechartsWrappers.forEach((rw: any) => {
-                rw.style.height = '420px';
-                rw.style.width = '100%';
-                rw.style.display = 'block';
-            });
-
-            const rechartsSurfaces = el.querySelectorAll('.recharts-surface');
-            rechartsSurfaces.forEach((rs: any) => {
-                rs.style.height = '420px';
-                rs.style.width = '100%';
-            });
-
-            // Ensure recharts containers grow and fill
-            const containers = el.querySelectorAll('.recharts-responsive-container');
-            containers.forEach((c: any) => {
-                c.style.height = '420px';
-                c.style.minHeight = '420px';
-                c.style.width = '100%';
-                c.style.display = 'block';
-            });
-
-            // Trigger a resize event in the cloned window to help Recharts re-render
-            if (clonedDoc.defaultView) {
-                clonedDoc.defaultView.dispatchEvent(new Event('resize'));
-            }
-
-            // Special fix for labels: sometimes they are hidden if the container is too small
-            // We ensure the chart wrapper has enough top padding
-            const chartWrappers = el.querySelectorAll('[data-chart-wrapper]');
-            chartWrappers.forEach((cw: any) => {
-                cw.style.paddingTop = '40px';
-                cw.style.marginTop = '0px';
             });
           }
         }
@@ -432,11 +388,14 @@ export const SummaryView: React.FC = () => {
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+        <div className="flex flex-col gap-1">
             <div className="flex items-center gap-3">
                 <Calendar className="text-slate-400" size={24} />
                 <h1 className="text-xl md:text-2xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
             </div>
+            <p className="text-sm font-bold text-blue-600 uppercase tracking-tight ml-9">Resumen de productividad Expedición Malagueño</p>
+        </div>
+        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
             <button 
                 onClick={handleShare}
                 disabled={isSharing}
@@ -446,41 +405,14 @@ export const SummaryView: React.FC = () => {
                 {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
                 <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir Imagen'}</span>
             </button>
-            <button 
-                onClick={handleDownloadPDF}
-                disabled={isSharing}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 text-xs font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'}`}
-                title="Descargar PDF"
-            >
-                {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Descargar PDF'}</span>
-            </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
           <DateFilter onFilterChange={handleFilterChange} />
         </div>
       </div>
 
-      <div id="summary-view-content" className="space-y-6 bg-slate-950 p-4 md:p-8 rounded-xl border border-slate-800 shadow-2xl">
+      <div id="summary-view-content" className="space-y-6 bg-white p-4 md:p-8 rounded-xl border border-slate-200 shadow-xl">
         
-        {/* Report Header (Visible in capture) */}
-        <div className="flex justify-between items-end border-b-2 border-blue-500/50 pb-6 mb-8">
-            <div>
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="bg-blue-600 p-2 rounded-lg">
-                        <Activity className="text-white" size={24} />
-                    </div>
-                    <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Reporte Diario de Producción</h1>
-                </div>
-                <p className="text-blue-400 font-bold tracking-widest text-xs uppercase ml-12">Planta de Cemento - PSC QUBE</p>
-            </div>
-            <div className="text-right">
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Fecha del Reporte</p>
-                <p className="text-xl font-black text-white tracking-tight">{formatDate(dateRange.start)}</p>
-                <p className="text-sm font-bold text-blue-400 mt-1 uppercase tracking-tighter">Resumen de productividad Expedición Malagueño</p>
-            </div>
-        </div>
-
         {isLoading ? (
            <div className="h-96 flex flex-col items-center justify-center text-slate-400">
               <Loader2 className="animate-spin mb-2" size={48} />
@@ -506,50 +438,25 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Secondary KPIs Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div data-card="left" className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-lg flex flex-col justify-center">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Weight size={14} className="text-blue-300" />
-                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">Total Bolsas</p>
-                        </div>
-                        <p className="text-2xl font-black text-white">{(totalBags / 1000).toFixed(1)}k</p>
-                    </div>
-                    <div data-card="left" className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-lg flex flex-col justify-center">
-                        <div className="flex items-center gap-2 mb-1">
-                            <AlertTriangle size={14} className="text-amber-400" />
-                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">Rotura %</p>
-                        </div>
-                        <p className="text-2xl font-black text-white">{breakageRate.toFixed(2)}%</p>
-                    </div>
-                    <div data-card="left" className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-lg flex flex-col justify-center">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Timer size={14} className="text-red-400" />
-                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">Total Paros</p>
-                        </div>
-                        <p className="text-2xl font-black text-white">{formatMinutes(totalDowntimeMinutes)}</p>
-                    </div>
-                </div>
-
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-gradient-to-br from-blue-900 to-blue-700 text-white p-6 rounded-lg shadow-lg space-y-4 border border-blue-800/50 flex flex-col justify-center">
-                    <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-blue-300 mb-2 border-b border-blue-800/30 pb-2">TN por PRODUCTO</h3>
+                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-slate-50 text-slate-800 p-6 rounded-lg shadow-sm space-y-4 border border-slate-200 flex flex-col justify-center">
+                    <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 border-b border-slate-200 pb-2">TN por PRODUCTO</h3>
                     <div className="space-y-4">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
                             <div key={prod.name} className="space-y-1">
                                 <div className="flex justify-between text-[12px] font-bold uppercase tracking-tight">
-                                    <span className="text-blue-100">{prod.name}</span>
-                                    <span className="text-white">{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
+                                    <span className="text-slate-600">{prod.name}</span>
+                                    <span className="text-slate-900">{prod.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
                                 </div>
-                                <div className="h-2 bg-black/20 rounded-full overflow-hidden">
+                                <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                     <div 
-                                        className="h-full bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.5)]" 
+                                        className="h-full bg-emerald-500 rounded-full" 
                                         style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
                                     />
                                 </div>
                             </div>
                         )) : (
-                            <p className="text-xs text-blue-300 italic">Sin datos de productos</p>
+                            <p className="text-xs text-slate-400 italic">Sin datos de productos</p>
                         )}
                     </div>
                 </div>
@@ -561,169 +468,146 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-9 flex flex-col gap-6 lg:h-full">
                 
                 {/* Stock Section */}
-                <div className="bg-gradient-to-br from-slate-950 to-blue-900 rounded-lg shadow-xl border border-slate-800 overflow-hidden">
-                    <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 text-white px-6 py-2 flex justify-between items-center shadow-lg">
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-emerald-600 text-white px-6 py-2 flex justify-between items-center shadow-sm">
                         <h3 className="font-black uppercase tracking-widest text-sm">Stock a las 06:00 hs.</h3>
                         <Clock size={16} />
                     </div>
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-center">
-                        {producedStock.length > 0 ? producedStock.map(item => (
-                            <div key={item.id} className="sm:border-r border-slate-700 last:border-0 px-1">
-                                <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight truncate" title={item.product}>{item.product}</p>
-                                <p className="text-xl md:text-2xl font-black tracking-tighter text-white">
+                    <div className="p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {producedStock.length > 0 ? producedStock.map((item, idx) => (
+                            <div key={item.id} className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center group hover:bg-emerald-50 transition-colors">
+                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-600 transition-colors truncate w-full" title={item.product}>{item.product}</p>
+                                <p className="text-2xl font-black tracking-tighter text-slate-800">
                                     {item.tonnage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-[10px] md:text-xs font-bold text-emerald-500 ml-1">Tn</span>
+                                    <span className="text-xs font-bold text-slate-400 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) : (
-                            <div className="col-span-4 py-2 text-slate-500 text-xs italic">Datos de stock no disponibles</div>
+                            <div className="col-span-full py-8 text-center text-slate-400 italic text-sm">Sin datos de stock</div>
                         )}
+                        
                         {producedStock.length > 0 && (
-                            <div className="px-1 bg-emerald-500/10 rounded-md py-1 border border-emerald-500/20">
-                                <p className="text-[9px] uppercase font-bold text-emerald-400 mb-1 leading-tight">TOTAL STOCK</p>
-                                <p className="text-xl md:text-2xl font-black tracking-tighter text-emerald-400">
+                            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100 flex flex-col items-center justify-center text-center shadow-inner">
+                                <p className="text-[9px] uppercase font-bold text-emerald-700 mb-1 leading-tight">TOTAL STOCK</p>
+                                <p className="text-xl md:text-2xl font-black tracking-tighter text-emerald-600">
                                     {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-[10px] md:text-xs font-bold text-emerald-500 ml-1">Tn</span>
+                                    <span className="text-[10px] md:text-xs font-bold text-emerald-700 ml-1">Tn</span>
                                 </p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Downtime Horizontal Chart */}
-                <div data-chart="downtime" className="bg-gradient-to-br from-slate-950 to-blue-900 p-4 md:p-6 rounded-lg shadow-xl border border-slate-800 flex flex-col relative overflow-hidden group h-[450px] lg:flex-1">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-400/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-blue-400/10 transition-colors"></div>
-                    <div className="flex items-center gap-2 mb-4 border-b border-slate-800/50 pb-3 relative z-10">
+                {/* Downtime Table Section */}
+                <div data-chart="downtime" className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
+                    <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3 relative z-10">
                         <AlertTriangle className="text-red-500" size={18} />
-                        <h3 className="font-bold text-slate-200 uppercase text-xs tracking-widest">Análisis de Paradas Principales</h3>
+                        <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Ranking de Paros Internos (Top 5)</h3>
                     </div>
-                    <div data-chart-wrapper className="flex-grow relative z-10">
+                    <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto">
                         {downtimesByMachine.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%" debounce={50}>
-                                <BarChart
-                                    data={downtimesByMachine}
-                                    layout="vertical"
-                                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
-                                    <XAxis type="number" hide />
-                                    <YAxis
-                                        type="category"
-                                        dataKey="machineId"
-                                        stroke="#94a3b8"
-                                        fontSize={isMobile ? 10 : 14}
-                                        width={isMobile ? 80 : 120}
-                                        tick={{ fill: '#e2e8f0', fontWeight: 900 }}
-                                    />
-                                    <Tooltip 
-                                        content={({ active, payload }: any) => {
-                                            if (active && payload && payload.length) {
-                                                const data = payload[0].payload;
-                                                return (
-                                                    <div className="bg-slate-900 p-3 border border-slate-700 shadow-xl rounded-lg text-xs">
-                                                        <p className="font-bold text-white mb-2 uppercase tracking-wider border-b border-slate-700 pb-1">{data.machineId}</p>
-                                                        <div className="space-y-2">
-                                                            {data.reasons.map((r: any, i: number) => (
-                                                                <div key={i} className="flex justify-between gap-4">
-                                                                    <span className="text-slate-400">{r.reason}</span>
-                                                                    <span className="text-red-400 font-bold">{r.duration} min</span>
-                                                                </div>
-                                                            ))}
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-100">
+                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Máquina</th>
+                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Motivos Principales</th>
+                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Total (min)</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {downtimesByMachine.map((machine, idx) => (
+                                        <tr key={machine.machineId} className="hover:bg-slate-50 transition-colors">
+                                            <td className="py-4 px-2">
+                                                <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{machine.machineId}</span>
+                                            </td>
+                                            <td className="py-4 px-2">
+                                                <div className="space-y-1">
+                                                    {machine.reasons.map((r: any, rIdx: number) => (
+                                                        <div key={rIdx} className="flex justify-between gap-4 text-[11px]">
+                                                            <span className="text-slate-600 truncate max-w-[150px]">{r.reason}</span>
+                                                            <span className="text-red-500 font-bold whitespace-nowrap">{r.duration}m</span>
                                                         </div>
-                                                        <div className="mt-2 pt-2 border-t border-slate-700 flex justify-between font-black">
-                                                            <span className="text-white">TOTAL TOP 5</span>
-                                                            <span className="text-red-500">{data.totalDuration} min</span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        }} 
-                                        cursor={{fill: 'rgba(255,255,255,0.05)'}} 
-                                    />
-                                    <Bar dataKey="totalDuration" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={isMobile ? 30 : 50}>
-                                        {downtimesByMachine.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.1)} />
-                                        ))}
-                                        <LabelList 
-                                            dataKey="totalDuration" 
-                                            position="right" 
-                                            formatter={(val: number) => `${val}m`}
-                                            style={{ fill: '#cbd5e1', fontSize: isMobile ? '9px' : '12px', fontWeight: 'bold' }}
-                                        />
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-2 text-right align-top">
+                                                <span className="text-lg font-black text-slate-900 tracking-tighter">{machine.totalDuration}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase">min</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         ) : (
-                            <div className="h-full flex items-center justify-center text-slate-500 italic text-sm">Sin registros de paros internos</div>
+                            <div className="h-full flex items-center justify-center text-slate-400 italic text-sm py-10">Sin registros de paros internos</div>
                         )}
                     </div>
                 </div>
             </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-7 bg-gradient-to-br from-blue-700 to-blue-500 p-4 md:p-6 rounded-lg shadow-xl border border-blue-400/30 h-[450px] lg:h-full flex flex-col relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none"></div>
-                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-white/20 pb-3">
-                    <TableProperties className="text-white" size={20} />
-                    <h3 className="font-bold text-white uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
+            <div data-chart="shift" className="lg:col-span-12 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-100 pb-3">
+                    <TableProperties className="text-slate-400" size={20} />
+                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
                 <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-white/20">
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-blue-100">Turno / Paletizadora</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-white text-right">Producción (Tn)</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 text-right">HS Marcha</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-amber-300 text-right">Disp %</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-indigo-200 text-right">Rend %</th>
+                                <tr className="border-b border-slate-100">
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Turno / Paletizadora</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Producción (Tn)</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">HS Marcha</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Disp %</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Rend %</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/10">
+                            <tbody className="divide-y divide-slate-50">
                                 {shiftData.map((shift, idx) => (
                                     <React.Fragment key={shift.name}>
-                                        <tr className="bg-white/10 transition-colors group/row">
+                                        <tr className="bg-slate-50/50 transition-colors group/row">
                                             <td className="py-4 px-2">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
-                                                    <span className="text-sm font-black text-white uppercase tracking-tight">{shift.name}</span>
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{shift.name}</span>
                                                 </div>
                                             </td>
                                             <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-white tracking-tighter">
+                                                <span className="text-lg font-black text-slate-900 tracking-tighter">
                                                     {shift.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-blue-100 ml-1 uppercase">Tn</span>
+                                                <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Tn</span>
                                             </td>
                                             <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-emerald-300 tracking-tighter">
+                                                <span className="text-lg font-black text-emerald-600 tracking-tighter">
                                                     {shift.hsMarcha.toFixed(1)}
                                                 </span>
                                             </td>
                                             <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-amber-300 tracking-tighter">{shift.disp}%</span>
+                                                <span className="text-lg font-black text-amber-600 tracking-tighter">{shift.disp}%</span>
                                             </td>
                                             <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-indigo-200 tracking-tighter">{shift.rend}%</span>
+                                                <span className="text-lg font-black text-indigo-600 tracking-tighter">{shift.rend}%</span>
                                             </td>
                                         </tr>
                                         {shift.breakdown.map((m: any, mIdx: number) => (
-                                            <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                                            <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
                                                 <td className="py-2 px-6">
-                                                    <span className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">{m.machineName}</span>
+                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
                                                 <td className="py-2 px-2 text-right">
-                                                    {/* Empty production for breakdown as it's summed in shift */}
+                                                    <span className="text-sm font-bold text-slate-700 tracking-tight">{m.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                    <span className="text-[9px] font-medium text-slate-400 ml-1">Tn</span>
                                                 </td>
                                                 <td className="py-2 px-2 text-right">
-                                                    <span className="text-xs font-bold text-emerald-400/80">{m.hsMarcha.toFixed(1)}</span>
+                                                    <span className="text-sm font-bold text-emerald-600 tracking-tight">{m.hsMarcha.toFixed(1)}</span>
                                                 </td>
                                                 <td className="py-2 px-2 text-right">
-                                                    <span className="text-xs font-bold text-amber-400/80">{m.disp}%</span>
+                                                    <span className="text-sm font-bold text-amber-600 tracking-tight">{m.disp}%</span>
                                                 </td>
                                                 <td className="py-2 px-2 text-right">
-                                                    <span className="text-xs font-bold text-indigo-300/80">{m.rend}%</span>
+                                                    <span className="text-sm font-bold text-indigo-600 tracking-tight">{m.rend}%</span>
                                                 </td>
                                             </tr>
                                         ))}
@@ -732,7 +616,7 @@ export const SummaryView: React.FC = () => {
                             </tbody>
                         </table>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-blue-100/60 italic">Sin registros de producción</div>
+                        <div className="h-full flex items-center justify-center text-slate-400 italic text-sm py-10">Sin datos de producción por turno</div>
                     )}
                 </div>
                 
