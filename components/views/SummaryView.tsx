@@ -155,6 +155,7 @@ export const SummaryView: React.FC = () => {
             rend: Math.round(metrics.rend * 100),
             breakdown: shiftMetrics.map(m => ({
                 machineName: m.machineName,
+                valueTn: m.valueTn || 0,
                 hsMarcha: m.hsMarcha || 0,
                 disp: Math.round(m.availability * 100),
                 rend: Math.round(m.performance * 100)
