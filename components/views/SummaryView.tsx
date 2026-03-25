@@ -619,7 +619,7 @@ export const SummaryView: React.FC = () => {
                                             </td>
                                             <td className="py-1 px-2 text-right">
                                                 <span className="text-sm font-black text-slate-900 tracking-tighter">
-                                                    {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                                    {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                 </span>
                                                 <span className="text-[9px] font-bold text-slate-400 ml-0.5 uppercase">Tn</span>
                                             </td>
@@ -641,7 +641,7 @@ export const SummaryView: React.FC = () => {
                                                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
                                                 <td className="py-1 px-2 text-right">
-                                                    <span className="text-xs font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                    <span className="text-xs font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                                                     <span className="text-[8px] font-medium text-slate-400 ml-0.5">Tn</span>
                                                 </td>
                                                 <td className="py-1 px-2 text-right">

@@ -127,7 +127,7 @@ function App() {
           </button>
         </div>
         
-        <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden no-scrollbar">
           {navItems.map((item) => (
              <button
                key={item.id}
