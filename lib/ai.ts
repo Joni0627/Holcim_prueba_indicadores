@@ -7,15 +7,23 @@ const API_KEY = process.env.API_KEY;
  */
 export function cleanJsonString(str: string): string {
   if (!str) return "";
-  const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (match && match[1]) return match[1].trim();
   
-  const firstOpen = str.indexOf('{');
-  const lastClose = str.lastIndexOf('}');
+  // Remove markdown code blocks
+  const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  let cleaned = match && match[1] ? match[1].trim() : str.trim();
+  
+  // Find first { and last }
+  const firstOpen = cleaned.indexOf('{');
+  const lastClose = cleaned.lastIndexOf('}');
+  
   if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
-      return str.substring(firstOpen, lastClose + 1);
+      cleaned = cleaned.substring(firstOpen, lastClose + 1);
   }
-  return str.trim();
+  
+  // Basic cleanup of common issues
+  return cleaned
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
+    .trim();
 }
 
 /**
@@ -27,40 +35,44 @@ export async function generateAIAnalysis(prompt: string): Promise<any | null> {
     return null;
   }
 
-  const genAI = new GoogleGenAI({ apiKey: API_KEY });
+  const ai = new GoogleGenAI({ apiKey: API_KEY });
   
-  // Modelos a intentar en orden de preferencia
+  // Modelos a intentar en orden de preferencia (usando modelos permitidos)
   const modelsToTry = [
-    "gemini-2.0-flash-exp",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro"
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-pro-preview"
   ];
 
   for (const modelName of modelsToTry) {
     try {
-      const response = await genAI.models.generateContent({
+      const response = await ai.models.generateContent({
         model: modelName,
         contents: [{ parts: [{ text: prompt }] }],
         config: {
-          temperature: 0.2, // Baja temperatura para respuestas más consistentes y técnicas
+          temperature: 0.1, // Muy baja para respuestas determinísticas
           responseMimeType: "application/json"
         }
       });
 
       const text = response.text;
       if (text) {
+        const cleaned = cleanJsonString(text);
         try {
-          return JSON.parse(cleanJsonString(text));
+          const parsed = JSON.parse(cleaned);
+          // Basic validation of expected structure
+          if (parsed && typeof parsed === 'object') {
+            return parsed;
+          }
         } catch (parseError) {
-          console.error(`Error parseando JSON del modelo ${modelName}:`, parseError);
+          console.error(`Error parseando JSON del modelo ${modelName}:`, parseError, "Texto original:", text);
           // Intentamos con el siguiente modelo si el JSON es inválido
         }
       }
     } catch (error: any) {
       console.error(`Error con modelo ${modelName}:`, error.message);
       // Si es un error de cuota o modelo no encontrado, seguimos con el siguiente
-      if (error.message?.includes("429") || error.message?.includes("404")) {
+      if (error.message?.includes("429") || error.message?.includes("404") || error.message?.includes("503")) {
         continue;
       }
       // Si es error de API Key, no tiene sentido seguir intentando
