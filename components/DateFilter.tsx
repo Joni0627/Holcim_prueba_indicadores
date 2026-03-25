@@ -33,24 +33,26 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
       return date;
   };
 
-  // Initialize with Default Filter
+  // Initial filter trigger
+  const initialTriggerRef = React.useRef(false);
   useEffect(() => {
-    if (onFilterChange) {
-       let start = getLocalNoonDate(0);
-       let end = getLocalNoonDate(0);
+    if (!initialTriggerRef.current) {
+        initialTriggerRef.current = true;
+        let start = getLocalNoonDate(0);
+        let end = getLocalNoonDate(0);
 
-       if (defaultFilter === 'yesterday') {
-           start = getLocalNoonDate(-1);
-           end = getLocalNoonDate(-1);
-       } else if (defaultFilter === 'week') {
-           start = getLocalNoonDate(-7);
-       } else if (defaultFilter === 'month') {
-           start = getStartOfMonth();
-       }
-       
-       onFilterChange({ start, end }, defaultFilter);
+        if (defaultFilter === 'yesterday') {
+            start = getLocalNoonDate(-1);
+            end = getLocalNoonDate(-1);
+        } else if (defaultFilter === 'week') {
+            start = getLocalNoonDate(-7);
+        } else if (defaultFilter === 'month') {
+            start = getStartOfMonth();
+        }
+        
+        onFilterChange({ start, end }, defaultFilter);
     }
-  }, []); // Run once on mount
+  }, [defaultFilter, onFilterChange]); // Run once on mount
 
   // Cerrar el menú si se hace clic fuera
   useEffect(() => {
@@ -106,8 +108,8 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
   };
 
   return (
-    <div className="relative z-20" ref={wrapperRef}>
-      <div className="flex items-center gap-1 sm:gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm flex-wrap">
+    <div className="relative z-20 max-w-full" ref={wrapperRef}>
+      <div className="flex items-center gap-1 sm:gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm overflow-x-auto no-scrollbar">
         <button
           onClick={() => handlePresetClick('today')}
           className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${

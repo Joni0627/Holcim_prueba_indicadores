@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 
@@ -56,6 +57,12 @@ function cleanName(str: string): string {
 
 export async function GET(req: Request) {
   try {
+    // Seguridad: Verificar autenticación
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const startParam = searchParams.get("start"); 
     const endParam = searchParams.get("end");
@@ -82,8 +89,8 @@ export async function GET(req: Request) {
 
     if (!email || !key || !sheetId) return NextResponse.json({});
 
-    const auth = new JWT({ email, key, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
-    const doc = new GoogleSpreadsheet(sheetId, auth);
+    const authClient = new JWT({ email, key, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
+    const doc = new GoogleSpreadsheet(sheetId, authClient);
     await doc.loadInfo();
 
     const sheetConteo = doc.sheetsByTitle["DETALLE CONTEO"];
@@ -136,38 +143,51 @@ export async function GET(req: Request) {
         "CEMENTO MAESTRO",
         "CEMENTO CPF 40",
         "CEMENTO RAPIDO",
-        "CEMENTO CPF 30"
+        "CEMENTO CPC 30"
     ]);
 
-    const stockMap: Record<string, { qty: number, tn: number, isProduced: boolean, date: string }> = {};
+    const stockMap: Record<string, { displayName: string, qty: number, tn: number, isProduced: boolean, date: string }> = {};
 
     conteosFiltrados.forEach(row => {
         const productoOriginal = String(row.get("PRODUCTO") || "").trim();
         const productoNorm = cleanName(productoOriginal);
         
         const cantidad = parseNumber(row.get("CANTIDAD"));
-        let tn = parseNumber(row.get("TN"));
+        const tn = parseNumber(row.get("TN"));
         const fecha = row.get("FECHA");
         
-        // Verificamos si es producido (coincidencia exacta normalizada)
-        let isProduced = PRODUCED_PRODUCTS.has(productoNorm);
+        const isProduced = PRODUCED_PRODUCTS.has(productoNorm);
         
-        // Si es producido, sumamos la producción noche correspondiente
-        if (isProduced) {
-            const nightTn = nightProductionMap[productoNorm] || 0;
-            tn += nightTn;
+        if (!stockMap[productoNorm]) {
+            stockMap[productoNorm] = { 
+                displayName: productoOriginal, 
+                qty: 0, 
+                tn: 0, 
+                isProduced, 
+                date: fecha 
+            };
         }
-
-        if (!stockMap[productoOriginal]) {
-            stockMap[productoOriginal] = { qty: 0, tn: 0, isProduced, date: fecha };
-        }
-        stockMap[productoOriginal].qty += cantidad;
-        stockMap[productoOriginal].tn += tn;
+        stockMap[productoNorm].qty += cantidad;
+        stockMap[productoNorm].tn += tn;
     });
 
-    const items = Object.entries(stockMap).map(([product, stats], idx) => ({
+    // 3. SUMAR PRODUCCIÓN NOCHE A LOS TOTALES (Solo una vez por producto)
+    Object.keys(stockMap).forEach(productoNorm => {
+        if (stockMap[productoNorm].isProduced) {
+            const nightTn = nightProductionMap[productoNorm] || 0;
+            stockMap[productoNorm].tn += nightTn;
+            
+            // También podríamos estimar bolsas si fuera necesario, 
+            // pero el usuario pidió enfocarse en TN_PRODUCIDA.
+            // Si 1 bolsa = 0.05 Tn, entonces nightBags = nightTn / 0.05
+            const nightBags = nightTn / 0.05;
+            stockMap[productoNorm].qty += nightBags;
+        }
+    });
+
+    const items = Object.entries(stockMap).map(([norm, stats], idx) => ({
         id: `stk-${idx}`,
-        product,
+        product: stats.displayName,
         quantity: stats.qty,
         tonnage: stats.tn,
         isProduced: stats.isProduced,

@@ -1,6 +1,7 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar, Box } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchDowntimes } from '../../services/sheetService';
 import { DowntimeEvent } from '../../types';
 
@@ -32,12 +33,12 @@ const getVisualShift = (startTime: string) => {
 
 const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: DowntimeEvent[] }> = ({ shiftKey, machineId, events }) => {
   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
-  if (!config) return null;
   
-  const totalMins = config.duration;
-  const shiftStartMin = config.start * 60;
+  const totalMins = config?.duration || 480;
+  const shiftStartMin = (config?.start || 0) * 60;
 
   const blocks = useMemo(() => {
+    if (!config) return [];
     const segments: { type: 'uptime' | 'downtime', duration: number, event?: DowntimeEvent }[] = [];
     let currentPos = 0;
 
@@ -60,7 +61,9 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
     }
 
     return segments;
-  }, [events, config]);
+  }, [events, config, shiftStartMin, totalMins]);
+
+  if (!config) return null;
 
   const downtimeTotal = events.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const availability = Math.max(0, ((totalMins - downtimeTotal) / totalMins) * 100);
@@ -104,7 +107,7 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
                     <span className="text-red-400">{block.duration} MIN</span>
                   </div>
                   <p className="text-[11px] font-bold text-white mb-1 uppercase tracking-tight">{block.event.hac}</p>
-                  <p className="text-[10px] leading-tight text-slate-300 italic">"{block.event.reason}"</p>
+                  <p className="text-[10px] leading-tight text-slate-300 italic">&quot;{block.event.reason}&quot;</p>
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
                 </div>
               )}
@@ -122,27 +125,16 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
 };
 
 export const DailyTimelineView: React.FC = () => {
-  const [downtimes, setDowntimes] = useState<DowntimeEvent[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const loadData = async (dateStr: string) => {
-    setLoading(true);
-    try {
-      const parts = dateStr.split('-');
-      const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
-      const result = await fetchDowntimes(dateObj, dateObj);
-      setDowntimes(result);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData(selectedDay);
-  }, [selectedDay]);
+  const { data: downtimes = [], isLoading: loading } = useQuery({
+    queryKey: ['downtimes', selectedDay],
+    queryFn: async () => {
+        const parts = selectedDay.split('-');
+        const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+        return fetchDowntimes(dateObj, dateObj);
+    },
+  });
 
   const handleDayChange = (offset: number) => {
     const d = new Date(selectedDay + "T12:00:00");
@@ -279,7 +271,7 @@ export const DailyTimelineView: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {downtimes.sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e, i) => (
+                            {[...downtimes].sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e, i) => (
                                 <tr key={i} className="hover:bg-slate-50 transition-colors">
                                     <td className="px-6 py-4 font-mono font-bold text-indigo-600">{e.startTime || '00:00'}</td>
                                     <td className="px-6 py-4 font-black text-slate-800 uppercase text-[11px]">{e.machineId}</td>
@@ -294,7 +286,7 @@ export const DailyTimelineView: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 font-medium text-slate-600 text-[11px] uppercase">{e.hac}</td>
-                                    <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">"{e.reason}"</td>
+                                    <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">&quot;{e.reason}&quot;</td>
                                     <td className="px-6 py-4 text-right font-black text-red-600">{e.durationMinutes}</td>
                                 </tr>
                             ))}

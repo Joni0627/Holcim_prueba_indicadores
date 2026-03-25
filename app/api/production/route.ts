@@ -1,5 +1,6 @@
 
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 
@@ -30,6 +31,12 @@ function parseNumber(val: any): number {
 
 export async function GET(req: Request) {
   try {
+    // Seguridad: Verificar autenticación
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const startParam = searchParams.get("start"); 
     const endParam = searchParams.get("end");
@@ -61,8 +68,8 @@ export async function GET(req: Request) {
 
     if (!email || !key || !sheetId) return NextResponse.json({});
 
-    const auth = new JWT({ email, key, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
-    const doc = new GoogleSpreadsheet(sheetId, auth);
+    const authClient = new JWT({ email, key, scopes: ["https://www.googleapis.com/auth/spreadsheets"] });
+    const doc = new GoogleSpreadsheet(sheetId, authClient);
     await doc.loadInfo();
 
     const sheetCabecera = doc.sheetsByTitle["PRODUCCION_CABECERA"];
@@ -91,7 +98,8 @@ export async function GET(req: Request) {
     // 3. Estructuras de Agregación
     let totalBags = 0;
     let totalTn = 0;
-    const shiftTotals: Record<string, number> = {};
+    const shiftTotalsTn: Record<string, number> = {};
+    const shiftTotalsBags: Record<string, number> = {};
     const machineStats: Record<string, { bags: number, tn: number }> = {};
     
     // New Aggregation for Stacked Bar (Machine -> Product -> Quantity)
@@ -112,20 +120,20 @@ export async function GET(req: Request) {
     // --- PROCESAR CABECERA (KPIs y Toneladas) ---
     cabecerasFiltradas.forEach(row => {
         const maquinaDesc = row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida";
-        const turno = row.get("turno");
+        const turno = row.get("turno") || "Sin Turno";
         const key = `${maquinaDesc}-${turno}`;
 
-        const tn = parseNumber(row.get("tn_totales_turno"));
+        const tnHeader = parseNumber(row.get("tn_totales_turno")); // Mantener para OEE si es necesario
         const hsMarcha = parseNumber(row.get("hs_marcha"));
         const hsParoExt = parseNumber(row.get("hs_paro_externo_decimal"));
         const duracion = parseNumber(row.get("duracion_turno"));
         
         const rendimientoFila = parseNumber(row.get("rendimiento"));
         
-        totalTn += tn;
+        // totalTn += tnHeader; // No sumaremos desde la cabecera para evitar discrepancias con la lista
 
         if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
-        machineStats[maquinaDesc].tn += tn;
+        // machineStats[maquinaDesc].tn += tnHeader;
 
         if (!detailsMap[key]) {
             detailsMap[key] = { 
@@ -140,9 +148,9 @@ export async function GET(req: Request) {
         detailsMap[key].hsParoExtSum += hsParoExt;
         detailsMap[key].duracionSum += duracion;
 
-        if (tn > 0) {
-            detailsMap[key].weightedRendNumer += (rendimientoFila * tn);
-            detailsMap[key].weightedRendDenom += tn;
+        if (tnHeader > 0) {
+            detailsMap[key].weightedRendNumer += (rendimientoFila * tnHeader);
+            detailsMap[key].weightedRendDenom += tnHeader;
         }
 
         detailsMap[key].count += 1;
@@ -152,6 +160,7 @@ export async function GET(req: Request) {
     listaFiltrada.forEach(row => {
         const idCab = row.get("ID_CABECERA");
         const bags = parseNumber(row.get("BOLSAS PRODUCIDAS"));
+        const tn = parseNumber(row.get("TN_PRODUCIDA"));
         const material = String(row.get("DESCRIPCION_MATERIAL") || "Otros").trim();
         
         const cabecera = cabecerasFiltradas.find(c => c.get("id_produccion") === idCab);
@@ -161,24 +170,32 @@ export async function GET(req: Request) {
         const maquinaDesc = cabecera.get("descripcion_paletizadora") || cabecera.get("paletizadora") || "Desconocida";
 
         totalBags += bags;
+        totalTn += tn; // Sumar desde la lista
 
-        if (!shiftTotals[turno]) shiftTotals[turno] = 0;
-        shiftTotals[turno] += bags;
+        if (!shiftTotalsTn[turno]) shiftTotalsTn[turno] = 0;
+        shiftTotalsTn[turno] += tn;
+
+        if (!shiftTotalsBags[turno]) shiftTotalsBags[turno] = 0;
+        shiftTotalsBags[turno] += bags;
 
         if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
         machineStats[maquinaDesc].bags += bags;
+        machineStats[maquinaDesc].tn += tn;
         
-        // Stacked Bar Aggregation
+        // Stacked Bar Aggregation (en Toneladas ahora)
         if (!machineProductMap[maquinaDesc]) machineProductMap[maquinaDesc] = {};
         if (!machineProductMap[maquinaDesc][material]) machineProductMap[maquinaDesc][material] = 0;
-        machineProductMap[maquinaDesc][material] += bags;
+        machineProductMap[maquinaDesc][material] += tn;
     });
 
 
     // --- CONSTRUIR RESPUESTA ---
 
-    const byShift = Object.entries(shiftTotals).map(([name, value]) => ({
-        name, value, target: 0 
+    const byShift = Object.entries(shiftTotalsTn).map(([name, value]) => ({
+        name, 
+        valueTn: value,
+        valueBags: shiftTotalsBags[name] || 0,
+        target: 0 
     }));
 
     const byMachine = Object.entries(machineStats).map(([name, stats]) => ({
@@ -211,7 +228,9 @@ export async function GET(req: Request) {
             availability: disponibilidad,
             performance: rendimiento,
             quality: 1, 
-            oee: oee
+            oee: oee,
+            valueTn: d.weightedRendDenom,
+            hsMarcha: d.hsMarchaSum
         };
     });
 

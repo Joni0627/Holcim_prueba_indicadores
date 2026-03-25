@@ -2,15 +2,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Activity, Settings, AlertCircle, Package, Ban, BarChart3, Menu, X, Home, Box, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
-import { SummaryView } from './components/views/SummaryView';
-import { StocksView } from './components/views/StocksView';
-import { DowntimeView } from './components/views/DowntimeView';
-import { PalletizerView } from './components/views/PalletizerView';
-import { BreakageView } from './components/views/BreakageView';
-import { DailyTimelineView } from './components/views/DailyTimelineView';
+import { LayoutDashboard, Activity, Settings, AlertCircle, Package, Ban, BarChart3, Menu, X, Home, Box, ChevronLeft, ChevronRight, Clock, ShieldCheck } from 'lucide-react';
+import { SummaryView } from '../components/views/SummaryView';
+import { StocksView } from '../components/views/StocksView';
+import { DowntimeView } from '../components/views/DowntimeView';
+import { PalletizerView } from '../components/views/PalletizerView';
+import { BreakageView } from '../components/views/BreakageView';
+import { DailyTimelineView } from '../components/views/DailyTimelineView';
+import { MonitorView } from '../components/views/MonitorView';
+import { AdminPanel } from '../components/AdminPanel';
+import { useUser, UserButton } from '@clerk/nextjs';
 
-type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline';
+type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline' | 'admin' | 'monitor';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
@@ -25,14 +28,22 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  const { user } = useUser();
+  const isAdmin = (user?.publicMetadata as { role?: string })?.role === 'admin';
+  const isOwner = user?.primaryEmailAddress?.emailAddress === "joni0627@gmail.com";
+  const canAccessAdmin = isAdmin || isOwner;
+
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'stocks', label: 'Hoja Stocks', icon: Package },
     { id: 'timeline', label: 'Cronograma Diario', icon: Clock },
+    { id: 'monitor', label: 'Monitor de Planta', icon: LayoutDashboard },
     { id: 'downtime', label: 'Análisis Paros', icon: AlertCircle },
     { id: 'palletizers', label: 'Rendimiento Paletizadora', icon: Activity },
     { id: 'breakage', label: 'Roturas de Sacos', icon: Ban },
   ];
+
+  const adminNavItem = { id: 'admin', label: 'Administración', icon: ShieldCheck };
 
   const renderView = () => {
     switch (currentView) {
@@ -42,6 +53,8 @@ function App() {
       case 'downtime': return <DowntimeView />;
       case 'palletizers': return <PalletizerView />;
       case 'breakage': return <BreakageView />;
+      case 'monitor': return <MonitorView onBack={() => setCurrentView('home')} />;
+      case 'admin': return canAccessAdmin ? <AdminPanel /> : <SummaryView />;
       default: return <SummaryView />;
     }
   };
@@ -69,7 +82,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans overflow-x-hidden">
       
       {/* Mobile Header */}
       <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">
@@ -114,7 +127,7 @@ function App() {
           </button>
         </div>
         
-        <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden">
+        <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden no-scrollbar">
           {navItems.map((item) => (
              <button
                key={item.id}
@@ -140,6 +153,27 @@ function App() {
           <div className={`pt-6 mt-6 border-t border-slate-800 ${isCollapsed ? 'border-t-0 pt-2 mt-2' : ''}`}>
             {!isCollapsed && <p className="px-4 text-xs font-semibold text-slate-500 uppercase mb-2 tracking-wider animate-in fade-in">Sistema</p>}
             
+            {canAccessAdmin && (
+              <button
+                onClick={() => {
+                  setCurrentView('admin');
+                  setIsMobileMenuOpen(false);
+                }}
+                title={isCollapsed ? 'Administración' : ''}
+                className={`w-full flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 group mb-2
+                  ${isCollapsed ? 'justify-center px-2' : 'px-4'}
+                  ${currentView === 'admin' 
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20 border border-emerald-500/50' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'}
+                `}
+              >
+                <ShieldCheck size={20} className={`shrink-0 ${currentView === 'admin' ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
+                <span className={`whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
+                  Administración
+                </span>
+              </button>
+            )}
+
             <button title="Reportes" className={`w-full flex items-center gap-3 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-lg text-sm font-medium transition-all ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
                 <BarChart3 size={20} className="shrink-0" />
                 <span className={`whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Reportes Históricos</span>
@@ -149,12 +183,12 @@ function App() {
 
         <div className="p-4 bg-slate-950 border-t border-slate-800">
           <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
-            <div className="w-10 h-10 rounded-full bg-emerald-900/50 border border-emerald-500/30 flex items-center justify-center text-xs font-bold text-emerald-400 shrink-0">OP</div>
+            <UserButton afterSignOutUrl="/sign-in" />
             <div className={`transition-all duration-200 overflow-hidden ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
-              <p className="text-sm font-medium text-white whitespace-nowrap">Operador Turno</p>
+              <p className="text-sm font-medium text-white whitespace-nowrap">{user?.fullName || 'Usuario'}</p>
               <p className="text-xs text-emerald-500/60 flex items-center gap-1 whitespace-nowrap">
                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                 En Línea
+                 {canAccessAdmin ? 'Administrador' : 'Operador'}
               </p>
             </div>
           </div>
@@ -168,7 +202,7 @@ function App() {
         />
       )}
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen scroll-smooth">
+      <main className="flex-1 p-2 md:p-8 overflow-y-auto overflow-x-hidden h-screen scroll-smooth bg-slate-50">
         {renderView()}
       </main>
     </div>

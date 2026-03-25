@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { Clock, ClipboardCheck, Loader2, Table, AlertTriangle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { DateFilter } from '../DateFilter';
 import { fetchDowntimes } from '../../services/sheetService';
 import { analyzeDowntimeData } from '../../services/geminiService';
@@ -34,23 +35,22 @@ const CustomBarTooltip = ({ active, payload, label }: any) => {
 };
 
 export const DowntimeView: React.FC = () => {
-  const [downtimes, setDowntimes] = useState<DowntimeEvent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
+    start: new Date(),
+    end: new Date()
+  });
   const [selectedType, setSelectedType] = useState<'all' | 'interno' | 'externo'>('all');
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+
+  const { data: downtimes = [], isLoading: loading } = useQuery({
+    queryKey: ['downtimes', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchDowntimes(dateRange.start, dateRange.end),
+  });
   
-  const handleFilterChange = async (range: { start: Date, end: Date }) => {
-      setLoading(true);
+  const handleFilterChange = (range: { start: Date, end: Date }) => {
+      setDateRange(range);
       setAiAnalysis(null);
-      try {
-          const result = await fetchDowntimes(range.start, range.end);
-          setDowntimes(result);
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setLoading(false);
-      }
   };
 
   const handleAIAnalysis = async () => {
@@ -66,16 +66,29 @@ export const DowntimeView: React.FC = () => {
       }
   };
 
-  const filteredDowntimes = downtimes.filter(d => {
-      if (selectedType === 'all') return true;
-      if (!d.downtimeType) return false;
-      return d.downtimeType.toLowerCase().includes(selectedType);
-  });
+  const filteredDowntimes = useMemo(() => {
+    return downtimes.filter(d => {
+        if (selectedType === 'all') return true;
+        if (!d.downtimeType) return false;
+        return d.downtimeType.toLowerCase().includes(selectedType);
+    });
+  }, [downtimes, selectedType]);
 
-  const totalDowntime = filteredDowntimes.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+  const totalDowntime = useMemo(() => 
+    filteredDowntimes.reduce((acc, curr) => acc + curr.durationMinutes, 0),
+  [filteredDowntimes]);
+
+  const pieData = useMemo(() => {
+    const counts = filteredDowntimes.reduce((acc, curr) => {
+        const cat = curr.sapCause || 'Otros';
+        acc[cat] = (acc[cat] || 0) + curr.durationMinutes;
+        return acc;
+    }, {} as Record<string, number>);
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [filteredDowntimes]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-12 overflow-x-hidden">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Análisis de Paros</h2>
@@ -131,16 +144,16 @@ export const DowntimeView: React.FC = () => {
                         Ranking Top 10 Motivos (Pareto)
                     </h3>
                     {filteredDowntimes.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={filteredDowntimes.slice(0, 10).sort((a,b) => b.durationMinutes - a.durationMinutes)} layout="vertical" margin={{top:5, right:30, left:20, bottom:5}}>
+                        <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                            <BarChart data={[...filteredDowntimes].sort((a,b) => b.durationMinutes - a.durationMinutes).slice(0, 10)} layout="vertical" margin={{top:5, right:30, left:20, bottom:5}}>
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                                 <XAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={formatMinutes} />
                                 <YAxis 
                                     type="category" 
                                     dataKey="reason" 
-                                    width={180} 
-                                    style={{fontSize: '11px', fontWeight: 500, fill: '#475569'}} 
-                                    tickFormatter={(val) => val.length > 25 ? `${val.substring(0,25)}...` : val}
+                                    width={120} 
+                                    style={{fontSize: '10px', fontWeight: 500, fill: '#475569'}} 
+                                    tickFormatter={(val) => val.length > 20 ? `${val.substring(0,20)}...` : val}
                                 />
                                 <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomBarTooltip />} />
                                 <Bar dataKey="durationMinutes" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={24}>
@@ -157,18 +170,14 @@ export const DowntimeView: React.FC = () => {
 
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-[500px] flex flex-col">
                     <h3 className="font-semibold text-slate-800 mb-4">Distribución por Causa SAP</h3>
-                    {filteredDowntimes.length > 0 ? (
-                         <ResponsiveContainer width="100%" height="100%">
+                    {pieData.length > 0 ? (
+                         <ResponsiveContainer width="100%" height="100%" debounce={50}>
                              <PieChart>
                                  <Pie
-                                     data={Object.entries(filteredDowntimes.reduce((acc, curr) => {
-                                         const cat = curr.sapCause || 'Otros';
-                                         acc[cat] = (acc[cat] || 0) + curr.durationMinutes;
-                                         return acc;
-                                     }, {} as Record<string, number>)).map(([name, value]) => ({ name, value }))}
+                                     data={pieData}
                                      cx="50%" cy="50%" innerRadius={80} outerRadius={120} paddingAngle={2} dataKey="value"
                                  >
-                                     {filteredDowntimes.map((_, index) => (
+                                     {pieData.map((_, index) => (
                                          <Cell key={`cell-${index}`} fill={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index % 5]} />
                                      ))}
                                  </Pie>
@@ -201,7 +210,7 @@ export const DowntimeView: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filteredDowntimes.sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((event, idx) => (
+                            {[...filteredDowntimes].sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((event, idx) => (
                                 <tr key={event.id || idx} className="hover:bg-slate-50/50">
                                     <td className="px-6 py-3 font-mono text-slate-500">{event.startTime}</td>
                                     <td className="px-6 py-3 text-slate-600">{event.shift}</td>
