@@ -451,23 +451,46 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <div className="flex items-center justify-between border-b border-slate-800 pb-4 lg:pb-6 flex-shrink-0">
           <div className="flex-1 flex items-center gap-4 lg:gap-8 overflow-x-auto no-scrollbar">
             {/* Machine KPIs & Totalizers */}
-            <div className="flex-1 flex items-center gap-3">
+            <div className="flex-1 flex items-center gap-4">
               {machineKPIs.map(m => (
-                <div key={m.id} className="flex-1 bg-slate-800/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col items-center gap-2 shadow-xl min-w-[140px]">
-                  <div className="flex justify-between items-center w-full border-b border-slate-800 pb-1.5">
-                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
-                      {m.id}
-                    </span>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[12px] font-black text-emerald-400 tracking-tighter leading-none">
-                        {Math.floor(m.totalTn).toLocaleString()}
+                <div key={m.id} className="flex-1 bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-2xl flex flex-col gap-4 min-w-[180px] relative overflow-hidden group hover:border-slate-700 transition-all">
+                  <div className="flex justify-between items-start w-full">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
+                      <span className="text-sm font-black text-white uppercase tracking-tight mt-0.5">
+                        {m.id}
                       </span>
-                      <span className="text-[6px] font-black text-slate-500 uppercase tracking-tighter">TOTAL TN</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] font-black text-emerald-500/70 uppercase tracking-tighter">Total Hoy</span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-black text-emerald-400 tracking-tighter leading-none">
+                          {Math.floor(m.totalTn).toLocaleString()}
+                        </span>
+                        <span className="text-[8px] font-black text-slate-500 uppercase">Tn</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-4 lg:gap-6">
-                    <CircularProgress value={m.availability} label="DISP" size={45} strokeWidth={5} color="text-blue-500" />
-                    <CircularProgress value={m.performance} label="REND" size={45} strokeWidth={5} color="text-amber-500" />
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/50 flex flex-col items-center justify-center gap-1 group-hover:bg-blue-500/5 group-hover:border-blue-500/20 transition-all">
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Disponibilidad</span>
+                      <span className={`text-lg font-black tracking-tighter ${m.availability > 0.9 ? 'text-blue-400' : 'text-slate-300'}`}>
+                        {(m.availability * 100).toFixed(0)}%
+                      </span>
+                      <div className="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-blue-500" style={{ width: `${m.availability * 100}%` }} />
+                      </div>
+                    </div>
+                    <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/50 flex flex-col items-center justify-center gap-1 group-hover:bg-amber-500/5 group-hover:border-amber-500/20 transition-all">
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Rendimiento</span>
+                      <span className={`text-lg font-black tracking-tighter ${m.performance > 0.9 ? 'text-amber-400' : 'text-slate-300'}`}>
+                        {(m.performance * 100).toFixed(0)}%
+                      </span>
+                      <div className="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full bg-amber-500" style={{ width: `${m.performance * 100}%` }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -532,11 +555,45 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
                 <Trophy size={150} />
               </div>
-              <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-sm mb-6 flex items-center gap-3">
-                <Trophy size={18} /> Ranking de Producción por Turno
-              </p>
+              <div className="flex flex-col gap-4 mb-8">
+                <div className="flex items-center justify-between">
+                  <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-sm flex items-center gap-3">
+                    <Trophy size={18} /> Ranking de Producción
+                  </p>
+                  {topRecords[0] && (
+                    <div className="flex items-center gap-2 bg-indigo-500/20 border border-indigo-500/30 px-3 py-1 rounded-full">
+                      <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                      <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">Récord Histórico: {Math.floor(topRecords[0].valueTn).toLocaleString()} Tn</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Today's Leader Highlight */}
+                {prodResult?.byShift && prodResult.byShift.length > 0 && (
+                  <div className="bg-gradient-to-r from-amber-500/20 to-transparent border-l-4 border-amber-500 p-4 rounded-r-2xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black text-amber-500/70 uppercase tracking-widest leading-none mb-1">Líder del Día (Puesto 1)</p>
+                        <p className="text-xl font-black text-white uppercase tracking-tighter">
+                          {([...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name.split('.')[1] || [...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-black text-emerald-400 tracking-tighter leading-none">
+                          {Math.floor([...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn).toLocaleString()}
+                          <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                        </p>
+                        {topRecords[0] && [...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn >= topRecords[0].valueTn && (
+                          <span className="text-[8px] font-black text-emerald-500 uppercase animate-bounce block mt-1">¡Récord Superado!</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
               
-              <div className="flex-1 flex flex-col gap-3 overflow-y-auto no-scrollbar">
+              <div className="flex-1 flex flex-col gap-2 overflow-y-auto no-scrollbar">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Desempeño por Turno</p>
                 {prodResult?.byShift && prodResult.byShift.length > 0 ? (
                   [...prodResult.byShift]
                     .sort((a, b) => b.valueTn - a.valueTn)
@@ -545,34 +602,31 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       return (
                         <div 
                           key={shift.name} 
-                          className={`relative group transition-all duration-500 p-4 rounded-xl border ${
+                          className={`relative group transition-all duration-500 p-3 rounded-xl border ${
                             isTop 
-                              ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)]' 
-                              : 'bg-slate-800/30 border-slate-700/50'
+                              ? 'bg-amber-500/5 border-amber-500/20' 
+                              : 'bg-slate-800/20 border-slate-800/50'
                           }`}
                         >
                           <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-4">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${
-                                idx === 0 ? 'bg-amber-500 text-slate-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' : 
+                            <div className="flex items-center gap-3">
+                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] ${
+                                idx === 0 ? 'bg-amber-500 text-slate-900' : 
                                 idx === 1 ? 'bg-slate-300 text-slate-900' : 
                                 idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-400'
                               }`}>
                                 {idx + 1}
                               </div>
                               <div>
-                                <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-white text-lg' : 'text-slate-400 text-xs'}`}>
+                                <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-amber-500 text-sm' : 'text-slate-400 text-xs'}`}>
                                   {shift.name.split('.')[1] || shift.name}
-                                </p>
-                                <p className="text-[10px] font-bold text-red-500/70 uppercase tracking-tighter mt-0.5">
-                                  Paros: {downtimeByShift[shift.name] || 0} min
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={`font-black tracking-tighter ${isTop ? 'text-emerald-400 text-2xl' : 'text-slate-300 text-lg'}`}>
+                              <p className={`font-black tracking-tighter ${isTop ? 'text-white text-lg' : 'text-slate-400 text-sm'}`}>
                                 {Math.floor(shift.valueTn).toLocaleString()}
-                                <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                                <span className="text-[8px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
                               </p>
                             </div>
                           </div>
