@@ -40,13 +40,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const startParam = searchParams.get("start"); 
     const endParam = searchParams.get("end");
+    const topParam = searchParams.get("top");
 
-    if (!startParam || !endParam) {
+    if (!topParam && (!startParam || !endParam)) {
       return NextResponse.json({ error: "Missing date params" }, { status: 400 });
     }
 
     // 1. VERIFICAR CACHÉ
-    const cacheKey = `prod-${startParam}-${endParam}`;
+    const cacheKey = topParam ? `prod-top-${topParam}` : `prod-${startParam}-${endParam}`;
     const cachedEntry = cache.get(cacheKey);
     const now = Date.now();
 
@@ -59,8 +60,8 @@ export async function GET(req: Request) {
        });
     }
 
-    const startDate = new Date(startParam + "T00:00:00");
-    const endDate = new Date(endParam + "T23:59:59");
+    const startDate = startParam ? new Date(startParam + "T00:00:00") : null;
+    const endDate = endParam ? new Date(endParam + "T23:59:59") : null;
 
     const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const key = process.env.GOOGLE_SERVICE_ACCOUNT_KEY?.replace(/\\n/g, "\n");
@@ -84,10 +85,23 @@ export async function GET(req: Request) {
         sheetLista.getRows()
     ]);
 
+    if (topParam) {
+        const topCount = parseInt(topParam);
+        const allRecords = rowsCabecera.map(row => ({
+            date: row.get("fecha"),
+            shift: row.get("turno"),
+            machineId: row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida",
+            valueTn: parseNumber(row.get("tn_totales_turno")),
+        })).sort((a, b) => b.valueTn - a.valueTn).slice(0, topCount);
+
+        cache.set(cacheKey, { data: allRecords, timestamp: now });
+        return NextResponse.json(allRecords);
+    }
+
     // 1. Filtrar Cabeceras por Fecha
     const cabecerasFiltradas = rowsCabecera.filter(row => {
         const d = parseSheetDate(row.get("fecha"));
-        return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
+        return d && startDate && endDate && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
     });
 
     const cabeceraIds = new Set(cabecerasFiltradas.map(r => r.get("id_produccion")));

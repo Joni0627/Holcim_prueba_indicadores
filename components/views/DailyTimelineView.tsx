@@ -2,8 +2,8 @@
 import React, { useState, useMemo } from 'react';
 import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar, Box } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchDowntimes } from '../../services/sheetService';
-import { DowntimeEvent } from '../../types';
+import { fetchDowntimes, fetchProductionStats } from '../../services/sheetService';
+import { DowntimeEvent, ShiftMetric } from '../../types';
 
 // CONFIGURACIÓN DE TURNOS EXACTA SEGÚN USUARIO
 const SHIFT_MAP = {
@@ -31,7 +31,12 @@ const getVisualShift = (startTime: string) => {
     return '1.MAÑANA';
 };
 
-const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: DowntimeEvent[] }> = ({ shiftKey, machineId, events }) => {
+const TimelineBar: React.FC<{ 
+  shiftKey: string, 
+  machineId: string, 
+  events: DowntimeEvent[],
+  productionTn?: number
+}> = ({ shiftKey, machineId, events, productionTn = 0 }) => {
   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
   
   const totalMins = config?.duration || 480;
@@ -67,6 +72,7 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
 
   const downtimeTotal = events.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const availability = Math.max(0, ((totalMins - downtimeTotal) / totalMins) * 100);
+  const hsMarcha = (totalMins - downtimeTotal) / 60;
 
   const getBlockColor = (block: any) => {
     if (block.type === 'uptime') return 'bg-emerald-500/80 hover:bg-emerald-500';
@@ -77,17 +83,29 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row h-auto md:h-20 overflow-visible mb-2">
-      <div className="w-full md:w-56 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-3 flex flex-col justify-center shrink-0">
-        <div className="flex items-center gap-2 mb-0.5">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row h-auto md:h-24 overflow-visible mb-2">
+      <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-3 flex flex-col justify-center shrink-0">
+        <div className="flex items-center gap-2 mb-1">
           <Box size={14} className="text-indigo-500" />
           <span className="text-[11px] font-black text-slate-800 uppercase truncate">{machineId}</span>
         </div>
-        <div className="flex justify-between items-center mt-1">
-            <span className={`text-[10px] font-bold ${availability > 90 ? 'text-emerald-600' : availability > 70 ? 'text-amber-600' : 'text-red-600'}`}>
-                {availability.toFixed(1)}% Disp.
+        
+        <div className="grid grid-cols-2 gap-2 mt-1">
+          <div className="flex flex-col">
+            <span className="text-[8px] font-bold text-slate-400 uppercase">Producción</span>
+            <span className="text-xs font-black text-slate-900">{productionTn.toLocaleString()} Tn</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[8px] font-bold text-slate-400 uppercase">Hs Marcha</span>
+            <span className="text-xs font-black text-emerald-600">{hsMarcha.toFixed(1)} hs</span>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200/60">
+            <span className={`text-[9px] font-bold ${availability > 90 ? 'text-emerald-600' : availability > 70 ? 'text-amber-600' : 'text-red-600'}`}>
+                {availability.toFixed(1)}% Disponibilidad
             </span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase">{downtimeTotal} min paros</span>
+            <span className="text-[8px] font-bold text-slate-400 uppercase">{downtimeTotal}m paros</span>
         </div>
       </div>
 
@@ -127,7 +145,7 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
 export const DailyTimelineView: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const { data: downtimes = [], isLoading: loading } = useQuery({
+  const { data: downtimes = [], isLoading: loadingDowntimes } = useQuery({
     queryKey: ['downtimes', selectedDay],
     queryFn: async () => {
         const parts = selectedDay.split('-');
@@ -135,6 +153,17 @@ export const DailyTimelineView: React.FC = () => {
         return fetchDowntimes(dateObj, dateObj);
     },
   });
+
+  const { data: prodStats, isLoading: loadingProd } = useQuery({
+    queryKey: ['prod-stats', selectedDay],
+    queryFn: async () => {
+        const parts = selectedDay.split('-');
+        const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12, 0, 0);
+        return fetchProductionStats(dateObj, dateObj);
+    },
+  });
+
+  const loading = loadingDowntimes || loadingProd;
 
   const handleDayChange = (offset: number) => {
     const d = new Date(selectedDay + "T12:00:00");
@@ -235,9 +264,18 @@ export const DailyTimelineView: React.FC = () => {
                     <div className="flex-grow h-px bg-slate-100"></div>
                  </div>
                  <div className="grid grid-cols-1 gap-1">
-                    {Object.entries(groupedData[s] || {}).map(([machine, events]) => (
-                        <TimelineBar key={machine} shiftKey={s} machineId={machine} events={events} />
-                    ))}
+                    {Object.entries(groupedData[s] || {}).map(([machine, events]) => {
+                        const machineProd = prodStats?.details?.find(d => d.machineId === machine && d.shift === s);
+                        return (
+                            <TimelineBar 
+                                key={machine} 
+                                shiftKey={s} 
+                                machineId={machine} 
+                                events={events} 
+                                productionTn={machineProd?.valueTn || 0}
+                            />
+                        );
+                    })}
                  </div>
               </div>
             ))}

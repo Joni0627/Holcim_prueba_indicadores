@@ -96,3 +96,14 @@ export const fetchStocks = async (start: Date, end: Date): Promise<StockStats | 
         return null;
     }
 };
+
+export const fetchTopRecords = async (count: number = 3): Promise<any[]> => {
+    try {
+        const res = await fetch(`/api/production?top=${count}`);
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (error) {
+        console.error("Error al obtener podio histórico:", error);
+        return [];
+    }
+};
