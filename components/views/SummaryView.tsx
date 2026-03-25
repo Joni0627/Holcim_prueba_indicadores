@@ -326,7 +326,10 @@ export const SummaryView: React.FC = () => {
             })
           ]);
           copied = true;
-          alert('¡Reporte copiado al portapapeles! Ya puedes pegarlo (Ctrl+V) en WhatsApp o Correo.');
+          // Only alert on desktop if sharing is not available
+          if (!navigator.share) {
+            alert('¡Reporte copiado al portapapeles! Ya puedes pegarlo (Ctrl+V) en WhatsApp o Correo.');
+          }
         }
       } catch (clipError) {
         console.error('Error copying to clipboard:', clipError);
@@ -341,11 +344,8 @@ export const SummaryView: React.FC = () => {
           const data: ShareData = {
             title: 'Reporte de Producción',
             text: `Reporte de producción ${formatDate(dateRange.start)}`,
+            files: [file]
           };
-
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            data.files = [file];
-          }
 
           await navigator.share(data);
         } catch (shareError) {
@@ -428,18 +428,18 @@ export const SummaryView: React.FC = () => {
                 <Calendar className="text-slate-400" size={20} />
                 <h1 className="text-lg md:text-xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
             </div>
-            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight ml-7">Resumen de productividad Expedición Malagueño</p>
-        </div>
-        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-            <button 
-                onClick={handleShare}
-                disabled={isSharing}
-                className={`p-1.5 rounded-lg transition-colors flex items-center gap-2 px-3 text-[10px] font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-700'}`}
-                title="Copiar Reporte al Portapapeles"
-            >
-                {isSharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
-                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Copiar Reporte'}</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-3 ml-0 sm:ml-7">
+                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Resumen de productividad Expedición Malagueño</p>
+                <button 
+                    onClick={handleShare}
+                    disabled={isSharing}
+                    className={`p-1 rounded-lg transition-colors flex items-center gap-1.5 px-2.5 text-[9px] font-black shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-700'}`}
+                    title="Copiar o Compartir Reporte"
+                >
+                    {isSharing ? <Loader2 size={12} className="animate-spin" /> : <Share2 size={12} />}
+                    <span>{isSharing ? 'GENERANDO...' : 'REPORTE'}</span>
+                </button>
+            </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 items-center w-full md:w-auto scale-90 origin-right">
           <DateFilter onFilterChange={handleFilterChange} />
