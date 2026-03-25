@@ -33,12 +33,12 @@ const getVisualShift = (startTime: string) => {
 
 const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: DowntimeEvent[] }> = ({ shiftKey, machineId, events }) => {
   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
-  if (!config) return null;
   
-  const totalMins = config.duration;
-  const shiftStartMin = config.start * 60;
+  const totalMins = config?.duration || 480;
+  const shiftStartMin = (config?.start || 0) * 60;
 
   const blocks = useMemo(() => {
+    if (!config) return [];
     const segments: { type: 'uptime' | 'downtime', duration: number, event?: DowntimeEvent }[] = [];
     let currentPos = 0;
 
@@ -61,7 +61,9 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
     }
 
     return segments;
-  }, [events, config]);
+  }, [events, config, shiftStartMin, totalMins]);
+
+  if (!config) return null;
 
   const downtimeTotal = events.reduce((acc, curr) => acc + curr.durationMinutes, 0);
   const availability = Math.max(0, ((totalMins - downtimeTotal) / totalMins) * 100);
@@ -105,7 +107,7 @@ const TimelineBar: React.FC<{ shiftKey: string, machineId: string, events: Downt
                     <span className="text-red-400">{block.duration} MIN</span>
                   </div>
                   <p className="text-[11px] font-bold text-white mb-1 uppercase tracking-tight">{block.event.hac}</p>
-                  <p className="text-[10px] leading-tight text-slate-300 italic">"{block.event.reason}"</p>
+                  <p className="text-[10px] leading-tight text-slate-300 italic">&quot;{block.event.reason}&quot;</p>
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
                 </div>
               )}
@@ -284,7 +286,7 @@ export const DailyTimelineView: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 font-medium text-slate-600 text-[11px] uppercase">{e.hac}</td>
-                                    <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">"{e.reason}"</td>
+                                    <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">&quot;{e.reason}&quot;</td>
                                     <td className="px-6 py-4 text-right font-black text-red-600">{e.durationMinutes}</td>
                                 </tr>
                             ))}

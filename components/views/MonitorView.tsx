@@ -39,12 +39,12 @@ const MonitorTimelineBar: React.FC<{
   longestEvent: DowntimeEvent | null
 }> = ({ shiftKey, machineId, events, longestEvent }) => {
   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
-  if (!config) return null;
   
-  const totalMins = config.duration;
-  const shiftStartMin = config.start * 60;
+  const totalMins = config?.duration || 480;
+  const shiftStartMin = (config?.start || 0) * 60;
 
   const blocks = useMemo(() => {
+    if (!config) return [];
     const segments: { type: 'uptime' | 'downtime', duration: number, event?: DowntimeEvent }[] = [];
     let currentPos = 0;
 
@@ -67,7 +67,9 @@ const MonitorTimelineBar: React.FC<{
     }
 
     return segments;
-  }, [events, config]);
+  }, [events, config, shiftStartMin, totalMins]);
+
+  if (!config) return null;
 
   const getBlockColor = (block: any) => {
     if (block.type === 'uptime') return 'bg-emerald-500/60';
@@ -190,6 +192,7 @@ const CircularProgress: React.FC<{ value: number, label: string, size?: number, 
 
 export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
   const [currentStockIndex, setCurrentStockIndex] = useState(0);
   const [currentDowntimePage, setCurrentDowntimePage] = useState(0);
@@ -243,6 +246,13 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     queryFn: () => fetchStocks(today, today),
     refetchInterval: 1200000,
   });
+
+  // Update lastUpdated when data changes
+  useEffect(() => {
+    if (prodResult || downtimeResult.length > 0 || stockResult) {
+      setLastUpdated(new Date());
+    }
+  }, [prodResult, downtimeResult, stockResult]);
 
   const topShift = useMemo(() => {
     if (!prodResult?.byShift || prodResult.byShift.length === 0) return null;
@@ -388,7 +398,18 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
             <div className="flex flex-col">
               <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-white">Monitor de Producción</h1>
-              <p className="text-emerald-400 font-bold uppercase text-[8px] tracking-[0.2em] mt-0.5">Expedición Malagueño | Tiempo Real</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Live</span>
+                </div>
+                <span className="text-[8px] font-bold text-emerald-400/60 uppercase tracking-widest border-l border-white/10 pl-2">
+                  Actualizado: {lastUpdated.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
           </div>
           <div className="h-8 w-px bg-white/10 mx-2"></div>

@@ -229,7 +229,8 @@ export async function GET(req: Request) {
             performance: rendimiento,
             quality: 1, 
             oee: oee,
-            valueTn: d.weightedRendDenom
+            valueTn: d.weightedRendDenom,
+            hsMarcha: d.hsMarchaSum
         };
     });
 

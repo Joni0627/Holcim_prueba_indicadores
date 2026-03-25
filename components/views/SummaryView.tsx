@@ -5,8 +5,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import html2canvas from 'html2canvas';
-import { fetchDowntimes, fetchProductionStats, fetchStocks } from '../../services/sheetService';
-import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
+import jsPDF from 'jspdf';
+import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchBreakageStats } from '../../services/sheetService';
+import { DowntimeEvent, ShiftMetric, StockStats, BreakageStats } from '../../types';
 import { DateFilter } from '../DateFilter';
 
 // Helper for hh:mm format
@@ -66,11 +67,20 @@ export const SummaryView: React.FC = () => {
   });
 
   const { data: stockResult, isLoading: loadingStocks } = useQuery({
-    queryKey: ['stocks', dateRange.start.toISOString(), dateRange.end.toISOString()],
-    queryFn: () => fetchStocks(dateRange.start, dateRange.end),
+    queryKey: ['stocks', 'today'],
+    queryFn: () => {
+      const today = new Date();
+      return fetchStocks(today, today);
+    },
+    refetchInterval: 300000,
   });
 
-  const isLoading = loadingDowntimes || loadingProd || loadingStocks;
+  const { data: breakageResult, isLoading: loadingBreakage } = useQuery({
+    queryKey: ['breakage', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchBreakageStats(dateRange.start, dateRange.end),
+  });
+
+  const isLoading = loadingDowntimes || loadingProd || loadingStocks || loadingBreakage;
 
   const handleFilterChange = (range: { start: Date, end: Date }) => {
     setDateRange(range);
@@ -89,32 +99,66 @@ export const SummaryView: React.FC = () => {
   };
 
   // Data processing using useMemo for performance
-  const downtimes = useMemo(() => {
+  const downtimesByMachine = useMemo(() => {
     if (!downtimeResult) return [];
-    return [...downtimeResult]
-      .sort((a, b) => b.durationMinutes - a.durationMinutes)
-      .slice(0, 10);
+    
+    const internalStops = downtimeResult.filter(d => d.downtimeType === 'Interno');
+    
+    const grouped = internalStops.reduce((acc: Record<string, any[]>, curr) => {
+      const machine = curr.machineId || 'Desconocida';
+      if (!acc[machine]) acc[machine] = [];
+      acc[machine].push(curr);
+      return acc;
+    }, {});
+    
+    return Object.entries(grouped).map(([machineId, events]) => {
+      const reasonMap = events.reduce((acc: Record<string, number>, curr) => {
+        acc[curr.reason] = (acc[curr.reason] || 0) + curr.durationMinutes;
+        return acc;
+      }, {});
+      
+      const topReasons = Object.entries(reasonMap)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 5)
+        .map(([reason, duration]) => ({ reason, duration: duration as number }));
+        
+      const totalDuration = topReasons.reduce((acc, r) => acc + r.duration, 0);
+      
+      return {
+        machineId,
+        totalDuration,
+        reasons: topReasons
+      };
+    }).sort((a, b) => b.totalDuration - a.totalDuration);
   }, [downtimeResult]);
 
-  const detailedMetrics = prodResult?.details || [];
+  const detailedMetrics = useMemo(() => prodResult?.details || [], [prodResult]);
 
   const shiftData = useMemo(() => {
     if (!prodResult?.byShift) return [];
     return prodResult.byShift.map(s => {
         const shiftMetrics = detailedMetrics.filter(m => m.shift === s.name);
         const count = shiftMetrics.length;
+        
+        const totalHsMarcha = shiftMetrics.reduce((acc, m) => acc + (m.hsMarcha || 0), 0);
+        
         const metrics = count > 0 ? {
             disp: shiftMetrics.reduce((acc, m) => acc + m.availability, 0) / count,
             rend: shiftMetrics.reduce((acc, m) => acc + m.performance, 0) / count,
-            oee: shiftMetrics.reduce((acc, m) => acc + m.oee, 0) / count
-        } : { disp: 0, rend: 0, oee: 0 };
+        } : { disp: 0, rend: 0 };
 
         return {
             ...s,
             valueTn: s.valueTn,
-            oee: Math.round(metrics.oee * 100),
+            hsMarcha: totalHsMarcha,
             disp: Math.round(metrics.disp * 100),
-            rend: Math.round(metrics.rend * 100)
+            rend: Math.round(metrics.rend * 100),
+            breakdown: shiftMetrics.map(m => ({
+                machineName: m.machineName,
+                hsMarcha: m.hsMarcha || 0,
+                disp: Math.round(m.availability * 100),
+                rend: Math.round(m.performance * 100)
+            }))
         };
     });
   }, [prodResult, detailedMetrics]);
@@ -146,16 +190,34 @@ export const SummaryView: React.FC = () => {
 
   const producedStock = useMemo(() => {
     if (!stockResult?.items) return [];
-    const order = ["CEMENTO MAESTRO", "CEMENTO CPF 40", "CEMENTO RAPIDO", "CEMENTO CPC 30"];
+    const order = ["CEMENTO CPF 40", "CEMENTO CPC 30", "CEMENTO MAESTRO", "CEMENTO RAPIDO"];
     return stockResult.items
       .filter(i => i.isProduced)
       .sort((a, b) => {
         const nameA = a.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const nameB = b.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return order.indexOf(nameA) - order.indexOf(nameB);
-      })
-      .slice(0, 4);
+        
+        const indexA = order.indexOf(nameA);
+        const indexB = order.indexOf(nameB);
+        
+        if (indexA === -1 && indexB === -1) return nameA.localeCompare(nameB);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
   }, [stockResult]);
+
+  const totalStockTn = useMemo(() => {
+    return producedStock.reduce((acc, item) => acc + item.tonnage, 0);
+  }, [producedStock]);
+
+  const totalDowntimeMinutes = useMemo(() => {
+    if (!downtimeResult) return 0;
+    return downtimeResult.reduce((acc, d) => acc + d.durationMinutes, 0);
+  }, [downtimeResult]);
+
+  const breakageRate = useMemo(() => breakageResult?.globalRate || 0, [breakageResult]);
+  const totalBags = useMemo(() => prodResult?.totalBags || 0, [prodResult]);
 
   const handleShare = async () => {
     const element = document.getElementById('summary-view-content');
@@ -311,6 +373,36 @@ export const SummaryView: React.FC = () => {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('summary-view-content');
+    if (!element || isSharing) return;
+
+    setIsSharing(true);
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#0f172a',
+        windowWidth: 1400,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('l', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Reporte_Produccion_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Hubo un error al generar el PDF.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   const downloadFile = (blob: Blob, name: string) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -354,13 +446,41 @@ export const SummaryView: React.FC = () => {
                 {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
                 <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir Imagen'}</span>
             </button>
+            <button 
+                onClick={handleDownloadPDF}
+                disabled={isSharing}
+                className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 text-xs font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'}`}
+                title="Descargar PDF"
+            >
+                {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Descargar PDF'}</span>
+            </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
           <DateFilter onFilterChange={handleFilterChange} />
         </div>
       </div>
 
-      <div id="summary-view-content" className="space-y-6">
+      <div id="summary-view-content" className="space-y-6 bg-slate-950 p-4 md:p-8 rounded-xl border border-slate-800 shadow-2xl">
+        
+        {/* Report Header (Visible in capture) */}
+        <div className="flex justify-between items-end border-b-2 border-blue-500/50 pb-6 mb-8">
+            <div>
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="bg-blue-600 p-2 rounded-lg">
+                        <Activity className="text-white" size={24} />
+                    </div>
+                    <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Reporte Diario de Producción</h1>
+                </div>
+                <p className="text-blue-400 font-bold tracking-widest text-xs uppercase ml-12">Planta de Cemento - PSC QUBE</p>
+            </div>
+            <div className="text-right">
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Fecha del Reporte</p>
+                <p className="text-xl font-black text-white tracking-tight">{formatDate(dateRange.start)}</p>
+                <p className="text-sm font-bold text-blue-400 mt-1 uppercase tracking-tighter">Resumen de productividad Expedición Malagueño</p>
+            </div>
+        </div>
+
         {isLoading ? (
            <div className="h-96 flex flex-col items-center justify-center text-slate-400">
               <Loader2 className="animate-spin mb-2" size={48} />
@@ -383,6 +503,31 @@ export const SummaryView: React.FC = () => {
                             {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
                         <span className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-100">Tn</span>
+                    </div>
+                </div>
+
+                {/* Secondary KPIs Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div data-card="left" className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-lg flex flex-col justify-center">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Weight size={14} className="text-blue-300" />
+                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">Total Bolsas</p>
+                        </div>
+                        <p className="text-2xl font-black text-white">{(totalBags / 1000).toFixed(1)}k</p>
+                    </div>
+                    <div data-card="left" className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-lg flex flex-col justify-center">
+                        <div className="flex items-center gap-2 mb-1">
+                            <AlertTriangle size={14} className="text-amber-400" />
+                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">Rotura %</p>
+                        </div>
+                        <p className="text-2xl font-black text-white">{breakageRate.toFixed(2)}%</p>
+                    </div>
+                    <div data-card="left" className="bg-white/5 backdrop-blur-sm border border-white/10 p-4 rounded-lg flex flex-col justify-center">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Timer size={14} className="text-red-400" />
+                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">Total Paros</p>
+                        </div>
+                        <p className="text-2xl font-black text-white">{formatMinutes(totalDowntimeMinutes)}</p>
                     </div>
                 </div>
 
@@ -409,32 +554,7 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* RENDIMIENTO GLOBAL */}
-                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-gradient-to-br from-blue-700 to-blue-500 p-5 rounded-lg shadow-lg border border-blue-400/30 space-y-4 text-white flex flex-col justify-center">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100/60 mb-1 border-b border-blue-500/30 pb-2">RENDIMIENTO GLOBAL</h3>
-                    <div className="space-y-3">
-                        <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
-                            <p className="text-[10px] font-bold uppercase text-blue-200 tracking-wider">OEE Total</p>
-                            <p className="text-3xl font-black text-white">
-                                {(detailedMetrics.reduce((acc, m) => acc + m.oee, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
-                                <p className="text-[10px] font-bold uppercase text-emerald-300 tracking-wider">Disp %</p>
-                                <p className="text-2xl font-black text-white">
-                                    {(detailedMetrics.reduce((acc, m) => acc + m.availability, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
-                                </p>
-                            </div>
-                            <div className="bg-white/10 backdrop-blur-sm p-3 rounded-md border border-white/10">
-                                <p className="text-[10px] font-bold uppercase text-amber-300 tracking-wider">Rend %</p>
-                                <p className="text-2xl font-black text-white">
-                                    {(detailedMetrics.reduce((acc, m) => acc + m.performance, 0) / (detailedMetrics.length || 1) * 100).toFixed(0)}%
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
             {/* RIGHT COLUMN (Stock & Downtime) - 9/12 */}
@@ -446,7 +566,7 @@ export const SummaryView: React.FC = () => {
                         <h3 className="font-black uppercase tracking-widest text-sm">Stock a las 06:00 hs.</h3>
                         <Clock size={16} />
                     </div>
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-center">
                         {producedStock.length > 0 ? producedStock.map(item => (
                             <div key={item.id} className="sm:border-r border-slate-700 last:border-0 px-1">
                                 <p className="text-[9px] uppercase font-bold text-slate-400 mb-1 leading-tight truncate" title={item.product}>{item.product}</p>
@@ -457,6 +577,15 @@ export const SummaryView: React.FC = () => {
                             </div>
                         )) : (
                             <div className="col-span-4 py-2 text-slate-500 text-xs italic">Datos de stock no disponibles</div>
+                        )}
+                        {producedStock.length > 0 && (
+                            <div className="px-1 bg-emerald-500/10 rounded-md py-1 border border-emerald-500/20">
+                                <p className="text-[9px] uppercase font-bold text-emerald-400 mb-1 leading-tight">TOTAL STOCK</p>
+                                <p className="text-xl md:text-2xl font-black tracking-tighter text-emerald-400">
+                                    {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    <span className="text-[10px] md:text-xs font-bold text-emerald-500 ml-1">Tn</span>
+                                </p>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -469,10 +598,10 @@ export const SummaryView: React.FC = () => {
                         <h3 className="font-bold text-slate-200 uppercase text-xs tracking-widest">Análisis de Paradas Principales</h3>
                     </div>
                     <div data-chart-wrapper className="flex-grow relative z-10">
-                        {downtimes.length > 0 ? (
+                        {downtimesByMachine.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%" debounce={50}>
                                 <BarChart
-                                    data={downtimes}
+                                    data={downtimesByMachine}
                                     layout="vertical"
                                     margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
                                 >
@@ -480,26 +609,44 @@ export const SummaryView: React.FC = () => {
                                     <XAxis type="number" hide />
                                     <YAxis
                                         type="category"
-                                        dataKey="reason"
+                                        dataKey="machineId"
                                         stroke="#94a3b8"
-                                        fontSize={isMobile ? 8 : 16}
-                                        width={isMobile ? 60 : 200}
+                                        fontSize={isMobile ? 10 : 14}
+                                        width={isMobile ? 80 : 120}
                                         tick={{ fill: '#e2e8f0', fontWeight: 900 }}
-                                        tickFormatter={(val) => {
-                                            const maxLen = isMobile ? 15 : 40;
-                                            return val.length > maxLen ? `${val.substring(0, maxLen)}...` : val;
-                                        }}
                                     />
                                     <Tooltip 
-                                        content={<CustomTooltip />} 
+                                        content={({ active, payload }: any) => {
+                                            if (active && payload && payload.length) {
+                                                const data = payload[0].payload;
+                                                return (
+                                                    <div className="bg-slate-900 p-3 border border-slate-700 shadow-xl rounded-lg text-xs">
+                                                        <p className="font-bold text-white mb-2 uppercase tracking-wider border-b border-slate-700 pb-1">{data.machineId}</p>
+                                                        <div className="space-y-2">
+                                                            {data.reasons.map((r: any, i: number) => (
+                                                                <div key={i} className="flex justify-between gap-4">
+                                                                    <span className="text-slate-400">{r.reason}</span>
+                                                                    <span className="text-red-400 font-bold">{r.duration} min</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="mt-2 pt-2 border-t border-slate-700 flex justify-between font-black">
+                                                            <span className="text-white">TOTAL TOP 5</span>
+                                                            <span className="text-red-500">{data.totalDuration} min</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }} 
                                         cursor={{fill: 'rgba(255,255,255,0.05)'}} 
                                     />
-                                    <Bar dataKey="durationMinutes" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={isMobile ? 25 : 70}>
-                                        {downtimes.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.08)} />
+                                    <Bar dataKey="totalDuration" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={isMobile ? 30 : 50}>
+                                        {downtimesByMachine.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#f87171'} fillOpacity={1 - (index * 0.1)} />
                                         ))}
                                         <LabelList 
-                                            dataKey="durationMinutes" 
+                                            dataKey="totalDuration" 
                                             position="right" 
                                             formatter={(val: number) => `${val}m`}
                                             style={{ fill: '#cbd5e1', fontSize: isMobile ? '9px' : '12px', fontWeight: 'bold' }}
@@ -508,7 +655,7 @@ export const SummaryView: React.FC = () => {
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="h-full flex items-center justify-center text-slate-500 italic text-sm">Sin registros de paros</div>
+                            <div className="h-full flex items-center justify-center text-slate-500 italic text-sm">Sin registros de paros internos</div>
                         )}
                     </div>
                 </div>
@@ -526,48 +673,66 @@ export const SummaryView: React.FC = () => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-white/20">
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-blue-100">Turno</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-blue-100">Turno / Paletizadora</th>
                                     <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-white text-right">Producción (Tn)</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 text-right">OEE %</th>
+                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 text-right">HS Marcha</th>
                                     <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-amber-300 text-right">Disp %</th>
                                     <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-indigo-200 text-right">Rend %</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/10">
                                 {shiftData.map((shift, idx) => (
-                                    <tr key={shift.name} className="hover:bg-white/10 transition-colors group/row">
-                                        <td className="py-4 px-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
-                                                <span className="text-sm font-black text-white uppercase tracking-tight">{shift.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-2 text-right">
-                                            <span className="text-lg font-black text-white tracking-tighter">
-                                                {shift.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                                            </span>
-                                            <span className="text-[10px] font-bold text-blue-100 ml-1 uppercase">Tn</span>
-                                        </td>
-                                        <td className="py-4 px-2 text-right">
-                                            <div className="inline-flex flex-col items-end">
-                                                <span className="text-sm font-black text-white">{shift.oee}%</span>
-                                                <div className="w-12 h-1 bg-black/20 rounded-full mt-1 overflow-hidden">
-                                                    <div className="h-full bg-emerald-400" style={{ width: `${shift.oee}%` }}></div>
+                                    <React.Fragment key={shift.name}>
+                                        <tr className="bg-white/10 transition-colors group/row">
+                                            <td className="py-4 px-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
+                                                    <span className="text-sm font-black text-white uppercase tracking-tight">{shift.name}</span>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-2 text-right">
-                                            <span className="text-sm font-bold text-amber-200">{shift.disp}%</span>
-                                        </td>
-                                        <td className="py-4 px-2 text-right">
-                                            <span className="text-sm font-bold text-indigo-100">{shift.rend}%</span>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                            <td className="py-4 px-2 text-right">
+                                                <span className="text-lg font-black text-white tracking-tighter">
+                                                    {shift.valueTn.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-blue-100 ml-1 uppercase">Tn</span>
+                                            </td>
+                                            <td className="py-4 px-2 text-right">
+                                                <span className="text-lg font-black text-emerald-300 tracking-tighter">
+                                                    {shift.hsMarcha.toFixed(1)}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-2 text-right">
+                                                <span className="text-lg font-black text-amber-300 tracking-tighter">{shift.disp}%</span>
+                                            </td>
+                                            <td className="py-4 px-2 text-right">
+                                                <span className="text-lg font-black text-indigo-200 tracking-tighter">{shift.rend}%</span>
+                                            </td>
+                                        </tr>
+                                        {shift.breakdown.map((m: any, mIdx: number) => (
+                                            <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                                                <td className="py-2 px-6">
+                                                    <span className="text-[11px] font-bold text-blue-200 uppercase tracking-wider">{m.machineName}</span>
+                                                </td>
+                                                <td className="py-2 px-2 text-right">
+                                                    {/* Empty production for breakdown as it's summed in shift */}
+                                                </td>
+                                                <td className="py-2 px-2 text-right">
+                                                    <span className="text-xs font-bold text-emerald-400/80">{m.hsMarcha.toFixed(1)}</span>
+                                                </td>
+                                                <td className="py-2 px-2 text-right">
+                                                    <span className="text-xs font-bold text-amber-400/80">{m.disp}%</span>
+                                                </td>
+                                                <td className="py-2 px-2 text-right">
+                                                    <span className="text-xs font-bold text-indigo-300/80">{m.rend}%</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-blue-100/60 italic">Sin datos de turnos</div>
+                        <div className="h-full flex items-center justify-center text-blue-100/60 italic">Sin registros de producción</div>
                     )}
                 </div>
                 
