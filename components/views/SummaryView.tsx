@@ -452,7 +452,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="flex-grow bg-white text-slate-800 rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-[480px] overflow-hidden">
+                <div data-card="left" className="flex-grow bg-white text-slate-800 rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-[380px] overflow-hidden">
                     <div className="bg-slate-700 px-4 py-2 flex items-center gap-2">
                         <TrendingUp className="text-white" size={14} />
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white">TN por PRODUCTO</h3>
@@ -519,28 +519,28 @@ export const SummaryView: React.FC = () => {
                         <AlertTriangle className="text-white" size={16} />
                         <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Ranking de Paros Internos (Top 5)</h3>
                     </div>
-                    <div className="p-4 flex-grow flex flex-col">
+                    <div className="p-3 flex-grow flex flex-col">
                         <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto">
                         {downtimesByMachine.length > 0 ? (
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-100">
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Máquina</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">HAC</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/2">Motivos Principales</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Total (min)</th>
+                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Máquina</th>
+                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">HAC</th>
+                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/2">Motivos Principales</th>
+                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Total (min)</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {downtimesByMachine.map((machine, idx) => (
                                         <tr key={machine.machineId} className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-2 px-2">
+                                            <td className="py-1 px-2">
                                                 <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{machine.machineId}</span>
                                             </td>
-                                            <td className="py-2 px-2">
+                                            <td className="py-1 px-2">
                                                 <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{machine.hac}</span>
                                             </td>
-                                            <td className="py-2 px-2">
+                                            <td className="py-1 px-2">
                                                 <div className="space-y-0.5">
                                                     {machine.reasons.slice(0, 2).map((r: any, rIdx: number) => (
                                                         <div key={rIdx} className="flex justify-between gap-4 text-[10px]">
@@ -550,8 +550,8 @@ export const SummaryView: React.FC = () => {
                                                     ))}
                                                 </div>
                                             </td>
-                                            <td className="py-2 px-2 text-right align-top">
-                                                <span className="text-base font-black text-slate-900 tracking-tighter">{machine.totalDuration}</span>
+                                            <td className="py-1 px-2 text-right align-top">
+                                                <span className="text-sm font-black text-slate-900 tracking-tighter">{machine.totalDuration}</span>
                                                 <span className="text-[9px] font-bold text-slate-400 ml-0.5 uppercase">min</span>
                                             </td>
                                         </tr>
@@ -572,63 +572,63 @@ export const SummaryView: React.FC = () => {
                     <TableProperties className="text-white" size={18} />
                     <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
-                <div className="p-4 flex-grow flex flex-col">
+                <div className="p-3 flex-grow flex flex-col">
                     <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-slate-100">
-                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Turno / Paletizadora</th>
-                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Producción (Tn)</th>
-                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">HS Marcha</th>
-                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Disp %</th>
-                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Rend %</th>
+                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Turno / Paletizadora</th>
+                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Producción (Tn)</th>
+                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">HS Marcha</th>
+                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Disp %</th>
+                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Rend %</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {shiftData.map((shift, idx) => (
                                     <React.Fragment key={shift.name}>
                                         <tr className="bg-slate-50/50 transition-colors group/row">
-                                            <td className="py-2 px-2">
+                                            <td className="py-1 px-2">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                                                     <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{shift.name}</span>
                                                 </div>
                                             </td>
-                                            <td className="py-2 px-2 text-right">
-                                                <span className="text-base font-black text-slate-900 tracking-tighter">
+                                            <td className="py-1 px-2 text-right">
+                                                <span className="text-sm font-black text-slate-900 tracking-tighter">
                                                     {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                                                 </span>
                                                 <span className="text-[9px] font-bold text-slate-400 ml-0.5 uppercase">Tn</span>
                                             </td>
-                                            <td className="py-2 px-2 text-right">
-                                                <span className="text-base font-black text-emerald-600 tracking-tighter">
+                                            <td className="py-1 px-2 text-right">
+                                                <span className="text-sm font-black text-emerald-600 tracking-tighter">
                                                     {(shift.hsMarcha || 0).toFixed(1)}
                                                 </span>
                                             </td>
-                                            <td className="py-2 px-2 text-right">
-                                                <span className="text-base font-black text-amber-600 tracking-tighter">{shift.disp}%</span>
+                                            <td className="py-1 px-2 text-right">
+                                                <span className="text-sm font-black text-amber-600 tracking-tighter">{shift.disp}%</span>
                                             </td>
-                                            <td className="py-2 px-2 text-right">
-                                                <span className="text-base font-black text-indigo-600 tracking-tighter">{shift.rend}%</span>
+                                            <td className="py-1 px-2 text-right">
+                                                <span className="text-sm font-black text-indigo-600 tracking-tighter">{shift.rend}%</span>
                                             </td>
                                         </tr>
                                         {shift.breakdown.map((m: any, mIdx: number) => (
                                             <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-                                                <td className="py-1.5 px-6">
+                                                <td className="py-1 px-6">
                                                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
-                                                <td className="py-1.5 px-2 text-right">
+                                                <td className="py-1 px-2 text-right">
                                                     <span className="text-xs font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                                                     <span className="text-[8px] font-medium text-slate-400 ml-0.5">Tn</span>
                                                 </td>
-                                                <td className="py-1.5 px-2 text-right">
+                                                <td className="py-1 px-2 text-right">
                                                     <span className="text-xs font-bold text-emerald-600 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                                 </td>
-                                                <td className="py-1.5 px-2 text-right">
+                                                <td className="py-1 px-2 text-right">
                                                     <span className="text-xs font-bold text-amber-600 tracking-tight">{m.disp}%</span>
                                                 </td>
-                                                <td className="py-1.5 px-2 text-right">
+                                                <td className="py-1 px-2 text-right">
                                                     <span className="text-xs font-bold text-indigo-600 tracking-tight">{m.rend}%</span>
                                                 </td>
                                             </tr>
