@@ -108,7 +108,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
   };
 
   return (
-    <div className="relative z-20 max-w-full" ref={wrapperRef}>
+    <div className="relative z-[60] max-w-full" ref={wrapperRef}>
       <div className="flex items-center gap-1 sm:gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm overflow-x-auto no-scrollbar">
         <button
           onClick={() => handlePresetClick('today')}
@@ -167,9 +167,8 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
         </button>
       </div>
 
-      {/* Popover de Rango Personalizado */}
       {showCustomRange && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200 z-50">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200 z-[100]">
           <div className="flex justify-between items-center mb-4">
              <h4 className="font-semibold text-slate-800 text-sm">Seleccionar Fecha</h4>
              <button onClick={() => setShowCustomRange(false)} className="text-slate-400 hover:text-slate-600">

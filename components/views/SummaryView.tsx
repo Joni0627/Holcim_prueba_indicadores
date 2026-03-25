@@ -422,7 +422,7 @@ export const SummaryView: React.FC = () => {
     <div className="space-y-4 animate-in fade-in duration-500 pb-8 overflow-x-hidden">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-200 pb-2">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-200 pb-2 relative z-30">
         <div className="flex flex-col gap-0">
             <div className="flex items-center gap-2">
                 <Calendar className="text-slate-400" size={20} />

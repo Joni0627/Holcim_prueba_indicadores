@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles, AlertTriangle, CheckCircle, AlertCircle, Loader2, Brain, Zap } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'motion/react';
 import { AIAnalysisResult } from '../types';
 
 interface Props {
@@ -93,14 +93,14 @@ export const AIAnalyst: React.FC<Props> = ({ analysis, loading, onAnalyze }) => 
             </p>
           </div>
           <div className="pt-4 flex items-center gap-4">
-              <div className="flex -space-x-2">
+             <div className="flex -space-x-2">
                 {[1,2,3].map(i => (
                   <div key={i} className="w-6 h-6 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center overflow-hidden">
                     <div className="w-full h-full bg-indigo-500/20"></div>
                   </div>
                 ))}
-              </div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Basado en {Math.floor(Math.random() * 50) + 100} puntos de datos</span>
+             </div>
+             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Basado en {Math.floor(Math.random() * 50) + 100} puntos de datos</span>
           </div>
         </div>
 
