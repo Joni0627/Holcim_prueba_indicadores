@@ -452,9 +452,12 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="flex-grow bg-slate-50 text-slate-800 p-4 rounded-lg shadow-sm space-y-4 border border-slate-200 flex flex-col min-h-[400px]">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 border-b border-slate-200 pb-1">TN por PRODUCTO</h3>
-                    <div className="space-y-4 flex-grow overflow-y-auto no-scrollbar py-2">
+                <div data-card="left" className="flex-grow bg-white text-slate-800 rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-[480px] overflow-hidden">
+                    <div className="bg-slate-700 px-4 py-2 flex items-center gap-2">
+                        <TrendingUp className="text-white" size={14} />
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white">TN por PRODUCTO</h3>
+                    </div>
+                    <div className="p-4 space-y-6 flex-grow overflow-y-auto no-scrollbar py-4">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
                             <div key={prod.name} className="space-y-1.5">
                                 <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
@@ -561,6 +564,7 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
             </div>
+        </div>
 
             {/* Producción por Turno (Tabla) */}
             <div data-chart="shift" className="lg:col-span-6 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
@@ -637,7 +641,8 @@ export const SummaryView: React.FC = () => {
                         <div className="h-full flex items-center justify-center text-slate-400 italic text-xs py-6">Sin datos de producción por turno</div>
                     )}
                 </div>
-                {/* Footer decorativo para la tabla */}
+            </div>
+            {/* Footer decorativo para la tabla */}
                 <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center relative z-10">
                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Resumen Operativo</p>
                     <div className="flex gap-1">
@@ -742,6 +747,5 @@ export const SummaryView: React.FC = () => {
       )}
       </div>
     </div>
-  </div>
   );
 };
