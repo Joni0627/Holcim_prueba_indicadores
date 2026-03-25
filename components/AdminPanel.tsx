@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Mail, Send, CheckCircle2, AlertCircle, Loader2, ShieldCheck, Users, UserCog, Shield, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ClerkUser {
   id: string;
