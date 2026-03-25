@@ -452,18 +452,18 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="h-auto min-h-[220px] bg-slate-50 text-slate-800 p-4 rounded-lg shadow-sm space-y-3 border border-slate-200 flex flex-col justify-center">
+                <div data-card="left" className="flex-grow bg-slate-50 text-slate-800 p-4 rounded-lg shadow-sm space-y-4 border border-slate-200 flex flex-col min-h-[400px]">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 border-b border-slate-200 pb-1">TN por PRODUCTO</h3>
-                    <div className="space-y-2">
+                    <div className="space-y-4 flex-grow overflow-y-auto no-scrollbar py-2">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
-                            <div key={prod.name} className="space-y-0.5">
-                                <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
-                                    <span className="text-slate-600 truncate max-w-[120px]">{prod.name}</span>
+                            <div key={prod.name} className="space-y-1.5">
+                                <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
+                                    <span className="text-slate-600 truncate max-w-[140px]">{prod.name}</span>
                                     <span className="text-slate-900">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
                                 </div>
-                                <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                <div className="h-2 bg-slate-200 rounded-full overflow-hidden shadow-inner">
                                     <div 
-                                        className="h-full bg-emerald-500 rounded-full" 
+                                        className="h-full bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]" 
                                         style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
                                     />
                                 </div>
@@ -511,12 +511,13 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
                                {/* Downtime Table Section */}
-                <div data-chart="downtime" className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
-                    <div className="flex items-center gap-2 mb-2 border-b border-slate-100 pb-2 relative z-10">
-                        <AlertTriangle className="text-red-500" size={16} />
-                        <h3 className="font-bold text-slate-800 uppercase text-[10px] tracking-widest">Ranking de Paros Internos (Top 5)</h3>
+                <div data-chart="downtime" className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
+                    <div className="flex items-center gap-2 bg-amber-600 px-4 py-2 relative z-10 shadow-sm">
+                        <AlertTriangle className="text-white" size={16} />
+                        <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Ranking de Paros Internos (Top 5)</h3>
                     </div>
-                    <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto">
+                    <div className="p-4 flex-grow flex flex-col">
+                        <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto">
                         {downtimesByMachine.length > 0 ? (
                             <table className="w-full text-left border-collapse">
                                 <thead>
@@ -562,12 +563,13 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-6 bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center gap-2 mb-4 relative z-10 border-b border-slate-100 pb-2">
-                    <TableProperties className="text-slate-400" size={18} />
-                    <h3 className="font-bold text-slate-800 uppercase text-[10px] tracking-widest">Producción y Métricas por Turno</h3>
+            <div data-chart="shift" className="lg:col-span-6 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 relative z-10 shadow-sm">
+                    <TableProperties className="text-white" size={18} />
+                    <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
-                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
+                <div className="p-4 flex-grow flex flex-col">
+                    <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -644,15 +646,16 @@ export const SummaryView: React.FC = () => {
                 </div>
             </div>
 
-            <div className="lg:col-span-6 bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center mb-4 border-b border-slate-100 pb-2">
+            <div className="lg:col-span-6 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center bg-blue-900 px-4 py-2 relative z-10 shadow-sm">
                     <div className="flex items-center gap-2">
-                        <Cpu className="text-slate-400" size={16} />
-                        <h3 className="font-bold text-slate-800 uppercase text-[10px] tracking-widest">Producción por Paletizadora</h3>
+                        <Cpu className="text-white" size={16} />
+                        <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Producción por Paletizadora</h3>
                     </div>
                 </div>
                 
-                {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
+                <div className="p-4 flex-grow flex flex-col">
+                    {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
@@ -726,10 +729,19 @@ export const SummaryView: React.FC = () => {
                 ) : (
                     <div className="flex-grow flex items-center justify-center text-slate-400 py-8 italic text-xs">Sin datos de máquinas</div>
                 )}
+                </div>
+                {/* Footer decorativo para la tabla */}
+                <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center relative z-10">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Resumen Operativo</p>
+                    <div className="flex gap-1">
+                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-slate-200"></div>)}
+                    </div>
+                </div>
             </div>
         </div>
       )}
       </div>
     </div>
+  </div>
   );
 };
