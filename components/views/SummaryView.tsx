@@ -452,7 +452,7 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="h-auto min-h-[120px] bg-slate-50 text-slate-800 p-4 rounded-lg shadow-sm space-y-3 border border-slate-200 flex flex-col justify-center">
+                <div data-card="left" className="h-auto min-h-[220px] bg-slate-50 text-slate-800 p-4 rounded-lg shadow-sm space-y-3 border border-slate-200 flex flex-col justify-center">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 border-b border-slate-200 pb-1">TN por PRODUCTO</h3>
                     <div className="space-y-2">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
@@ -523,7 +523,7 @@ export const SummaryView: React.FC = () => {
                                     <tr className="border-b border-slate-100">
                                         <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Máquina</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">HAC</th>
-                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Motivos Principales</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/2">Motivos Principales</th>
                                         <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Total (min)</th>
                                     </tr>
                                 </thead>
@@ -540,7 +540,7 @@ export const SummaryView: React.FC = () => {
                                                 <div className="space-y-0.5">
                                                     {machine.reasons.slice(0, 2).map((r: any, rIdx: number) => (
                                                         <div key={rIdx} className="flex justify-between gap-4 text-[10px]">
-                                                            <span className="text-slate-600 truncate max-w-[180px]">{r.reason}</span>
+                                                            <span className="text-slate-600 truncate max-w-[350px]">{r.reason}</span>
                                                             <span className="text-red-500 font-bold whitespace-nowrap">{r.duration}m</span>
                                                         </div>
                                                     ))}
@@ -562,7 +562,7 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-12 bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+            <div data-chart="shift" className="lg:col-span-6 bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
                 <div className="flex items-center gap-2 mb-4 relative z-10 border-b border-slate-100 pb-2">
                     <TableProperties className="text-slate-400" size={18} />
                     <h3 className="font-bold text-slate-800 uppercase text-[10px] tracking-widest">Producción y Métricas por Turno</h3>
@@ -573,7 +573,6 @@ export const SummaryView: React.FC = () => {
                             <thead>
                                 <tr className="border-b border-slate-100">
                                     <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Turno / Paletizadora</th>
-                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">HAC</th>
                                     <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Producción (Tn)</th>
                                     <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">HS Marcha</th>
                                     <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Disp %</th>
@@ -589,9 +588,6 @@ export const SummaryView: React.FC = () => {
                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                                                     <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{shift.name}</span>
                                                 </div>
-                                            </td>
-                                            <td className="py-2 px-2 text-right">
-                                                <span className="text-[10px] font-mono font-bold text-slate-400">-</span>
                                             </td>
                                             <td className="py-2 px-2 text-right">
                                                 <span className="text-base font-black text-slate-900 tracking-tighter">
@@ -617,9 +613,6 @@ export const SummaryView: React.FC = () => {
                                                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
                                                 <td className="py-1.5 px-2 text-right">
-                                                    <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{m.hac}</span>
-                                                </td>
-                                                <td className="py-1.5 px-2 text-right">
                                                     <span className="text-xs font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                                                     <span className="text-[8px] font-medium text-slate-400 ml-0.5">Tn</span>
                                                 </td>
@@ -643,24 +636,24 @@ export const SummaryView: React.FC = () => {
                     )}
                 </div>
                 {/* Footer decorativo para la tabla */}
-                <div className="mt-2 pt-2 border-t border-white/20 flex justify-between items-center relative z-10">
-                    <p className="text-[8px] font-bold text-blue-100 uppercase tracking-widest">Resumen Operativo</p>
+                <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center relative z-10">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Resumen Operativo</p>
                     <div className="flex gap-1">
-                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-white/30"></div>)}
+                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-slate-200"></div>)}
                     </div>
                 </div>
             </div>
 
-            <div className="lg:col-span-12 bg-gradient-to-br from-blue-600 to-blue-400 p-3 rounded-lg shadow-lg border border-blue-300/30">
-                <div className="flex items-center mb-3 border-b border-white/20 pb-1.5">
+            <div className="lg:col-span-6 bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center mb-4 border-b border-slate-100 pb-2">
                     <div className="flex items-center gap-2">
-                        <Cpu className="text-white" size={16} />
-                        <h3 className="font-bold text-white uppercase text-[9px] tracking-widest">Producción por Paletizadora</h3>
+                        <Cpu className="text-slate-400" size={16} />
+                        <h3 className="font-bold text-slate-800 uppercase text-[10px] tracking-widest">Producción por Paletizadora</h3>
                     </div>
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
                             const avg = machineMetrics.length > 0 ? {
@@ -672,57 +665,57 @@ export const SummaryView: React.FC = () => {
                             return (
                                 <div 
                                     key={m.name} 
-                                    className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 shadow-md hover:shadow-white/20 transition-all group flex flex-col overflow-hidden"
+                                    className="bg-slate-50 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col overflow-hidden"
                                 >
                                     {/* Card Header */}
-                                    <div className="px-3 py-1.5 border-b border-white/10 flex justify-between items-center bg-black/10">
-                                        <span className="text-[9px] font-black text-white uppercase tracking-widest">{m.name}</span>
-                                        <Activity size={10} className="text-emerald-300" />
+                                    <div className="px-3 py-1.5 border-b border-slate-100 flex justify-between items-center bg-slate-100/50">
+                                        <span className="text-[9px] font-black text-slate-800 uppercase tracking-widest">{m.name}</span>
+                                        <Activity size={10} className="text-emerald-500" />
                                     </div>
 
                                     {/* Main Value Area */}
                                     <div className="p-3 flex-grow flex flex-col">
-                                        <div className="bg-black/20 rounded-xl p-3 mb-3 relative overflow-hidden border border-white/10">
-                                            <p className="text-blue-100/60 text-[7px] font-bold uppercase mb-0.5 tracking-widest">Producción Total</p>
+                                        <div className="bg-white rounded-xl p-3 mb-3 relative overflow-hidden border border-slate-100">
+                                            <p className="text-slate-400 text-[7px] font-bold uppercase mb-0.5 tracking-widest">Producción Total</p>
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-3xl font-black text-white tracking-tighter">
+                                                <span className="text-3xl font-black text-slate-900 tracking-tighter">
                                                     {(m.valueTn || 0).toFixed(0)}
                                                 </span>
-                                                <span className="text-[9px] font-bold text-blue-100 uppercase tracking-widest">Tn</span>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Tn</span>
                                             </div>
                                         </div>
 
                                         {/* KPIs Grid - Modernized */}
                                         <div className="grid grid-cols-3 gap-2">
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
+                                                <div className="w-full h-1 bg-slate-200 rounded-full mb-1 overflow-hidden">
                                                     <div 
-                                                        className="h-full bg-white" 
+                                                        className="h-full bg-slate-400" 
                                                         style={{ width: `${Math.min((avg.oee || 0) * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[7px] font-bold text-blue-100/60 uppercase">OEE</p>
-                                                <p className="text-xs font-black text-white">{((avg.oee || 0) * 100).toFixed(0)}%</p>
+                                                <p className="text-[7px] font-bold text-slate-400 uppercase">OEE</p>
+                                                <p className="text-xs font-black text-slate-800">{((avg.oee || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
+                                                <div className="w-full h-1 bg-slate-200 rounded-full mb-1 overflow-hidden">
                                                     <div 
-                                                        className="h-full bg-emerald-300" 
+                                                        className="h-full bg-emerald-500" 
                                                         style={{ width: `${Math.min((avg.disp || 0) * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[7px] font-bold text-blue-100/60 uppercase">Disp</p>
-                                                <p className="text-xs font-black text-emerald-300">{((avg.disp || 0) * 100).toFixed(0)}%</p>
+                                                <p className="text-[7px] font-bold text-slate-400 uppercase">Disp</p>
+                                                <p className="text-xs font-black text-emerald-600">{((avg.disp || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
-                                                <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
+                                                <div className="w-full h-1 bg-slate-200 rounded-full mb-1 overflow-hidden">
                                                     <div 
-                                                        className="h-full bg-amber-300" 
+                                                        className="h-full bg-amber-500" 
                                                         style={{ width: `${Math.min((avg.rend || 0) * 100, 100)}%` }}
                                                     />
                                                 </div>
-                                                <p className="text-[7px] font-bold text-blue-100/60 uppercase">Rend</p>
-                                                <p className="text-xs font-black text-amber-300">{((avg.rend || 0) * 100).toFixed(0)}%</p>
+                                                <p className="text-[7px] font-bold text-slate-400 uppercase">Rend</p>
+                                                <p className="text-xs font-black text-amber-600">{((avg.rend || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                         </div>
                                     </div>
@@ -731,7 +724,7 @@ export const SummaryView: React.FC = () => {
                         })}
                     </div>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-blue-300/40 py-8">Sin datos de máquinas</div>
+                    <div className="flex-grow flex items-center justify-center text-slate-400 py-8 italic text-xs">Sin datos de máquinas</div>
                 )}
             </div>
         </div>
