@@ -3,14 +3,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, Activity, Settings, AlertCircle, Package, Ban, BarChart3, Menu, X, Home, Box, ChevronLeft, ChevronRight, Clock, ShieldCheck } from 'lucide-react';
-import { SummaryView } from './components/views/SummaryView';
-import { StocksView } from './components/views/StocksView';
-import { DowntimeView } from './components/views/DowntimeView';
-import { PalletizerView } from './components/views/PalletizerView';
-import { BreakageView } from './components/views/BreakageView';
-import { DailyTimelineView } from './components/views/DailyTimelineView';
-import { MonitorView } from './components/views/MonitorView';
-import { AdminPanel } from './components/AdminPanel';
+import { SummaryView } from '../components/views/SummaryView';
+import { StocksView } from '../components/views/StocksView';
+import { DowntimeView } from '../components/views/DowntimeView';
+import { PalletizerView } from '../components/views/PalletizerView';
+import { BreakageView } from '../components/views/BreakageView';
+import { DailyTimelineView } from '../components/views/DailyTimelineView';
+import { MonitorView } from '../components/views/MonitorView';
+import { AdminPanel } from '../components/AdminPanel';
 import { useUser, UserButton } from '@clerk/nextjs';
 
 type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline' | 'admin' | 'monitor';

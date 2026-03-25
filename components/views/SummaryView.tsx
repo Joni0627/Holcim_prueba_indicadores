@@ -6,9 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchBreakageStats } from '../../services/sheetService';
-import { DowntimeEvent, ShiftMetric, StockStats, BreakageStats } from '../../types';
-import { DateFilter } from '../DateFilter';
+import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchBreakageStats } from '@/services/sheetService';
+import { DowntimeEvent, ShiftMetric, StockStats, BreakageStats } from '@/types';
+import { DateFilter } from '@/components/DateFilter';
 
 // Helper for hh:mm format
 const formatMinutes = (mins: number) => {
