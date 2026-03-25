@@ -123,9 +123,11 @@ export const SummaryView: React.FC = () => {
         .map(([reason, duration]) => ({ reason, duration: duration as number }));
         
       const totalDuration = topReasons.reduce((acc, r) => acc + r.duration, 0);
+      const hac = events[0]?.hac || 'N/A';
       
       return {
         machineId,
+        hac,
         totalDuration,
         reasons: topReasons
       };
@@ -133,6 +135,15 @@ export const SummaryView: React.FC = () => {
   }, [downtimeResult]);
 
   const detailedMetrics = useMemo(() => prodResult?.details || [], [prodResult]);
+
+  // Map of machine to HAC from downtime data
+  const machineHacMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    downtimesByMachine.forEach(m => {
+      map[m.machineId] = m.hac;
+    });
+    return map;
+  }, [downtimesByMachine]);
 
   const shiftData = useMemo(() => {
     if (!prodResult?.byShift) return [];
@@ -158,11 +169,12 @@ export const SummaryView: React.FC = () => {
                 valueTn: m.valueTn || 0,
                 hsMarcha: m.hsMarcha || 0,
                 disp: Math.round((m.availability || 0) * 100),
-                rend: Math.round((m.performance || 0) * 100)
+                rend: Math.round((m.performance || 0) * 100),
+                hac: machineHacMap[m.machineName] || 'N/A'
             }))
         };
     });
-  }, [prodResult, detailedMetrics]);
+  }, [prodResult, detailedMetrics, machineHacMap]);
 
   const productBreakdown = useMemo(() => {
     if (!prodResult?.byMachineProduct) return [];
@@ -236,17 +248,17 @@ export const SummaryView: React.FC = () => {
           const el = clonedDoc.getElementById('summary-view-content');
           if (el) {
             el.style.width = '1400px';
-            el.style.padding = '32px';
+            el.style.padding = '20px';
             el.style.backgroundColor = '#ffffff';
             
             // Adjust heights of specific chart containers for the capture to be more compact
             const downtimeContainer = el.querySelector('[data-chart="downtime"]');
             if (downtimeContainer) {
                 (downtimeContainer as HTMLElement).style.height = 'auto';
-                (downtimeContainer as HTMLElement).style.minHeight = '420px';
+                (downtimeContainer as HTMLElement).style.minHeight = '350px';
                 (downtimeContainer as HTMLElement).style.display = 'flex';
                 (downtimeContainer as HTMLElement).style.flexDirection = 'column';
-                (downtimeContainer as HTMLElement).style.padding = '20px';
+                (downtimeContainer as HTMLElement).style.padding = '12px';
                 (downtimeContainer as HTMLElement).style.backgroundColor = '#ffffff';
                 (downtimeContainer as HTMLElement).style.border = '1px solid #e2e8f0';
             }
@@ -254,10 +266,10 @@ export const SummaryView: React.FC = () => {
             const shiftContainer = el.querySelector('[data-chart="shift"]');
             if (shiftContainer) {
                 (shiftContainer as HTMLElement).style.height = 'auto';
-                (shiftContainer as HTMLElement).style.minHeight = '420px';
+                (shiftContainer as HTMLElement).style.minHeight = '350px';
                 (shiftContainer as HTMLElement).style.display = 'flex';
                 (shiftContainer as HTMLElement).style.flexDirection = 'column';
-                (shiftContainer as HTMLElement).style.padding = '20px';
+                (shiftContainer as HTMLElement).style.padding = '12px';
                 (shiftContainer as HTMLElement).style.backgroundColor = '#ffffff';
                 (shiftContainer as HTMLElement).style.border = '1px solid #e2e8f0';
                 
@@ -385,71 +397,71 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-12 overflow-x-hidden">
+    <div className="space-y-4 animate-in fade-in duration-500 pb-8 overflow-x-hidden">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-4">
-        <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-3">
-                <Calendar className="text-slate-400" size={24} />
-                <h1 className="text-xl md:text-2xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-200 pb-2">
+        <div className="flex flex-col gap-0">
+            <div className="flex items-center gap-2">
+                <Calendar className="text-slate-400" size={20} />
+                <h1 className="text-lg md:text-xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
             </div>
-            <p className="text-sm font-bold text-blue-600 uppercase tracking-tight ml-9">Resumen de productividad Expedición Malagueño</p>
+            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight ml-7">Resumen de productividad Expedición Malagueño</p>
         </div>
-        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
             <button 
                 onClick={handleShare}
                 disabled={isSharing}
-                className={`p-2 rounded-lg transition-colors flex items-center gap-2 px-3 text-xs font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100'}`}
+                className={`p-1.5 rounded-lg transition-colors flex items-center gap-2 px-3 text-[10px] font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100'}`}
                 title="Compartir Imagen"
             >
-                {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
+                {isSharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
                 <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir Imagen'}</span>
             </button>
         </div>
-        <div className="flex flex-col sm:flex-row gap-4 items-center w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 items-center w-full md:w-auto scale-90 origin-right">
           <DateFilter onFilterChange={handleFilterChange} />
         </div>
       </div>
 
-      <div id="summary-view-content" className="space-y-6 bg-white p-4 md:p-8 rounded-xl border border-slate-200 shadow-xl">
+      <div id="summary-view-content" className="space-y-3 bg-white p-2 md:p-4 rounded-xl border border-slate-200 shadow-lg">
         
         {isLoading ? (
-           <div className="h-96 flex flex-col items-center justify-center text-slate-400">
-              <Loader2 className="animate-spin mb-2" size={48} />
-              <p className="text-lg font-medium">Sincronizando con Planta...</p>
+           <div className="h-64 flex flex-col items-center justify-center text-slate-400">
+              <Loader2 className="animate-spin mb-2" size={40} />
+              <p className="text-sm font-medium">Sincronizando con Planta...</p>
           </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
             
             {/* LEFT COLUMN (KPIs) - 3/12 */}
-            <div className="lg:col-span-3 flex flex-col gap-6 lg:h-full">
+            <div className="lg:col-span-3 flex flex-col gap-4 lg:h-full">
                 
                 {/* Producción Total Card */}
-                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-gradient-to-br from-blue-600 to-blue-400 text-white p-6 rounded-lg shadow-xl relative overflow-hidden group border border-blue-300/30 flex flex-col justify-center">
-                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                        <PackageCheck size={120} />
+                <div data-card="left" className="h-auto min-h-[100px] bg-gradient-to-br from-blue-600 to-blue-400 text-white p-4 rounded-lg shadow-md relative overflow-hidden group border border-blue-300/30 flex flex-col justify-center">
+                    <div className="absolute -right-2 -bottom-2 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <PackageCheck size={80} />
                     </div>
-                    <p className="text-white font-bold uppercase tracking-wider text-sm mb-1">Producción Total</p>
-                    <div className="flex items-baseline gap-2">
-                        <h2 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter">
+                    <p className="text-white font-bold uppercase tracking-wider text-[10px] mb-0.5">Producción Total</p>
+                    <div className="flex items-baseline gap-1">
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter">
                             {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
-                        <span className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-100">Tn</span>
+                        <span className="text-xl font-bold text-blue-100">Tn</span>
                     </div>
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="h-auto min-h-[140px] md:flex-1 bg-slate-50 text-slate-800 p-6 rounded-lg shadow-sm space-y-4 border border-slate-200 flex flex-col justify-center">
-                    <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 border-b border-slate-200 pb-2">TN por PRODUCTO</h3>
-                    <div className="space-y-4">
+                <div data-card="left" className="h-auto min-h-[120px] bg-slate-50 text-slate-800 p-4 rounded-lg shadow-sm space-y-3 border border-slate-200 flex flex-col justify-center">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1 border-b border-slate-200 pb-1">TN por PRODUCTO</h3>
+                    <div className="space-y-2">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
-                            <div key={prod.name} className="space-y-1">
-                                <div className="flex justify-between text-[12px] font-bold uppercase tracking-tight">
-                                    <span className="text-slate-600">{prod.name}</span>
+                            <div key={prod.name} className="space-y-0.5">
+                                <div className="flex justify-between text-[10px] font-bold uppercase tracking-tight">
+                                    <span className="text-slate-600 truncate max-w-[120px]">{prod.name}</span>
                                     <span className="text-slate-900">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
                                 </div>
-                                <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                     <div 
                                         className="h-full bg-emerald-500 rounded-full" 
                                         style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
@@ -457,7 +469,7 @@ export const SummaryView: React.FC = () => {
                                 </div>
                             </div>
                         )) : (
-                            <p className="text-xs text-slate-400 italic">Sin datos de productos</p>
+                            <p className="text-[10px] text-slate-400 italic">Sin datos</p>
                         )}
                     </div>
                 </div>
@@ -466,149 +478,159 @@ export const SummaryView: React.FC = () => {
             </div>
 
             {/* RIGHT COLUMN (Stock & Downtime) - 9/12 */}
-            <div className="lg:col-span-9 flex flex-col gap-6 lg:h-full">
+            <div className="lg:col-span-9 flex flex-col gap-4 lg:h-full">
                 
                 {/* Stock Section */}
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="bg-emerald-600 text-white px-6 py-2 flex justify-between items-center shadow-sm">
-                        <h3 className="font-black uppercase tracking-widest text-sm">Stock a las 06:00 hs.</h3>
-                        <Clock size={16} />
+                    <div className="bg-emerald-600 text-white px-4 py-1.5 flex justify-between items-center shadow-sm">
+                        <h3 className="font-black uppercase tracking-widest text-[10px]">Stock a las 06:00 hs.</h3>
+                        <Clock size={14} />
                     </div>
-                    <div className="p-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="p-4 grid grid-cols-2 md:grid-cols-5 gap-3">
                         {producedStock.length > 0 ? producedStock.map((item, idx) => (
-                            <div key={item.id} className="bg-slate-50 p-4 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center group hover:bg-emerald-50 transition-colors">
-                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-600 transition-colors truncate w-full" title={item.product}>{item.product}</p>
-                                <p className="text-2xl font-black tracking-tighter text-slate-800">
+                            <div key={item.id} className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center group hover:bg-emerald-50 transition-colors">
+                                <p className="text-[9px] uppercase font-black text-slate-400 mb-0.5 tracking-widest group-hover:text-emerald-600 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
+                                <p className="text-xl font-black tracking-tighter text-slate-800">
                                     {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-xs font-bold text-slate-400 ml-1">Tn</span>
+                                    <span className="text-[10px] font-bold text-slate-400 ml-0.5">Tn</span>
                                 </p>
                             </div>
                         )) : (
-                            <div className="col-span-full py-8 text-center text-slate-400 italic text-sm">Sin datos de stock</div>
+                            <div className="col-span-full py-4 text-center text-slate-400 italic text-xs">Sin datos de stock</div>
                         )}
                         
                         {producedStock.length > 0 && (
-                            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100 flex flex-col items-center justify-center text-center shadow-inner">
-                                <p className="text-[9px] uppercase font-bold text-emerald-700 mb-1 leading-tight">TOTAL STOCK</p>
-                                <p className="text-xl md:text-2xl font-black tracking-tighter text-emerald-600">
+                            <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100 flex flex-col items-center justify-center text-center shadow-inner">
+                                <p className="text-[8px] uppercase font-bold text-emerald-700 mb-0.5 leading-tight">TOTAL STOCK</p>
+                                <p className="text-xl font-black tracking-tighter text-emerald-600">
                                     {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-[10px] md:text-xs font-bold text-emerald-700 ml-1">Tn</span>
+                                    <span className="text-[10px] font-bold text-emerald-700 ml-0.5">Tn</span>
                                 </p>
                             </div>
                         )}
                     </div>
                 </div>
-
-                {/* Downtime Table Section */}
-                <div data-chart="downtime" className="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
-                    <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3 relative z-10">
-                        <AlertTriangle className="text-red-500" size={18} />
-                        <h3 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Ranking de Paros Internos (Top 5)</h3>
+                               {/* Downtime Table Section */}
+                <div data-chart="downtime" className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
+                    <div className="flex items-center gap-2 mb-2 border-b border-slate-100 pb-2 relative z-10">
+                        <AlertTriangle className="text-red-500" size={16} />
+                        <h3 className="font-bold text-slate-800 uppercase text-[10px] tracking-widest">Ranking de Paros Internos (Top 5)</h3>
                     </div>
                     <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto">
                         {downtimesByMachine.length > 0 ? (
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-100">
-                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Máquina</th>
-                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Motivos Principales</th>
-                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Total (min)</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Máquina</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">HAC</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Motivos Principales</th>
+                                        <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Total (min)</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {downtimesByMachine.map((machine, idx) => (
                                         <tr key={machine.machineId} className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-4 px-2">
-                                                <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{machine.machineId}</span>
+                                            <td className="py-2 px-2">
+                                                <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{machine.machineId}</span>
                                             </td>
-                                            <td className="py-4 px-2">
-                                                <div className="space-y-1">
-                                                    {machine.reasons.map((r: any, rIdx: number) => (
-                                                        <div key={rIdx} className="flex justify-between gap-4 text-[11px]">
-                                                            <span className="text-slate-600 truncate max-w-[150px]">{r.reason}</span>
+                                            <td className="py-2 px-2">
+                                                <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{machine.hac}</span>
+                                            </td>
+                                            <td className="py-2 px-2">
+                                                <div className="space-y-0.5">
+                                                    {machine.reasons.slice(0, 2).map((r: any, rIdx: number) => (
+                                                        <div key={rIdx} className="flex justify-between gap-4 text-[10px]">
+                                                            <span className="text-slate-600 truncate max-w-[180px]">{r.reason}</span>
                                                             <span className="text-red-500 font-bold whitespace-nowrap">{r.duration}m</span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-2 text-right align-top">
-                                                <span className="text-lg font-black text-slate-900 tracking-tighter">{machine.totalDuration}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase">min</span>
+                                            <td className="py-2 px-2 text-right align-top">
+                                                <span className="text-base font-black text-slate-900 tracking-tighter">{machine.totalDuration}</span>
+                                                <span className="text-[9px] font-bold text-slate-400 ml-0.5 uppercase">min</span>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         ) : (
-                            <div className="h-full flex items-center justify-center text-slate-400 italic text-sm py-10">Sin registros de paros internos</div>
+                            <div className="h-full flex items-center justify-center text-slate-400 italic text-xs py-6">Sin registros de paros internos</div>
                         )}
                     </div>
                 </div>
             </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-12 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center gap-2 mb-6 relative z-10 border-b border-slate-100 pb-3">
-                    <TableProperties className="text-slate-400" size={20} />
-                    <h3 className="font-bold text-slate-800 uppercase text-sm tracking-widest">Producción y Métricas por Turno</h3>
+            <div data-chart="shift" className="lg:col-span-12 bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center gap-2 mb-4 relative z-10 border-b border-slate-100 pb-2">
+                    <TableProperties className="text-slate-400" size={18} />
+                    <h3 className="font-bold text-slate-800 uppercase text-[10px] tracking-widest">Producción y Métricas por Turno</h3>
                 </div>
                 <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-slate-100">
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Turno / Paletizadora</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Producción (Tn)</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">HS Marcha</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Disp %</th>
-                                    <th className="py-4 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Rend %</th>
+                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Turno / Paletizadora</th>
+                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">HAC</th>
+                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Producción (Tn)</th>
+                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">HS Marcha</th>
+                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Disp %</th>
+                                    <th className="py-2 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Rend %</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
                                 {shiftData.map((shift, idx) => (
                                     <React.Fragment key={shift.name}>
                                         <tr className="bg-slate-50/50 transition-colors group/row">
-                                            <td className="py-4 px-2">
+                                            <td className="py-2 px-2">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
-                                                    <span className="text-sm font-black text-slate-900 uppercase tracking-tight">{shift.name}</span>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                                                    <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{shift.name}</span>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-slate-900 tracking-tighter">
+                                            <td className="py-2 px-2 text-right">
+                                                <span className="text-[10px] font-mono font-bold text-slate-400">-</span>
+                                            </td>
+                                            <td className="py-2 px-2 text-right">
+                                                <span className="text-base font-black text-slate-900 tracking-tighter">
                                                     {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Tn</span>
+                                                <span className="text-[9px] font-bold text-slate-400 ml-0.5 uppercase">Tn</span>
                                             </td>
-                                            <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-emerald-600 tracking-tighter">
+                                            <td className="py-2 px-2 text-right">
+                                                <span className="text-base font-black text-emerald-600 tracking-tighter">
                                                     {(shift.hsMarcha || 0).toFixed(1)}
                                                 </span>
                                             </td>
-                                            <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-amber-600 tracking-tighter">{shift.disp}%</span>
+                                            <td className="py-2 px-2 text-right">
+                                                <span className="text-base font-black text-amber-600 tracking-tighter">{shift.disp}%</span>
                                             </td>
-                                            <td className="py-4 px-2 text-right">
-                                                <span className="text-lg font-black text-indigo-600 tracking-tighter">{shift.rend}%</span>
+                                            <td className="py-2 px-2 text-right">
+                                                <span className="text-base font-black text-indigo-600 tracking-tighter">{shift.rend}%</span>
                                             </td>
                                         </tr>
                                         {shift.breakdown.map((m: any, mIdx: number) => (
                                             <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-                                                <td className="py-2 px-6">
-                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
+                                                <td className="py-1.5 px-6">
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
-                                                <td className="py-2 px-2 text-right">
-                                                    <span className="text-sm font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-                                                    <span className="text-[9px] font-medium text-slate-400 ml-1">Tn</span>
+                                                <td className="py-1.5 px-2 text-right">
+                                                    <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{m.hac}</span>
                                                 </td>
-                                                <td className="py-2 px-2 text-right">
-                                                    <span className="text-sm font-bold text-emerald-600 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
+                                                <td className="py-1.5 px-2 text-right">
+                                                    <span className="text-xs font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                                                    <span className="text-[8px] font-medium text-slate-400 ml-0.5">Tn</span>
                                                 </td>
-                                                <td className="py-2 px-2 text-right">
-                                                    <span className="text-sm font-bold text-amber-600 tracking-tight">{m.disp}%</span>
+                                                <td className="py-1.5 px-2 text-right">
+                                                    <span className="text-xs font-bold text-emerald-600 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                                 </td>
-                                                <td className="py-2 px-2 text-right">
-                                                    <span className="text-sm font-bold text-indigo-600 tracking-tight">{m.rend}%</span>
+                                                <td className="py-1.5 px-2 text-right">
+                                                    <span className="text-xs font-bold text-amber-600 tracking-tight">{m.disp}%</span>
+                                                </td>
+                                                <td className="py-1.5 px-2 text-right">
+                                                    <span className="text-xs font-bold text-indigo-600 tracking-tight">{m.rend}%</span>
                                                 </td>
                                             </tr>
                                         ))}
@@ -617,29 +639,28 @@ export const SummaryView: React.FC = () => {
                             </tbody>
                         </table>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-slate-400 italic text-sm py-10">Sin datos de producción por turno</div>
+                        <div className="h-full flex items-center justify-center text-slate-400 italic text-xs py-6">Sin datos de producción por turno</div>
                     )}
                 </div>
-                
                 {/* Footer decorativo para la tabla */}
-                <div className="mt-4 pt-4 border-t border-white/20 flex justify-between items-center relative z-10">
-                    <p className="text-[9px] font-bold text-blue-100 uppercase tracking-widest">Resumen Operativo</p>
+                <div className="mt-2 pt-2 border-t border-white/20 flex justify-between items-center relative z-10">
+                    <p className="text-[8px] font-bold text-blue-100 uppercase tracking-widest">Resumen Operativo</p>
                     <div className="flex gap-1">
                         {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-white/30"></div>)}
                     </div>
                 </div>
             </div>
 
-            <div className="lg:col-span-5 bg-gradient-to-br from-blue-600 to-blue-400 p-4 md:p-6 rounded-lg shadow-xl border border-blue-300/30 h-auto lg:h-full flex flex-col">
-                <div className="flex items-center mb-6 border-b border-white/20 pb-3">
+            <div className="lg:col-span-12 bg-gradient-to-br from-blue-600 to-blue-400 p-3 rounded-lg shadow-lg border border-blue-300/30">
+                <div className="flex items-center mb-3 border-b border-white/20 pb-1.5">
                     <div className="flex items-center gap-2">
-                        <Cpu className="text-white" size={20} />
-                        <h3 className="font-bold text-white uppercase text-sm tracking-widest">Producción por Paletizadora</h3>
+                        <Cpu className="text-white" size={16} />
+                        <h3 className="font-bold text-white uppercase text-[9px] tracking-widest">Producción por Paletizadora</h3>
                     </div>
                 </div>
                 
                 {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className={`grid gap-4 flex-grow items-start w-full ${prodResult.byMachine.length === 1 ? 'grid-cols-1 max-w-md mx-auto' : 'grid-cols-1 xl:grid-cols-2'}`}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
                             const avg = machineMetrics.length > 0 ? {
@@ -651,24 +672,23 @@ export const SummaryView: React.FC = () => {
                             return (
                                 <div 
                                     key={m.name} 
-                                    className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 shadow-lg hover:shadow-white/20 transition-all group flex flex-col overflow-hidden"
+                                    className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 shadow-md hover:shadow-white/20 transition-all group flex flex-col overflow-hidden"
                                 >
                                     {/* Card Header */}
-                                    <div className="px-4 py-2 border-b border-white/10 flex justify-between items-center bg-black/10">
-                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{m.name}</span>
-                                        <Activity size={12} className="text-emerald-300" />
+                                    <div className="px-3 py-1.5 border-b border-white/10 flex justify-between items-center bg-black/10">
+                                        <span className="text-[9px] font-black text-white uppercase tracking-widest">{m.name}</span>
+                                        <Activity size={10} className="text-emerald-300" />
                                     </div>
 
                                     {/* Main Value Area */}
-                                    <div className="p-4 flex-grow flex flex-col">
-                                        <div className="bg-black/20 rounded-2xl p-4 mb-4 relative overflow-hidden shadow-2xl group-hover:bg-black/30 transition-colors duration-500 border border-white/10">
-                                            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-white/10 transition-colors"></div>
-                                            <p className="text-blue-100/60 text-[8px] font-bold uppercase mb-1 tracking-widest">Producción Total</p>
+                                    <div className="p-3 flex-grow flex flex-col">
+                                        <div className="bg-black/20 rounded-xl p-3 mb-3 relative overflow-hidden border border-white/10">
+                                            <p className="text-blue-100/60 text-[7px] font-bold uppercase mb-0.5 tracking-widest">Producción Total</p>
                                             <div className="flex items-baseline gap-1">
-                                                <span className="text-4xl font-black text-white tracking-tighter">
+                                                <span className="text-3xl font-black text-white tracking-tighter">
                                                     {(m.valueTn || 0).toFixed(0)}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-blue-100 uppercase tracking-widest">Tn</span>
+                                                <span className="text-[9px] font-bold text-blue-100 uppercase tracking-widest">Tn</span>
                                             </div>
                                         </div>
 
@@ -678,7 +698,7 @@ export const SummaryView: React.FC = () => {
                                                 <div className="w-full h-1 bg-black/20 rounded-full mb-1 overflow-hidden">
                                                     <div 
                                                         className="h-full bg-white" 
-                                                        style={{ width: `${Math.min(avg.oee * 100, 100)}%` }}
+                                                        style={{ width: `${Math.min((avg.oee || 0) * 100, 100)}%` }}
                                                     />
                                                 </div>
                                                 <p className="text-[7px] font-bold text-blue-100/60 uppercase">OEE</p>
@@ -711,14 +731,12 @@ export const SummaryView: React.FC = () => {
                         })}
                     </div>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-blue-300/40">Sin datos de máquinas</div>
+                    <div className="flex-grow flex items-center justify-center text-blue-300/40 py-8">Sin datos de máquinas</div>
                 )}
             </div>
-
         </div>
       )}
       </div>
-
     </div>
   );
 };

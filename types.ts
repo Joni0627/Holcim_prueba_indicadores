@@ -52,6 +52,7 @@ export interface ShiftMetric {
   oee: number;
   valueTn?: number;
   hsMarcha?: number;
+  hac?: string;
 }
 
 export interface ProductionStats {
