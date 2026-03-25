@@ -250,15 +250,17 @@ export const SummaryView: React.FC = () => {
             el.style.width = '1400px';
             el.style.padding = '20px';
             el.style.backgroundColor = '#ffffff';
+            el.style.height = 'auto';
+            el.style.overflow = 'visible';
             
             // Adjust heights of specific chart containers for the capture to be more compact
             const downtimeContainer = el.querySelector('[data-chart="downtime"]');
             if (downtimeContainer) {
                 (downtimeContainer as HTMLElement).style.height = 'auto';
-                (downtimeContainer as HTMLElement).style.minHeight = '350px';
+                (downtimeContainer as HTMLElement).style.minHeight = '300px';
                 (downtimeContainer as HTMLElement).style.display = 'flex';
                 (downtimeContainer as HTMLElement).style.flexDirection = 'column';
-                (downtimeContainer as HTMLElement).style.padding = '12px';
+                (downtimeContainer as HTMLElement).style.padding = '10px';
                 (downtimeContainer as HTMLElement).style.backgroundColor = '#ffffff';
                 (downtimeContainer as HTMLElement).style.border = '1px solid #e2e8f0';
             }
@@ -266,10 +268,10 @@ export const SummaryView: React.FC = () => {
             const shiftContainer = el.querySelector('[data-chart="shift"]');
             if (shiftContainer) {
                 (shiftContainer as HTMLElement).style.height = 'auto';
-                (shiftContainer as HTMLElement).style.minHeight = '350px';
+                (shiftContainer as HTMLElement).style.minHeight = '300px';
                 (shiftContainer as HTMLElement).style.display = 'flex';
                 (shiftContainer as HTMLElement).style.flexDirection = 'column';
-                (shiftContainer as HTMLElement).style.padding = '12px';
+                (shiftContainer as HTMLElement).style.padding = '10px';
                 (shiftContainer as HTMLElement).style.backgroundColor = '#ffffff';
                 (shiftContainer as HTMLElement).style.border = '1px solid #e2e8f0';
                 
@@ -284,37 +286,58 @@ export const SummaryView: React.FC = () => {
             const leftCards = el.querySelectorAll('[data-card="left"]');
             leftCards.forEach((c: any) => {
                 c.style.height = 'auto';
-                c.style.minHeight = '70px';
-                c.style.padding = '12px';
+                c.style.minHeight = '60px';
+                c.style.padding = '10px';
                 c.style.flex = '0 0 auto';
-                c.style.marginBottom = '10px';
+                c.style.marginBottom = '8px';
                 
                 // Adjust font sizes inside left cards to prevent overflow
                 const mainTitle = c.querySelector('h2');
                 if (mainTitle) {
-                    mainTitle.style.fontSize = '48px'; // Reduced from 6xl (60px)
+                    mainTitle.style.fontSize = '42px'; 
                     mainTitle.style.lineHeight = '1';
                 }
                 const subValue = c.querySelector('span');
                 if (subValue && subValue.innerText === 'Tn') {
-                    subValue.style.fontSize = '20px'; // Reduced from 3xl
+                    subValue.style.fontSize = '18px';
                 }
             });
+
+            // Ensure grid layout is preserved but compact
+            const grid = el.querySelector('.grid');
+            if (grid) {
+                (grid as HTMLElement).style.gap = '12px';
+            }
           }
         }
       });
       
-      const imgData = canvas.toDataURL('image/png', 0.9);
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const response = await fetch(imgData);
       const blob = await response.blob();
       
+      // Try to copy to clipboard first (Desktop focus)
+      let copied = false;
+      try {
+        if (navigator.clipboard && (window as any).ClipboardItem) {
+          await navigator.clipboard.write([
+            new (window as any).ClipboardItem({
+              'image/png': blob
+            })
+          ]);
+          copied = true;
+          alert('¡Reporte copiado al portapapeles! Ya puedes pegarlo (Ctrl+V) en WhatsApp o Correo.');
+        }
+      } catch (clipError) {
+        console.error('Error copying to clipboard:', clipError);
+      }
+
       const fileName = `Reporte_Produccion_${new Date().toISOString().split('T')[0]}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
 
-      // Standard sharing logic
+      // Standard sharing logic (Mobile focus)
       if (navigator.share) {
         try {
-          // Check if file sharing is supported
           const data: ShareData = {
             title: 'Reporte de Producción',
             text: `Reporte de producción ${formatDate(dateRange.start)}`,
@@ -326,12 +349,11 @@ export const SummaryView: React.FC = () => {
 
           await navigator.share(data);
         } catch (shareError) {
-          // Only download if it wasn't a user cancellation
-          if ((shareError as any).name !== 'AbortError') {
+          if ((shareError as any).name !== 'AbortError' && !copied) {
             downloadFile(blob, fileName);
           }
         }
-      } else {
+      } else if (!copied) {
         downloadFile(blob, fileName);
       }
     } catch (error) {
@@ -412,11 +434,11 @@ export const SummaryView: React.FC = () => {
             <button 
                 onClick={handleShare}
                 disabled={isSharing}
-                className={`p-1.5 rounded-lg transition-colors flex items-center gap-2 px-3 text-[10px] font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100'}`}
-                title="Compartir Imagen"
+                className={`p-1.5 rounded-lg transition-colors flex items-center gap-2 px-3 text-[10px] font-bold shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-700'}`}
+                title="Copiar Reporte al Portapapeles"
             >
                 {isSharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
-                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Compartir Imagen'}</span>
+                <span className="hidden sm:inline">{isSharing ? 'Generando...' : 'Copiar Reporte'}</span>
             </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 items-center w-full md:w-auto scale-90 origin-right">
