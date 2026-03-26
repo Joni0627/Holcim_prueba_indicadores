@@ -82,7 +82,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans overflow-x-hidden">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#0a0f1e] text-slate-900 font-sans overflow-x-hidden">
       
       {/* Mobile Header */}
       <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">
@@ -202,8 +202,10 @@ function App() {
         />
       )}
 
-      <main className="flex-1 p-2 md:p-8 overflow-y-auto overflow-x-hidden h-screen scroll-smooth bg-slate-50">
-        {renderView()}
+      <main className="flex-1 p-0 overflow-y-auto overflow-x-hidden h-screen scroll-smooth bg-[#0a0f1e]">
+        <div className="p-2 md:p-8">
+          {renderView()}
+        </div>
       </main>
     </div>
   );

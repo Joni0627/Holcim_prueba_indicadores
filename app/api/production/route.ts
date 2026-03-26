@@ -12,7 +12,8 @@ function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
   const parts = dateStr.trim().split("/");
   if (parts.length === 3) {
-      const [day, month, year] = parts.map(Number);
+      let [day, month, year] = parts.map(Number);
+      if (year < 100) year += 2000;
       return new Date(year, month - 1, day);
   }
   return null;
@@ -126,6 +127,7 @@ export async function GET(req: Request) {
         duracionSum: number,
         weightedRendNumer: number, 
         weightedRendDenom: number,
+        bagsSum: number,
         count: number,
         machineName: string,
         shift: string
@@ -136,7 +138,7 @@ export async function GET(req: Request) {
         const maquinaDesc = row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida";
         const turno = row.get("turno") || "Sin Turno";
         const fecha = row.get("fecha") || "Sin Fecha";
-        const key = `${maquinaDesc}-${turno}-${fecha}`;
+        const key = `${maquinaDesc}|${turno}|${fecha}`;
 
         const tnHeader = parseNumber(row.get("tn_totales_turno")); // Mantener para OEE si es necesario
         const hsMarcha = parseNumber(row.get("hs_marcha"));
@@ -154,6 +156,7 @@ export async function GET(req: Request) {
             detailsMap[key] = { 
                 hsMarchaSum: 0, hsParoExtSum: 0, duracionSum: 0, 
                 weightedRendNumer: 0, weightedRendDenom: 0,
+                bagsSum: 0,
                 count: 0,
                 machineName: maquinaDesc, shift: turno 
             };
@@ -184,9 +187,14 @@ export async function GET(req: Request) {
         const turno = cabecera.get("turno") || "Sin Turno";
         const maquinaDesc = cabecera.get("descripcion_paletizadora") || cabecera.get("paletizadora") || "Desconocida";
         const fecha = cabecera.get("fecha") || "Sin Fecha";
+        const key = `${maquinaDesc}|${turno}|${fecha}`;
 
         totalBags += bags;
         totalTn += tn; // Sumar desde la lista
+
+        if (detailsMap[key]) {
+            detailsMap[key].bagsSum += bags;
+        }
 
         if (!shiftTotalsTn[turno]) shiftTotalsTn[turno] = 0;
         shiftTotalsTn[turno] += tn;
@@ -227,7 +235,8 @@ export async function GET(req: Request) {
     })).sort((a,b) => a.name.localeCompare(b.name));
 
     const details = Object.entries(detailsMap).map(([key, d]) => {
-        const [,, fecha] = key.split('-');
+        const parts = key.split('|');
+        const fecha = parts[parts.length - 1];
         const disponibilidad = d.duracionSum > 0 
             ? (d.hsParoExtSum + d.hsMarchaSum) / d.duracionSum 
             : 0;
@@ -248,6 +257,7 @@ export async function GET(req: Request) {
             quality: 1, 
             oee: oee,
             valueTn: d.weightedRendDenom,
+            valueBags: d.bagsSum,
             hsMarcha: d.hsMarchaSum
         };
     });

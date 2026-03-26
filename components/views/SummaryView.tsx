@@ -111,6 +111,87 @@ export const SummaryView: React.FC = () => {
   };
 
   // Data processing using useMemo for performance
+  const startStr = toLocalISO(dateRange.start);
+  const endStr = toLocalISO(dateRange.end);
+  const isSingleDay = startStr === endStr;
+
+  const unifiedDetails = useMemo(() => {
+    if (!prodResult?.details) return [];
+
+    let filteredDetails = prodResult.details.map(d => ({
+      ...d,
+      dateISO: sheetDateToISO(d.date || '')
+    }));
+
+    if (isSingleDay) {
+      const yesterday = new Date(dateRange.start);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = toLocalISO(yesterday);
+
+      const machines = Array.from(new Set(filteredDetails.map(d => d.machineId)));
+      const unified: any[] = [];
+
+      // 1. Mañana y Tarde del día actual
+      filteredDetails
+        .filter(d => d.dateISO === startStr && (d.shift.toUpperCase().includes('MAÑANA') || d.shift.toUpperCase().includes('TARDE')))
+        .forEach(d => unified.push(d));
+
+      // 2. Unificar Noche (Hoy) + Noche Fin (Ayer)
+      machines.forEach(m => {
+        const todayNoche = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && !d.shift.toUpperCase().includes('FIN') && d.dateISO === startStr);
+        const yesterdayNocheFin = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && d.shift.toUpperCase().includes('FIN') && d.dateISO === yesterdayStr);
+
+        if (todayNoche || yesterdayNocheFin) {
+          const totalTn = (todayNoche?.valueTn || 0) + (yesterdayNocheFin?.valueTn || 0);
+          const totalBags = (todayNoche?.valueBags || 0) + (yesterdayNocheFin?.valueBags || 0);
+          const totalHsMarcha = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0);
+          
+          const totalWeight = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0) || 1;
+          const avgAvailability = todayNoche && yesterdayNocheFin 
+            ? ((todayNoche.availability * todayNoche.hsMarcha) + (yesterdayNocheFin.availability * yesterdayNocheFin.hsMarcha)) / totalWeight
+            : (todayNoche?.availability || yesterdayNocheFin?.availability || 0);
+            
+          const avgPerformance = todayNoche && yesterdayNocheFin
+            ? ((todayNoche.performance * todayNoche.hsMarcha) + (yesterdayNocheFin.performance * yesterdayNocheFin.hsMarcha)) / totalWeight
+            : (todayNoche?.performance || yesterdayNocheFin?.performance || 0);
+
+          unified.push({
+            machineId: m,
+            machineName: todayNoche?.machineName || yesterdayNocheFin?.machineName || m,
+            shift: '3.NOCHE',
+            valueTn: totalTn,
+            valueBags: totalBags,
+            hsMarcha: totalHsMarcha,
+            availability: avgAvailability,
+            performance: avgPerformance,
+            dateISO: startStr
+          });
+        }
+      });
+      return unified;
+    } else {
+      return filteredDetails.filter(d => d.dateISO >= startStr && d.dateISO <= endStr);
+    }
+  }, [prodResult, dateRange, startStr, endStr, isSingleDay]);
+
+  const totalTn = useMemo(() => {
+    return unifiedDetails.reduce((acc, d) => acc + (d.valueTn || 0), 0);
+  }, [unifiedDetails]);
+
+  const byMachine = useMemo(() => {
+    const stats: Record<string, { bags: number, tn: number }> = {};
+    unifiedDetails.forEach(d => {
+      if (!stats[d.machineName]) stats[d.machineName] = { bags: 0, tn: 0 };
+      stats[d.machineName].tn += (d.valueTn || 0);
+      stats[d.machineName].bags += (d.valueBags || 0);
+    });
+    return Object.entries(stats).map(([name, s]) => ({
+      name,
+      valueTn: s.tn,
+      value: s.bags
+    }));
+  }, [unifiedDetails]);
+
   const topDowntimesByMachine = useMemo(() => {
     if (!downtimeResult) return {};
     
@@ -208,69 +289,8 @@ export const SummaryView: React.FC = () => {
   };
 
   const shiftData = useMemo(() => {
-    if (!prodResult?.details) return [];
+    if (unifiedDetails.length === 0) return [];
 
-    const startStr = toLocalISO(dateRange.start);
-    const endStr = toLocalISO(dateRange.end);
-    const isSingleDay = startStr === endStr;
-
-    let filteredDetails = prodResult.details.map(d => ({
-      ...d,
-      dateISO: sheetDateToISO(d.date || '')
-    }));
-
-    if (isSingleDay) {
-      const yesterday = new Date(dateRange.start);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = toLocalISO(yesterday);
-
-      // Unify Noche: Today's 3.NOCHE + Yesterday's 4.NOCHE FIN
-      const machines = Array.from(new Set(filteredDetails.map(d => d.machineId)));
-      const unifiedDetails: any[] = [];
-
-      // Add Mañana and Tarde for today
-      filteredDetails.filter(d => d.dateISO === startStr && (d.shift.toUpperCase().includes('MAÑANA') || d.shift.toUpperCase().includes('TARDE'))).forEach(d => unifiedDetails.push(d));
-
-      // Aggregate Noche for each machine
-      machines.forEach(m => {
-        const todayNoche = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && !d.shift.toUpperCase().includes('FIN') && d.dateISO === startStr);
-        const yesterdayNocheFin = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && d.shift.toUpperCase().includes('FIN') && d.dateISO === yesterdayStr);
-
-        if (todayNoche || yesterdayNocheFin) {
-          const totalTn = (todayNoche?.valueTn || 0) + (yesterdayNocheFin?.valueTn || 0);
-          const totalHsMarcha = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0);
-          
-          // Weighted averages for KPIs
-          const totalWeight = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0) || 1;
-          const avgAvailability = todayNoche && yesterdayNocheFin 
-            ? ((todayNoche.availability * todayNoche.hsMarcha) + (yesterdayNocheFin.availability * yesterdayNocheFin.hsMarcha)) / totalWeight
-            : (todayNoche?.availability || yesterdayNocheFin?.availability || 0);
-            
-          const avgPerformance = todayNoche && yesterdayNocheFin
-            ? ((todayNoche.performance * todayNoche.hsMarcha) + (yesterdayNocheFin.performance * yesterdayNocheFin.hsMarcha)) / totalWeight
-            : (todayNoche?.performance || yesterdayNocheFin?.performance || 0);
-
-          unifiedDetails.push({
-            machineId: m,
-            machineName: m,
-            shift: '3.NOCHE',
-            availability: avgAvailability,
-            performance: avgPerformance,
-            quality: 1,
-            oee: avgAvailability * avgPerformance,
-            valueTn: totalTn,
-            hsMarcha: totalHsMarcha,
-            dateISO: startStr
-          });
-        }
-      });
-      filteredDetails = unifiedDetails;
-    } else {
-      // For range, filter by ISO dates
-      filteredDetails = filteredDetails.filter(d => d.dateISO >= startStr && d.dateISO <= endStr);
-    }
-
-    // Group by shift for the summary table
     const shifts = [
       { id: '1.MAÑANA', label: 'MAÑANA' },
       { id: '2.TARDE', label: 'TARDE' },
@@ -278,7 +298,7 @@ export const SummaryView: React.FC = () => {
     ];
 
     return shifts.map(s => {
-      const sMetrics = filteredDetails.filter(d => d.shift.toUpperCase().includes(s.label));
+      const sMetrics = unifiedDetails.filter(d => d.shift.toUpperCase().includes(s.label));
       const totalTn = sMetrics.reduce((acc, m) => acc + (m.valueTn || 0), 0);
       const totalHsMarcha = sMetrics.reduce((acc, m) => acc + (m.hsMarcha || 0), 0);
       const count = sMetrics.length;
@@ -301,7 +321,7 @@ export const SummaryView: React.FC = () => {
         }))
       };
     }).filter(s => s.valueTn > 0 || s.breakdown.length > 0);
-  }, [prodResult, dateRange, machineHacMap]);
+  }, [unifiedDetails, machineHacMap]);
 
   const productBreakdown = useMemo(() => {
     if (!prodResult?.byMachineProduct) return [];
@@ -369,14 +389,14 @@ export const SummaryView: React.FC = () => {
         scale: 2, 
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff',
+        backgroundColor: '#0a0f1e',
         windowWidth: 1400, // Ensure lg: grid classes are active
         onclone: (clonedDoc) => {
           const el = clonedDoc.getElementById('summary-view-content');
           if (el) {
             el.style.width = '1400px';
             el.style.padding = '20px';
-            el.style.backgroundColor = '#ffffff';
+            el.style.backgroundColor = '#0a0f1e';
             el.style.height = 'auto';
             el.style.overflow = 'visible';
             
@@ -388,8 +408,8 @@ export const SummaryView: React.FC = () => {
                 (downtimeContainer as HTMLElement).style.display = 'flex';
                 (downtimeContainer as HTMLElement).style.flexDirection = 'column';
                 (downtimeContainer as HTMLElement).style.padding = '10px';
-                (downtimeContainer as HTMLElement).style.backgroundColor = '#ffffff';
-                (downtimeContainer as HTMLElement).style.border = '1px solid #e2e8f0';
+                (downtimeContainer as HTMLElement).style.backgroundColor = '#0a0f1e';
+                (downtimeContainer as HTMLElement).style.border = '1px solid rgba(255,255,255,0.1)';
             }
             
             const shiftContainer = el.querySelector('[data-chart="shift"]');
@@ -399,8 +419,8 @@ export const SummaryView: React.FC = () => {
                 (shiftContainer as HTMLElement).style.display = 'flex';
                 (shiftContainer as HTMLElement).style.flexDirection = 'column';
                 (shiftContainer as HTMLElement).style.padding = '10px';
-                (shiftContainer as HTMLElement).style.backgroundColor = '#ffffff';
-                (shiftContainer as HTMLElement).style.border = '1px solid #e2e8f0';
+                (shiftContainer as HTMLElement).style.backgroundColor = '#0a0f1e';
+                (shiftContainer as HTMLElement).style.border = '1px solid rgba(255,255,255,0.1)';
                 
                 const table = shiftContainer.querySelector('table');
                 if (table) {
@@ -546,7 +566,7 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 pb-8 overflow-x-hidden min-h-screen bg-[#0a0f1e] p-4 md:p-6 text-slate-200">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-8 overflow-x-hidden min-h-screen bg-[#0a0f1e] p-4 md:p-6 text-slate-200">
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4 relative z-30">
@@ -575,7 +595,7 @@ export const SummaryView: React.FC = () => {
         </div>
       </div>
 
-      <div id="summary-view-content" className="space-y-6">
+      <div id="summary-view-content" className="space-y-6 bg-[#0a0f1e]">
         
         {isLoading ? (
            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
@@ -583,12 +603,11 @@ export const SummaryView: React.FC = () => {
               <p className="text-sm font-medium">Sincronizando con Planta...</p>
           </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             
-            {/* LEFT COLUMN (KPIs) - 3/12 */}
-            <div className="lg:col-span-3 flex flex-col gap-4 lg:h-full">
+            {/* LEFT COLUMN (KPIs & Machine Cards) - 4/12 */}
+            <div className="lg:col-span-4 flex flex-col gap-4">
                 
-                {/* Producción Total Card */}
                 <div data-card="left" className="h-auto min-h-[120px] bg-blue-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden group border border-white/10 flex flex-col justify-center">
                     <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
                         <PackageCheck size={100} />
@@ -596,26 +615,26 @@ export const SummaryView: React.FC = () => {
                     <p className="text-blue-100 font-bold uppercase tracking-[0.2em] text-[10px] mb-1">Producción Total</p>
                     <div className="flex items-baseline gap-2">
                         <h2 className="text-5xl md:text-6xl font-black tracking-tighter drop-shadow-md">
-                            {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
                         <span className="text-2xl font-bold text-blue-200/80">Tn</span>
                     </div>
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="flex-grow bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col min-h-[400px] overflow-hidden">
+                <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col min-h-[300px] overflow-hidden">
                     <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
                         <TrendingUp className="text-blue-400" size={18} />
                         <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
                     </div>
-                    <div className="p-5 space-y-8 flex-grow overflow-y-auto no-scrollbar">
+                    <div className="p-5 space-y-6 overflow-y-auto no-scrollbar">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
-                            <div key={prod.name} className="space-y-3">
+                            <div key={prod.name} className="space-y-2">
                                 <div className="flex justify-between text-sm font-black uppercase tracking-wider">
-                                    <span className="text-slate-300 truncate max-w-[180px] text-base">{prod.name}</span>
-                                    <span className="text-white text-2xl tracking-tighter">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs text-slate-500 ml-0.5">Tn</span></span>
+                                    <span className="text-slate-300 truncate max-w-[150px] text-sm">{prod.name}</span>
+                                    <span className="text-white text-xl tracking-tighter">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-500 ml-0.5">Tn</span></span>
                                 </div>
-                                <div className="h-3 bg-white/5 rounded-full overflow-hidden p-[1px]">
+                                <div className="h-2 bg-white/5 rounded-full overflow-hidden p-[1px]">
                                     <div 
                                         className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.5)]" 
                                         style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
@@ -628,11 +647,25 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
 
-
+                {/* Producción por Paletizadora (Moved here) */}
+                <div className="grid grid-cols-1 gap-3">
+                    {byMachine.map((m: any) => (
+                        <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex justify-between items-center">
+                            <div>
+                                <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{m.name}</div>
+                                <div className="text-[10px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
+                            </div>
+                            <div className={`text-2xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
+                                {m.valueTn.toLocaleString()}
+                                <span className="text-xs ml-1 font-bold text-slate-500">TN</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
 
-            {/* RIGHT COLUMN (Stock & Downtime) - 9/12 */}
-            <div className="lg:col-span-9 flex flex-col gap-4 lg:h-full">
+            {/* RIGHT COLUMN (Stock & Downtime) - 8/12 */}
+            <div className="lg:col-span-8 flex flex-col gap-4">
                 
                 {/* Stock Section */}
                 <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 overflow-hidden">
@@ -644,9 +677,9 @@ export const SummaryView: React.FC = () => {
                         {producedStock.length > 0 ? producedStock.map((item, idx) => (
                             <div key={item.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-emerald-500/10 transition-all hover:scale-[1.02]">
                                 <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-400 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
-                                <p className="text-5xl font-black tracking-tighter text-white">
+                                <p className="text-4xl font-black tracking-tighter text-white">
                                     {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-sm font-bold text-slate-500 ml-1">Tn</span>
+                                    <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) : (
@@ -656,9 +689,9 @@ export const SummaryView: React.FC = () => {
                         {producedStock.length > 0 && (
                             <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center text-center shadow-inner">
                                 <p className="text-[9px] uppercase font-black text-emerald-400 mb-1 tracking-widest">TOTAL STOCK</p>
-                                <p className="text-5xl font-black tracking-tighter text-emerald-400">
+                                <p className="text-4xl font-black tracking-tighter text-emerald-400">
                                     {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-sm font-bold text-emerald-500/60 ml-1">Tn</span>
+                                    <span className="text-xs font-bold text-emerald-500/60 ml-1">Tn</span>
                                 </p>
                             </div>
                         )}
@@ -712,152 +745,86 @@ export const SummaryView: React.FC = () => {
             </div>
         </div>
 
-            {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-6 bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center gap-3 bg-slate-800/80 px-5 py-3 relative z-10 border-b border-white/10">
-                    <TableProperties className="text-blue-400" size={20} />
-                    <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Producción y Métricas por Turno</h3>
-                </div>
-                <div className="p-4 flex-grow flex flex-col">
-                    <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
-                    {shiftData.length > 0 ? (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-white/5">
-                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Turno / Paletizadora</th>
-                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Producción (Tn)</th>
-                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">HS Marcha</th>
-                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Disp %</th>
-                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Rend %</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {shiftData.map((shift, idx) => (
-                                    <React.Fragment key={shift.name}>
-                                        <tr className="bg-white/5 transition-colors group/row">
-                                            <td className="py-2 px-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
-                                                    <span className="text-xs font-black text-white uppercase tracking-tight">{shift.name}</span>
-                                                </div>
+        {/* Producción por Turno (Full Width Row) */}
+        <div className="grid grid-cols-1 gap-6 mt-4">
+            <div data-chart="shift" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group">
+            <div className="flex items-center gap-3 bg-slate-800/80 px-5 py-3 relative z-10 border-b border-white/10">
+                <TableProperties className="text-blue-400" size={20} />
+                <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Producción y Métricas por Turno</h3>
+            </div>
+            <div className="p-4 flex-grow flex flex-col">
+                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
+                {shiftData.length > 0 ? (
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-white/5">
+                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Turno / Paletizadora</th>
+                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Producción (Tn)</th>
+                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">HS Marcha</th>
+                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Disp %</th>
+                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Rend %</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {shiftData.map((shift, idx) => (
+                                <React.Fragment key={shift.name}>
+                                    <tr className="bg-white/5 transition-colors group/row">
+                                        <td className="py-2 px-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+                                                <span className="text-xs font-black text-white uppercase tracking-tight">{shift.name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                            <span className="text-lg font-black text-white tracking-tighter">
+                                                {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                            <span className="text-lg font-black text-emerald-400 tracking-tighter">
+                                                {(shift.hsMarcha || 0).toFixed(1)}
+                                            </span>
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                            <span className="text-lg font-black text-amber-400 tracking-tighter">{shift.disp}%</span>
+                                        </td>
+                                        <td className="py-2 px-3 text-right">
+                                            <span className="text-lg font-black text-indigo-400 tracking-tighter">{shift.rend}%</span>
+                                        </td>
+                                    </tr>
+                                    {shift.breakdown.map((m: any, mIdx: number) => (
+                                        <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                                            <td className="py-2 px-8">
+                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{m.machineName}</span>
                                             </td>
                                             <td className="py-2 px-3 text-right">
-                                                <span className="text-lg font-black text-white tracking-tighter">
-                                                    {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                                                <span className={`text-sm font-black tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                <span className="text-[9px] font-medium text-slate-500 ml-1">Tn</span>
                                             </td>
                                             <td className="py-2 px-3 text-right">
-                                                <span className="text-lg font-black text-emerald-400 tracking-tighter">
-                                                    {(shift.hsMarcha || 0).toFixed(1)}
-                                                </span>
+                                                <span className="text-sm font-black text-emerald-500/80 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                             </td>
                                             <td className="py-2 px-3 text-right">
-                                                <span className="text-lg font-black text-amber-400 tracking-tighter">{shift.disp}%</span>
+                                                <span className={`text-sm font-black tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
                                             </td>
                                             <td className="py-2 px-3 text-right">
-                                                <span className="text-lg font-black text-indigo-400 tracking-tighter">{shift.rend}%</span>
+                                                <span className={`text-sm font-black tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
                                             </td>
                                         </tr>
-                                        {shift.breakdown.map((m: any, mIdx: number) => (
-                                            <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
-                                                <td className="py-2 px-8">
-                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{m.machineName}</span>
-                                                </td>
-                                                <td className="py-2 px-3 text-right">
-                                                    <span className={`text-sm font-black tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                                    <span className="text-[9px] font-medium text-slate-500 ml-1">Tn</span>
-                                                </td>
-                                                <td className="py-2 px-3 text-right">
-                                                    <span className="text-sm font-black text-emerald-500/80 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
-                                                </td>
-                                                <td className="py-2 px-3 text-right">
-                                                    <span className={`text-sm font-black tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
-                                                </td>
-                                                <td className="py-2 px-3 text-right">
-                                                    <span className={`text-sm font-black tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin datos de producción por turno</div>
-                    )}
-                </div>
-            </div>
-            {/* Footer decorativo para la tabla */}
-                <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center relative z-10">
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Resumen Operativo</p>
-                    <div className="flex gap-1.5">
-                        {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/10"></div>)}
-                    </div>
-                </div>
-            </div>
-
-            <div className="lg:col-span-6 bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center bg-blue-900/80 px-5 py-3 relative z-10 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                        <Cpu className="text-blue-400" size={20} />
-                        <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Producción por Paletizadora</h3>
-                    </div>
-                </div>
-                
-                <div className="p-5 flex-grow flex flex-col">
-                    {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {prodResult.byMachine.map((m, i) => {
-                            const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
-                            const avg = machineMetrics.length > 0 ? {
-                                oee: machineMetrics.reduce((acc, curr) => acc + curr.oee, 0) / machineMetrics.length,
-                                rend: machineMetrics.reduce((acc, curr) => acc + curr.performance, 0) / machineMetrics.length,
-                                disp: machineMetrics.reduce((acc, curr) => acc + curr.availability, 0) / machineMetrics.length
-                            } : { oee: 0, rend: 0, disp: 0 };
-
-                            return (
-                                <div 
-                                    key={m.name} 
-                                    className="bg-white/5 p-4 rounded-xl border border-white/5 hover:bg-white/[0.08] transition-all group/card"
-                                >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h4 className="text-lg font-black text-white tracking-tighter">{m.name}</h4>
-                                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{machineHacMap[m.name] || 'N/A'}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className={`text-2xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
-                                                {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                                <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-black/20 p-2 rounded-lg text-center border border-white/5">
-                                            <p className="text-[8px] font-black text-slate-500 uppercase mb-1">DISP</p>
-                                            <p className={`text-sm font-black ${getAvailabilityColor(Math.round(avg.disp * 100))}`}>{Math.round(avg.disp * 100)}%</p>
-                                        </div>
-                                        <div className="bg-black/20 p-2 rounded-lg text-center border border-white/5">
-                                            <p className="text-[8px] font-black text-slate-500 uppercase mb-1">REND</p>
-                                            <p className={`text-sm font-black ${getPerformanceColor(Math.round(avg.rend * 100))}`}>{Math.round(avg.rend * 100)}%</p>
-                                        </div>
-                                        <div className="bg-black/20 p-2 rounded-lg text-center border border-white/5">
-                                            <p className="text-[8px] font-black text-slate-500 uppercase mb-1">OEE</p>
-                                            <p className="text-sm font-black text-blue-400">{Math.round(avg.oee * 100)}%</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    ) : (
-                        <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin datos de paletizadoras</div>
-                    )}
+                                    ))}
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                ) : (
+                    <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin datos de producción por turno</div>
+                )}
                 </div>
             </div>
         </div>
+      </div>
+      </div>
       )}
       </div>
     </div>

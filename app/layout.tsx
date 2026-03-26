@@ -48,7 +48,7 @@ export default function RootLayout({
       }}
     >
       <html lang="es" className="overflow-x-hidden">
-        <body className={`${inter.className} bg-slate-50 text-slate-900 antialiased overflow-x-hidden`}>
+        <body className={`${inter.className} bg-[#0a0f1e] text-slate-900 antialiased overflow-x-hidden`}>
           <QueryProvider>
             {children}
           </QueryProvider>
