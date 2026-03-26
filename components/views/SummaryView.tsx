@@ -17,6 +17,23 @@ const formatMinutes = (mins: number) => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
+const toLocalISO = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+const sheetDateToISO = (sheetDate: string) => {
+    if (!sheetDate) return '';
+    if (sheetDate.includes('-')) return sheetDate; // Already ISO
+    const parts = sheetDate.split('/');
+    if (parts.length !== 3) return sheetDate;
+    let year = parts[2];
+    if (year.length === 2) year = `20${year}`;
+    return `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+};
+
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -241,13 +258,6 @@ export const SummaryView: React.FC = () => {
     return map;
   }, [downtimeResult]);
 
-  const toLocalISO = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
   const getTnColor = (machineId: string, tn: number) => {
     if (tn === 0) return 'text-slate-400';
     const mId = machineId.toUpperCase();
@@ -276,16 +286,6 @@ export const SummaryView: React.FC = () => {
     if (a < 76) return 'text-red-500';
     if (a < 81) return 'text-amber-500';
     return 'text-emerald-500';
-  };
-
-  const sheetDateToISO = (sheetDate: string) => {
-    if (!sheetDate) return '';
-    if (sheetDate.includes('-')) return sheetDate; // Already ISO
-    const parts = sheetDate.split('/');
-    if (parts.length !== 3) return sheetDate;
-    let year = parts[2];
-    if (year.length === 2) year = `20${year}`;
-    return `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
   };
 
   const shiftData = useMemo(() => {
