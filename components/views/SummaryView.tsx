@@ -609,110 +609,112 @@ export const SummaryView: React.FC = () => {
       </div>
 
       <div id="summary-view-content" className="space-y-6 bg-[#0a0f1e]">
-        
         {isLoading ? (
-           <div className="h-64 flex flex-col items-center justify-center text-slate-400">
-              <Loader2 className="animate-spin mb-2" size={40} />
-              <p className="text-sm font-medium">Sincronizando con Planta...</p>
+          <div className="h-64 flex flex-col items-center justify-center text-slate-400">
+            <Loader2 className="animate-spin mb-2" size={40} />
+            <p className="text-sm font-medium">Sincronizando con Planta...</p>
           </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">            {/* LEFT COLUMN (KPIs & Product Breakdown) - 4/12 */}
-            <div className="lg:col-span-4 flex flex-col gap-4">
-                
-                <div data-card="left" className="h-auto min-h-[120px] bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-3xl shadow-2xl relative overflow-hidden group border border-white/20 flex flex-col justify-center">
-                    <div className="absolute -right-6 -bottom-6 opacity-20 group-hover:scale-110 transition-transform duration-700 blur-sm">
-                        <PackageCheck size={140} />
+        ) : (
+          <div className="space-y-6">
+                {/* ROW 1: KPI & STOCK */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                    {/* Producción Total Hoy - 4/12 */}
+                    <div className="lg:col-span-4">
+                        <div data-card="left" className="h-full min-h-[140px] bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-3xl shadow-2xl relative overflow-hidden group border border-white/20 flex flex-col justify-center">
+                            <div className="absolute -right-6 -bottom-6 opacity-20 group-hover:scale-110 transition-transform duration-700 blur-sm">
+                                <PackageCheck size={140} />
+                            </div>
+                            <div className="relative z-10">
+                                <p className="text-blue-100 font-black uppercase tracking-[0.2em] text-[10px] mb-2 opacity-80">Producción Total Hoy</p>
+                                <div className="flex items-baseline gap-3">
+                                    <h2 className="text-6xl md:text-7xl font-black tracking-tighter drop-shadow-2xl">
+                                        {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                    </h2>
+                                    <span className="text-3xl font-bold text-blue-200/60">Tn</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="relative z-10">
-                        <p className="text-blue-100 font-black uppercase tracking-[0.2em] text-[10px] mb-2 opacity-80">Producción Total Hoy</p>
-                        <div className="flex items-baseline gap-3">
-                            <h2 className="text-6xl md:text-7xl font-black tracking-tighter drop-shadow-2xl">
-                                {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            </h2>
-                            <span className="text-3xl font-bold text-blue-200/60">Tn</span>
+
+                    {/* Stock Section - 8/12 */}
+                    <div className="lg:col-span-8">
+                        <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 overflow-hidden h-full">
+                            <div className="bg-emerald-600/80 text-white px-5 py-2.5 flex justify-between items-center border-b border-white/5">
+                                <h3 className="font-black uppercase tracking-[0.2em] text-[11px]">Stock a las 06:00 hs.</h3>
+                                <Clock size={18} />
+                            </div>
+                            <div className="p-5 grid grid-cols-2 md:grid-cols-5 gap-4">
+                                {producedStock.length > 0 ? producedStock.map((item, idx) => (
+                                    <div key={item.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-emerald-500/10 transition-all hover:scale-[1.02]">
+                                        <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-400 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
+                                        <p className="text-4xl font-black tracking-tighter text-white">
+                                            {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                            <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
+                                        </p>
+                                    </div>
+                                )) : (
+                                    <div className="col-span-full py-10 text-center text-slate-500 italic text-sm">Sin datos de stock</div>
+                                )}
+                                
+                                {producedStock.length > 0 && (
+                                    <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center text-center shadow-inner">
+                                        <p className="text-[9px] uppercase font-black text-emerald-400 mb-1 tracking-widest">TOTAL STOCK</p>
+                                        <p className="text-4xl font-black tracking-tighter text-emerald-400">
+                                            {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                            <span className="text-xs font-bold text-emerald-500/60 ml-1">Tn</span>
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* TN por PRODUCTO */}
-                <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col flex-1 overflow-hidden">
-                    <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
-                        <TrendingUp className="text-blue-400" size={18} />
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
-                    </div>
-                    <div className="p-5 space-y-6 overflow-y-auto no-scrollbar">
-                        {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
-                            <div key={prod.name} className="space-y-2">
-                                <div className="flex justify-between text-sm font-black uppercase tracking-wider">
-                                    <span className="text-slate-300 truncate max-w-[150px] text-sm">{prod.name}</span>
-                                    <span className="text-white text-xl tracking-tighter">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-500 ml-0.5">Tn</span></span>
+                {/* ROW 2: PRODUCTS, MACHINES & DOWNTIME */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
+                    {/* TN por PRODUCTO */}
+                    <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col overflow-hidden min-h-[400px]">
+                        <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
+                            <TrendingUp className="text-blue-400" size={18} />
+                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
+                        </div>
+                        <div className="p-5 space-y-6 overflow-y-auto no-scrollbar flex-1">
+                            {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
+                                <div key={prod.name} className="space-y-2">
+                                    <div className="flex justify-between text-sm font-black uppercase tracking-wider">
+                                        <span className="text-slate-300 truncate max-w-[150px] text-sm">{prod.name}</span>
+                                        <span className="text-white text-xl tracking-tighter">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-500 ml-0.5">Tn</span></span>
+                                    </div>
+                                    <div className="h-2 bg-white/5 rounded-full overflow-hidden p-[1px]">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.5)]" 
+                                            style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="h-2 bg-white/5 rounded-full overflow-hidden p-[1px]">
-                                    <div 
-                                        className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.5)]" 
-                                        style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        )) : (
-                            <p className="text-xs text-slate-500 italic text-center py-10">Sin datos de producción</p>
-                        )}
+                            )) : (
+                                <p className="text-xs text-slate-500 italic text-center py-10">Sin datos de producción</p>
+                            )}
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            {/* RIGHT COLUMN (Stock, Machines & Downtime) - 8/12 */}
-            <div className="lg:col-span-8 flex flex-col gap-4">
-                
-                {/* Stock Section */}
-                <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 overflow-hidden">
-                    <div className="bg-emerald-600/80 text-white px-5 py-2.5 flex justify-between items-center border-b border-white/5">
-                        <h3 className="font-black uppercase tracking-[0.2em] text-[11px]">Stock a las 06:00 hs.</h3>
-                        <Clock size={18} />
-                    </div>
-                    <div className="p-5 grid grid-cols-2 md:grid-cols-5 gap-4">
-                        {producedStock.length > 0 ? producedStock.map((item, idx) => (
-                            <div key={item.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-emerald-500/10 transition-all hover:scale-[1.02]">
-                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-400 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
-                                <p className="text-4xl font-black tracking-tighter text-white">
-                                    {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
-                                </p>
-                            </div>
-                        )) : (
-                            <div className="col-span-full py-10 text-center text-slate-500 italic text-sm">Sin datos de stock</div>
-                        )}
-                        
-                        {producedStock.length > 0 && (
-                            <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center text-center shadow-inner">
-                                <p className="text-[9px] uppercase font-black text-emerald-400 mb-1 tracking-widest">TOTAL STOCK</p>
-                                <p className="text-4xl font-black tracking-tighter text-emerald-400">
-                                    {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-xs font-bold text-emerald-500/60 ml-1">Tn</span>
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
-                    {/* Producción por Paletizadora (Aligned with Downtime) */}
-                    <div className="flex flex-col gap-3">
+                    {/* Producción por Paletizadora */}
+                    <div className="flex flex-col gap-3 h-full">
                         <div className="bg-blue-600/80 text-white px-5 py-3 rounded-t-2xl flex items-center gap-3 border-b border-white/10">
                             <Cpu className="text-white" size={20} />
                             <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Productividad por Paletizadora</h3>
                         </div>
                         <div className="flex flex-col gap-3 flex-1">
                             {byMachine.map((m: any) => (
-                                <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg">
+                                <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg flex-1 justify-center">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <div className="text-slate-300 text-[10px] font-black uppercase tracking-widest mb-1">{m.name}</div>
-                                            <div className="text-[10px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
+                                            <div className="text-slate-300 text-[11px] font-black uppercase tracking-widest mb-1">{m.name}</div>
+                                            <div className="text-[11px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
                                         </div>
-                                        <div className={`text-2xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
+                                        <div className={`text-3xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
                                             {m.valueTn.toLocaleString()}
-                                            <span className="text-xs ml-1 font-bold text-slate-500">TN</span>
+                                            <span className="text-sm ml-1 font-bold text-slate-500">TN</span>
                                         </div>
                                     </div>
                                     
@@ -737,13 +739,13 @@ export const SummaryView: React.FC = () => {
                     </div>
 
                     {/* Downtime Table Section */}
-                    <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-full">
+                    <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-full min-h-[400px]">
                         <div className="flex items-center gap-3 bg-amber-600/80 px-5 py-3 relative z-10 border-b border-white/10">
                             <AlertTriangle className="text-white" size={20} />
                             <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Paros Internos (Top 5)</h3>
                         </div>
-                        <div className="p-4 flex-grow flex flex-col">
-                            <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
+                        <div className="p-4 flex-grow flex flex-col overflow-y-auto no-scrollbar">
+                            <div data-chart-wrapper className="flex-grow relative z-10">
                             {Object.keys(topDowntimesByMachine).length > 0 ? (
                                 <div className="space-y-6">
                                     {Object.entries(topDowntimesByMachine).map(([mId, reasons]) => (
@@ -755,18 +757,18 @@ export const SummaryView: React.FC = () => {
                                             <table className="w-full text-left border-collapse">
                                                 <thead>
                                                     <tr className="border-b border-white/5">
-                                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">HAC</th>
-                                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">Causa</th>
-                                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
+                                                        <th className="py-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">HAC</th>
+                                                        <th className="py-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Causa</th>
+                                                        <th className="py-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="divide-y divide-white/5 text-xs">
+                                                <tbody className="divide-y divide-white/5 text-sm">
                                                     {reasons.map((item: any, idx: number) => (
                                                         <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                            <td className="py-1.5 px-2 text-blue-400 font-bold whitespace-nowrap">{item.hac}</td>
-                                                            <td className="py-1.5 px-2 text-slate-300">{item.reason}</td>
-                                                            <td className="py-1.5 px-2 text-right font-black text-red-400 whitespace-nowrap">
-                                                                {item.duration} <span className="text-[9px] text-slate-500 ml-0.5">min</span>
+                                                            <td className="py-2 px-2 text-blue-400 font-bold whitespace-nowrap">{item.hac}</td>
+                                                            <td className="py-2 px-2 text-slate-300 leading-tight">{item.reason}</td>
+                                                            <td className="py-2 px-2 text-right font-black text-red-400 whitespace-nowrap">
+                                                                {item.duration} <span className="text-[10px] text-slate-500 ml-0.5">min</span>
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -778,79 +780,80 @@ export const SummaryView: React.FC = () => {
                             ) : (
                                 <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin registros de paros internos</div>
                             )}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        {/* Producción por Turno (Full Width Row) */}
-        <div className="w-full mt-8">
-            <div data-chart="shift" className="bg-white/[0.03] backdrop-blur-md rounded-3xl shadow-2xl border border-white/10 flex flex-col relative overflow-hidden group">
-            <div className="flex items-center gap-4 bg-[#0f172a]/80 px-6 py-4 relative z-10 border-b border-white/10">
-                <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
-                    <TableProperties className="text-blue-400" size={20} />
-                </div>
-                <h3 className="font-black text-white uppercase text-sm tracking-[0.2em]">Producción y Métricas por Turno</h3>
-            </div>
-            <div className="p-6 flex-grow flex flex-col">
-                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar w-full">
+                {/* ROW 3: SHIFT PRODUCTION TABLE (Full Width) */}
+                <div className="w-full mt-2">
+                    <div data-chart="shift" className="bg-white/[0.03] backdrop-blur-md rounded-3xl shadow-2xl border border-white/10 flex flex-col relative overflow-hidden group">
+                        <div className="flex items-center gap-4 bg-[#0f172a]/80 px-8 py-5 relative z-10 border-b border-white/10">
+                            <div className="p-2.5 bg-blue-500/20 rounded-xl border border-blue-500/30">
+                                <TableProperties className="text-blue-400" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-white uppercase text-base tracking-[0.2em]">Producción y Métricas por Turno</h3>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Detalle consolidado por máquina y horario</p>
+                            </div>
+                        </div>
+                        <div data-chart-wrapper data-table="shift" className="p-8 flex-grow relative z-10 overflow-x-auto no-scrollbar w-full flex flex-col">
                 {shiftData.length > 0 ? (
-                    <table className="w-full text-left border-collapse min-w-[800px]">
+                    <table className="w-full text-left border-collapse min-w-[900px]">
                         <thead>
                             <tr className="border-b border-white/10">
-                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500">Turno / Paletizadora</th>
-                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Producción (Tn)</th>
-                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">HS Marcha</th>
-                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Disp %</th>
-                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Rend %</th>
+                                <th className="py-5 px-6 text-[12px] font-black uppercase tracking-widest text-slate-500">Turno / Paletizadora</th>
+                                <th className="py-5 px-6 text-[12px] font-black uppercase tracking-widest text-slate-500 text-right">Producción (Tn)</th>
+                                <th className="py-5 px-6 text-[12px] font-black uppercase tracking-widest text-slate-500 text-right">HS Marcha</th>
+                                <th className="py-5 px-6 text-[12px] font-black uppercase tracking-widest text-slate-500 text-right">Disp %</th>
+                                <th className="py-5 px-6 text-[12px] font-black uppercase tracking-widest text-slate-500 text-right">Rend %</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {shiftData.map((shift, idx) => (
                                 <React.Fragment key={shift.name}>
-                                    <tr className="bg-white/[0.02] transition-colors group/row">
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse"></div>
-                                                <span className="text-sm font-black text-white uppercase tracking-tight">{shift.name}</span>
+                                    <tr className="bg-white/[0.04] transition-colors group/row border-l-4 border-blue-500">
+                                        <td className="py-6 px-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,1)] animate-pulse"></div>
+                                                <span className="text-lg font-black text-white uppercase tracking-tight">{shift.name}</span>
                                             </div>
                                         </td>
-                                        <td className="py-4 px-4 text-right">
-                                            <span className="text-2xl font-black text-white tracking-tighter">
+                                        <td className="py-6 px-6 text-right">
+                                            <span className="text-4xl font-black text-white tracking-tighter">
                                                 {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                             </span>
-                                            <span className="text-xs font-bold text-slate-500 ml-1.5 uppercase">Tn</span>
+                                            <span className="text-sm font-bold text-slate-500 ml-2 uppercase tracking-widest">Tn</span>
                                         </td>
-                                        <td className="py-4 px-4 text-right">
-                                            <span className="text-2xl font-black text-emerald-400 tracking-tighter">
+                                        <td className="py-6 px-6 text-right">
+                                            <span className="text-3xl font-black text-emerald-400 tracking-tighter">
                                                 {(shift.hsMarcha || 0).toFixed(1)}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-4 text-right">
-                                            <span className="text-2xl font-black text-amber-400 tracking-tighter">{shift.disp}%</span>
+                                        <td className="py-6 px-6 text-right">
+                                            <span className="text-3xl font-black text-amber-400 tracking-tighter">{shift.disp}%</span>
                                         </td>
-                                        <td className="py-4 px-4 text-right">
-                                            <span className="text-2xl font-black text-indigo-400 tracking-tighter">{shift.rend}%</span>
+                                        <td className="py-6 px-6 text-right">
+                                            <span className="text-3xl font-black text-indigo-400 tracking-tighter">{shift.rend}%</span>
                                         </td>
                                     </tr>
                                     {shift.breakdown.map((m: any, mIdx: number) => (
-                                        <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/[0.05] transition-colors border-b border-white/5 last:border-0">
-                                            <td className="py-3 px-10">
-                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{m.machineName}</span>
+                                        <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/[0.08] transition-colors border-b border-white/5 last:border-0">
+                                            <td className="py-4 px-14">
+                                                <span className="text-sm font-bold text-slate-300 uppercase tracking-widest">{m.machineName}</span>
                                             </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <span className={`text-lg font-black tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                                <span className="text-[10px] font-medium text-slate-500 ml-1.5">Tn</span>
+                                            <td className="py-4 px-6 text-right">
+                                                <span className={`text-2xl font-black tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                <span className="text-xs font-bold text-slate-500 ml-2">Tn</span>
                                             </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <span className="text-lg font-black text-emerald-500/80 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
+                                            <td className="py-4 px-6 text-right">
+                                                <span className="text-2xl font-black text-emerald-500/80 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                             </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <span className={`text-lg font-black tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
+                                            <td className="py-4 px-6 text-right">
+                                                <span className={`text-2xl font-black tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
                                             </td>
-                                            <td className="py-3 px-4 text-right">
-                                                <span className={`text-lg font-black tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
+                                            <td className="py-4 px-6 text-right">
+                                                <span className={`text-2xl font-black tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
                                             </td>
                                         </tr>
                                     ))}
@@ -863,11 +866,10 @@ export const SummaryView: React.FC = () => {
                 )}
                 </div>
             </div>
+          </div>
         </div>
-      </div>
-      </div>
       )}
-      </div>
+    </div>
     </div>
   );
 };
