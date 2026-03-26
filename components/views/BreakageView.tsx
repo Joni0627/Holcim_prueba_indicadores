@@ -69,8 +69,8 @@ export const BreakageView: React.FC = () => {
        {/* Header */}
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Análisis Roturas de Sacos</h2>
-          <p className="text-slate-500 text-sm mt-1">Análisis de mermas por sector, material y proveedor.</p>
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Análisis Roturas de Sacos</h2>
+          <p className="text-slate-400 text-sm mt-1 font-medium">Análisis de mermas por sector, material y proveedor.</p>
         </div>
         <DateFilter onFilterChange={handleFilterChange} defaultFilter="month" />
       </div>
@@ -78,10 +78,10 @@ export const BreakageView: React.FC = () => {
       {loading ? (
            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
               <Loader2 className="animate-spin mb-2" size={32} />
-              <p>Procesando datos de calidad...</p>
+              <p className="font-medium">Procesando datos de calidad...</p>
           </div>
       ) : !data ? (
-           <div className="h-64 flex items-center justify-center text-slate-400 border border-dashed border-slate-300 rounded-xl">
+           <div className="h-64 flex items-center justify-center text-slate-400 border border-dashed border-white/10 rounded-xl bg-white/5">
                Seleccione un rango de fecha para ver el análisis.
            </div>
       ) : (
@@ -98,41 +98,55 @@ export const BreakageView: React.FC = () => {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Factory size={20} /></div>
-                        <span className="text-sm font-medium text-slate-500">Total Producido</span>
+                <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10 shadow-xl group hover:bg-white/10 transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/30 group-hover:scale-110 transition-transform">
+                            <Factory className="text-blue-500" size={24} />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Producido</span>
                     </div>
-                    <p className="text-3xl font-bold text-slate-800">{data.totalProduced.toLocaleString()}</p>
-                    <p className="text-xs text-slate-400 mt-1">Bolsas Totales</p>
+                    <h3 className="text-4xl font-black text-white tracking-tighter">
+                        {data.totalProduced.toLocaleString()}
+                        <span className="text-sm font-bold text-slate-500 ml-1 uppercase">Bolsas</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-2 font-medium">Bolsas Totales</p>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-red-50 text-red-600 rounded-lg"><Ban size={20} /></div>
-                        <span className="text-sm font-medium text-slate-500">Total Roturas</span>
+                <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10 shadow-xl group hover:bg-white/10 transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-red-500/20 rounded-xl border border-red-500/30 group-hover:scale-110 transition-transform">
+                            <Ban className="text-red-500" size={24} />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Roturas</span>
                     </div>
-                    <p className="text-3xl font-bold text-slate-800">{data.totalBroken.toLocaleString()}</p>
-                    <p className="text-xs text-slate-400 mt-1">Sacos Descartados</p>
+                    <h3 className="text-4xl font-black text-white tracking-tighter">
+                        {data.totalBroken.toLocaleString()}
+                        <span className="text-sm font-bold text-slate-500 ml-1 uppercase">Sacos</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-2 font-medium">Sacos Descartados</p>
                 </div>
 
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-amber-50 text-amber-600 rounded-lg"><TrendingDown size={20} /></div>
-                        <span className="text-sm font-medium text-slate-500">% Merma Global</span>
+                <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl border border-white/10 shadow-xl group hover:bg-white/10 transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 bg-amber-500/20 rounded-xl border border-amber-500/30 group-hover:scale-110 transition-transform">
+                            <TrendingDown className="text-amber-500" size={24} />
+                        </div>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">% Merma Global</span>
                     </div>
-                    <p className="text-3xl font-bold text-slate-800">{data.globalRate.toFixed(2)}%</p>
-                    <p className="text-xs text-slate-400 mt-1">Tasa de falla</p>
+                    <h3 className="text-4xl font-black text-white tracking-tighter">
+                        {data.globalRate.toFixed(2)}%
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-2 font-medium">Tasa de falla</p>
                 </div>
             </div>
 
             {/* Evolution Chart (History) */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[450px]">
+            <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/10 flex flex-col h-[450px]">
                 <div className="flex items-center gap-2 mb-1">
-                     <Activity size={20} className="text-indigo-500" />
-                     <h3 className="font-bold text-slate-800">Evolución de Falla por Proveedor</h3>
+                     <Activity size={20} className="text-indigo-400" />
+                     <h3 className="font-black text-white uppercase tracking-widest text-sm">Evolución de Falla por Proveedor</h3>
                 </div>
-                <p className="text-xs text-slate-500 mb-6">Tendencia diaria del porcentaje de rotura.</p>
+                <p className="text-xs text-slate-400 mb-6 font-medium">Tendencia diaria del porcentaje de rotura.</p>
 
                 {data.history && data.history.length > 0 ? (
                      <div className="flex-grow w-full h-full">
@@ -142,10 +156,17 @@ export const BreakageView: React.FC = () => {
                                 <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} />
                                 <YAxis stroke="#94a3b8" fontSize={12} unit="%" />
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    contentStyle={{ 
+                                        backgroundColor: '#0f172a', 
+                                        borderRadius: '12px', 
+                                        border: '1px solid rgba(255,255,255,0.1)', 
+                                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)',
+                                        color: '#fff'
+                                    }}
+                                    itemStyle={{ color: '#fff' }}
                                     formatter={(value: number) => [`${value}%`, '']}
                                 />
-                                <Legend wrapperStyle={{paddingTop: '10px'}} />
+                                <Legend wrapperStyle={{paddingTop: '10px', color: '#94a3b8'}} />
                                 {data.byProvider.map((prov, idx) => (
                                     <Line 
                                         key={prov.id} // SAFE KEY (id_Provider)
@@ -163,37 +184,43 @@ export const BreakageView: React.FC = () => {
                         </ResponsiveContainer>
                      </div>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
+                    <div className="flex-grow flex items-center justify-center text-slate-500 bg-white/5 rounded-2xl border border-dashed border-white/10">
                         Seleccione un rango mayor a 1 día para ver evolución
                     </div>
                 )}
             </div>
 
              {/* Stacked Bar Chart: Materials by Sector */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[500px]">
+            <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/10 flex flex-col h-[500px]">
                 <div className="flex items-center gap-2 mb-1">
-                     <GanttChartSquare size={20} className="text-emerald-500" />
-                     <h3 className="font-bold text-slate-800">Roturas de Material por Sector</h3>
+                     <GanttChartSquare size={20} className="text-emerald-400" />
+                     <h3 className="font-black text-white uppercase tracking-widest text-sm">Roturas de Material por Sector</h3>
                 </div>
-                <p className="text-xs text-slate-500 mb-6">Cantidad de bolsas rotas de cada material, clasificadas por lugar de falla.</p>
+                <p className="text-xs text-slate-400 mb-6 font-medium">Cantidad de bolsas rotas de cada material, clasificadas por lugar de falla.</p>
 
                 {data.byMaterial.length > 0 ? (
                      <div className="flex-grow w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={data.byMaterial} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                                 <XAxis 
                                     dataKey="name" 
-                                    stroke="#94a3b8" 
+                                    stroke="#64748b" 
                                     fontSize={11} 
                                     tickFormatter={(val) => val.length > 15 ? val.substring(0,15)+'...' : val}
                                 />
-                                <YAxis stroke="#94a3b8" fontSize={12} />
+                                <YAxis stroke="#64748b" fontSize={12} />
                                 <Tooltip 
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    cursor={{fill: '#f8fafc'}}
+                                    contentStyle={{ 
+                                        backgroundColor: '#0f172a', 
+                                        borderRadius: '12px', 
+                                        border: '1px solid rgba(255,255,255,0.1)', 
+                                        boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)',
+                                        color: '#fff'
+                                    }}
+                                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
                                 />
-                                <Legend wrapperStyle={{paddingTop: '10px'}} />
+                                <Legend wrapperStyle={{paddingTop: '10px', color: '#94a3b8'}} />
                                 {/* FLATTENED KEYS */}
                                 <Bar dataKey="sector_Ensacadora" name="Ensacadora" stackId="a" fill={SECTOR_COLORS['Ensacadora']} />
                                 <Bar dataKey="sector_NoEmboquillada" name="No Emboquillada" stackId="a" fill={SECTOR_COLORS['NoEmboquillada']} />
@@ -201,9 +228,9 @@ export const BreakageView: React.FC = () => {
                                 <Bar dataKey="sector_Transporte" name="Transporte" stackId="a" fill={SECTOR_COLORS['Transporte']} />
                             </BarChart>
                         </ResponsiveContainer>
-                     </div>
+                    </div>
                 ) : (
-                    <div className="flex-grow flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
+                    <div className="flex-grow flex items-center justify-center text-slate-500 bg-white/5 rounded-2xl border border-dashed border-white/10">
                         Sin datos de materiales en este período
                     </div>
                 )}
@@ -213,9 +240,9 @@ export const BreakageView: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {/* Sector Breakdown Pie Chart */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[450px]">
-                    <h3 className="font-bold text-slate-800 mb-1">Distribución Total por Sector</h3>
-                    <p className="text-xs text-slate-500 mb-4">¿En qué parte del proceso ocurren las roturas?</p>
+                <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/10 flex flex-col h-[450px]">
+                    <h3 className="font-black text-white uppercase tracking-widest text-sm mb-1">Distribución Total por Sector</h3>
+                    <p className="text-xs text-slate-400 mb-4 font-medium">¿En qué parte del proceso ocurren las roturas?</p>
                     
                     {data.bySector.length > 0 ? (
                         <div className="flex-grow flex flex-col items-center justify-center">
@@ -237,13 +264,22 @@ export const BreakageView: React.FC = () => {
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
-                                        <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                                        <Tooltip 
+                                            contentStyle={{ 
+                                                backgroundColor: '#0f172a', 
+                                                borderRadius: '12px', 
+                                                border: '1px solid rgba(255,255,255,0.1)', 
+                                                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.5)',
+                                                color: '#fff'
+                                            }}
+                                            formatter={(value: number) => value.toLocaleString()} 
+                                        />
                                         <Legend 
                                             verticalAlign="bottom" 
                                             layout="horizontal"
                                             formatter={(value, entry: any) => {
                                                 const item = data.bySector.find(s => s.name === value);
-                                                return `${value} (${item?.percentage.toFixed(1)}%)`;
+                                                return <span className="text-slate-400 text-xs">{value} ({item?.percentage.toFixed(1)}%)</span>;
                                             }}
                                         />
                                     </PieChart>
@@ -251,35 +287,35 @@ export const BreakageView: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">Sin datos de roturas</div>
+                        <div className="flex-1 flex items-center justify-center text-slate-500 bg-white/5 rounded-2xl border border-dashed border-white/10">Sin datos de roturas</div>
                     )}
                 </div>
 
                 {/* Provider Ranking Table */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-[450px]">
-                    <h3 className="font-bold text-slate-800 mb-1">Ranking por Proveedor</h3>
-                    <p className="text-xs text-slate-500 mb-4">Ranking de tasa de falla por fabricante.</p>
+                <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/10 flex flex-col h-[450px]">
+                    <h3 className="font-black text-white uppercase tracking-widest text-sm mb-1">Ranking por Proveedor</h3>
+                    <p className="text-xs text-slate-400 mb-4 font-medium">Ranking de tasa de falla por fabricante.</p>
                     
-                    <div className="flex-grow overflow-auto">
+                    <div className="flex-grow overflow-auto no-scrollbar">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-500 font-semibold sticky top-0">
+                            <thead className="bg-white/5 text-slate-400 font-black uppercase tracking-widest text-[10px] sticky top-0">
                                 <tr>
-                                    <th className="px-3 py-2">Proveedor</th>
-                                    <th className="px-3 py-2 text-right">Prod.</th>
-                                    <th className="px-3 py-2 text-right">Rotas</th>
-                                    <th className="px-3 py-2 text-right">% Falla</th>
+                                    <th className="px-3 py-3">Proveedor</th>
+                                    <th className="px-3 py-3 text-right">Prod.</th>
+                                    <th className="px-3 py-3 text-right">Rotas</th>
+                                    <th className="px-3 py-3 text-right">% Falla</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-white/5">
                                 {data.byProvider.map((prov) => (
-                                    <tr key={prov.id} className="hover:bg-slate-50">
-                                        <td className="px-3 py-2 font-medium text-slate-700">{prov.name}</td>
-                                        <td className="px-3 py-2 text-right text-slate-500">{prov.produced.toLocaleString()}</td>
-                                        <td className="px-3 py-2 text-right font-medium text-slate-800">{prov.broken}</td>
-                                        <td className="px-3 py-2 text-right">
-                                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                                prov.rate > 0.5 ? 'bg-red-100 text-red-700' : 
-                                                prov.rate > 0.2 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                    <tr key={prov.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-3 py-3 font-bold text-slate-200">{prov.name}</td>
+                                        <td className="px-3 py-3 text-right text-slate-400">{prov.produced.toLocaleString()}</td>
+                                        <td className="px-3 py-3 text-right font-bold text-white">{prov.broken}</td>
+                                        <td className="px-3 py-3 text-right">
+                                            <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${
+                                                prov.rate > 0.5 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 
+                                                prov.rate > 0.2 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                             }`}>
                                                 {prov.rate.toFixed(2)}%
                                             </span>
@@ -288,7 +324,7 @@ export const BreakageView: React.FC = () => {
                                 ))}
                                 {data.byProvider.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="text-center py-8 text-slate-400">Sin datos</td>
+                                        <td colSpan={4} className="text-center py-8 text-slate-500">Sin datos</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -297,42 +333,42 @@ export const BreakageView: React.FC = () => {
                 </div>
 
                 {/* Material Breakdown Table (Full Width) */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[400px] lg:col-span-2">
+                <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl shadow-xl border border-white/10 flex flex-col min-h-[400px] lg:col-span-2">
                     <div className="flex items-center gap-2 mb-1">
-                        <Layers size={20} className="text-indigo-600" />
-                        <h3 className="font-bold text-slate-800">Detalle por Material / SKU</h3>
+                        <Layers size={20} className="text-indigo-400" />
+                        <h3 className="font-black text-white uppercase tracking-widest text-sm">Detalle por Material / SKU</h3>
                     </div>
-                    <p className="text-xs text-slate-500 mb-4">Identificación de productos con mayor incidencia de rotura.</p>
+                    <p className="text-xs text-slate-400 mb-4 font-medium">Identificación de productos con mayor incidencia de rotura.</p>
                     
-                    <div className="flex-grow overflow-auto">
+                    <div className="flex-grow overflow-auto no-scrollbar">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-500 font-semibold sticky top-0">
+                            <thead className="bg-white/5 text-slate-400 font-black uppercase tracking-widest text-[10px] sticky top-0">
                                 <tr>
-                                    <th className="px-4 py-3">Material</th>
-                                    <th className="px-4 py-3 text-right">Producción</th>
-                                    <th className="px-4 py-3 text-right">Roturas</th>
-                                    <th className="px-4 py-3 text-right">Tasa de Falla</th>
-                                    <th className="px-4 py-3 w-1/3">Impacto Visual</th>
+                                    <th className="px-4 py-4">Material</th>
+                                    <th className="px-4 py-4 text-right">Producción</th>
+                                    <th className="px-4 py-4 text-right">Roturas</th>
+                                    <th className="px-4 py-4 text-right">Tasa de Falla</th>
+                                    <th className="px-4 py-4 w-1/3">Impacto Visual</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-white/5">
                                 {data.byMaterial.map((mat) => (
-                                    <tr key={mat.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 font-medium text-slate-700 max-w-xs truncate" title={mat.name}>{mat.name}</td>
-                                        <td className="px-4 py-3 text-right text-slate-500">{mat.produced.toLocaleString()}</td>
-                                        <td className="px-4 py-3 text-right font-medium text-slate-800">{mat.broken}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                                mat.rate > 0.5 ? 'bg-red-100 text-red-700' : 
-                                                mat.rate > 0.2 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
+                                    <tr key={mat.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-4 py-4 font-bold text-slate-200 max-w-xs truncate" title={mat.name}>{mat.name}</td>
+                                        <td className="px-4 py-4 text-right text-slate-400">{mat.produced.toLocaleString()}</td>
+                                        <td className="px-4 py-4 text-right font-bold text-white">{mat.broken}</td>
+                                        <td className="px-4 py-4 text-right">
+                                            <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${
+                                                mat.rate > 0.5 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 
+                                                mat.rate > 0.2 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-white/10 text-slate-300 border border-white/10'
                                             }`}>
                                                 {mat.rate.toFixed(2)}%
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
-                                             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <td className="px-4 py-4">
+                                             <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden border border-white/5">
                                                 <div 
-                                                    className={`h-full rounded-full ${mat.rate > 0.5 ? 'bg-red-500' : mat.rate > 0.2 ? 'bg-amber-400' : 'bg-emerald-400'}`} 
+                                                    className={`h-full rounded-full transition-all duration-1000 ${mat.rate > 0.5 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : mat.rate > 0.2 ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]'}`} 
                                                     style={{width: `${Math.min(mat.rate * 20, 100)}%`}} // Scale visual impact
                                                 ></div>
                                             </div>
@@ -341,14 +377,13 @@ export const BreakageView: React.FC = () => {
                                 ))}
                                 {data.byMaterial.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="text-center py-8 text-slate-400">Sin datos de materiales</td>
+                                        <td colSpan={5} className="text-center py-8 text-slate-500">Sin datos de materiales</td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </div>
-
             </div>
           </>
       )}

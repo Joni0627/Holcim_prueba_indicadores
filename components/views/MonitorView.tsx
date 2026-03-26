@@ -424,11 +424,11 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden z-[60]">
-      <div className="absolute inset-0 bg-slate-900 opacity-100 pointer-events-none" />
+    <div className="fixed inset-0 bg-[#0a0f1e] text-white flex flex-col overflow-hidden z-[60]">
+      <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
       
       {/* Top Bar: Title, Date, Time, and Stocks */}
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between shadow-xl relative z-10">
+      <div className="bg-[#0a0f1e]/80 backdrop-blur-md border-b border-white/10 px-6 py-3 flex items-center justify-between shadow-2xl relative z-10">
         <div className="flex items-center gap-6">
           {onBack && (
             <button 
@@ -489,12 +489,12 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
       <div className="flex-1 p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 overflow-hidden min-h-0">
         {/* KPI Header Section */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4 lg:pb-6 flex-shrink-0">
+        <div className="flex items-center justify-between border-b border-white/5 pb-4 lg:pb-6 flex-shrink-0">
           <div className="flex-1 flex items-center gap-4 lg:gap-8 overflow-x-auto no-scrollbar">
             {/* Machine KPIs & Totalizers */}
             <div className="flex-1 flex items-center gap-4">
               {machineKPIs.map(m => (
-                <div key={m.id} className="flex-1 bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-2xl flex flex-col gap-4 min-w-[180px] relative overflow-hidden group hover:border-slate-700 transition-all">
+                <div key={m.id} className="flex-1 bg-white/[0.03] backdrop-blur-sm p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-4 min-w-[180px] relative overflow-hidden group hover:bg-white/[0.05] transition-all">
                   <div className="flex justify-between items-start w-full">
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
@@ -514,21 +514,21 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/50 flex flex-col items-center justify-center gap-1 group-hover:bg-blue-500/5 group-hover:border-blue-500/20 transition-all">
+                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Disponibilidad</span>
                       <span className={`text-lg font-black tracking-tighter ${getAvailabilityColor(m.availability)}`}>
                         {(m.availability * 100).toFixed(0)}%
                       </span>
-                      <div className="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                      <div className="w-full h-1 bg-white/5 rounded-full mt-1 overflow-hidden">
                         <div className={`h-full ${getAvailabilityColor(m.availability).replace('text-', 'bg-')}`} style={{ width: `${m.availability * 100}%` }} />
                       </div>
                     </div>
-                    <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/50 flex flex-col items-center justify-center gap-1 group-hover:bg-amber-500/5 group-hover:border-amber-500/20 transition-all">
+                    <div className="bg-black/40 p-2.5 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all">
                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Rendimiento</span>
                       <span className={`text-lg font-black tracking-tighter ${getPerformanceColor(m.performance)}`}>
                         {(m.performance * 100).toFixed(0)}%
                       </span>
-                      <div className="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
+                      <div className="w-full h-1 bg-white/5 rounded-full mt-1 overflow-hidden">
                         <div className={`h-full ${getPerformanceColor(m.performance).replace('text-', 'bg-')}`} style={{ width: `${m.performance * 100}%` }} />
                       </div>
                     </div>
@@ -538,7 +538,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
 
             {/* Top Downtimes List (Relocated) */}
-            <div className="w-[450px] bg-slate-800/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50 flex-shrink-0">
+            <div className="w-[450px] bg-white/[0.03] backdrop-blur-sm p-3 rounded-2xl border border-white/10 flex flex-col shadow-xl border-l-4 border-l-red-500/50 flex-shrink-0">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] flex items-center gap-2">
                   <AlertCircle size={12} /> Top 5 Paros Internos por Máquina
@@ -550,7 +550,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               <div className="flex-1 overflow-hidden">
                 <table className="w-full text-[9px] border-collapse">
                   <thead>
-                    <tr className="text-slate-500 uppercase font-black border-b border-slate-800">
+                    <tr className="text-slate-500 uppercase font-black border-b border-white/5">
                       <th className="text-left pb-1 w-6">#</th>
                       <th className="text-left pb-1">Máquina</th>
                       <th className="text-left pb-1">HAC</th>
@@ -566,7 +566,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                         return d.machine === targetMachine;
                       })
                       .map((d, idx) => (
-                      <tr key={idx} className="border-b border-slate-800/30 last:border-0 hover:bg-white/5 transition-colors">
+                      <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
                         <td className="py-1.5 text-slate-500 font-black">{d.rank}</td>
                         <td className="py-1.5 text-slate-400 font-bold uppercase">{d.machine.split('-')[0]}</td>
                         <td className="py-1.5 text-blue-400 font-black">{d.hac}</td>
@@ -596,7 +596,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           <div className="col-span-4 flex flex-col gap-6 overflow-hidden">
             
             {/* Ranking Card (Expanded) */}
-            <div className="flex-1 bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden flex flex-col">
+            <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col">
               <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
                 <Trophy size={150} />
               </div>
@@ -649,8 +649,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                           key={shift.name} 
                           className={`relative group transition-all duration-500 p-3 rounded-xl border ${
                             isTop 
-                              ? 'bg-amber-500/5 border-amber-500/20' 
-                              : 'bg-slate-800/20 border-slate-800/50'
+                              ? 'bg-amber-500/10 border-amber-500/30' 
+                              : 'bg-white/[0.03] border-white/5'
                           }`}
                         >
                           <div className="flex justify-between items-center">
@@ -658,7 +658,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                               <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[10px] ${
                                 idx === 0 ? 'bg-amber-500 text-slate-900' : 
                                 idx === 1 ? 'bg-slate-300 text-slate-900' : 
-                                idx === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-400'
+                                idx === 2 ? 'bg-amber-700 text-white' : 'bg-white/10 text-slate-400'
                               }`}>
                                 {idx + 1}
                               </div>
@@ -686,7 +686,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               </div>
 
               {/* RÉCORD HISTÓRICO (TOP 1) */}
-              <div className="mt-6 border-t border-slate-800 pt-6">
+              <div className="mt-6 border-t border-white/5 pt-6">
                 <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-[10px] mb-4 flex items-center gap-2">
                   <Trophy size={14} /> Récord Histórico de Producción
                 </p>
@@ -725,7 +725,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           </div>
 
           {/* Right Column: Timeline */}
-          <div className="col-span-8 bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-2xl flex flex-col overflow-hidden">
+          <div className="col-span-8 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Clock className="text-indigo-400" size={24} />

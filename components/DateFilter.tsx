@@ -109,56 +109,56 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
 
   return (
     <div className="relative z-[60] max-w-full" ref={wrapperRef}>
-      <div className="flex items-center gap-1 sm:gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1 sm:gap-2 bg-white/5 p-1 rounded-lg border border-white/10 shadow-xl overflow-x-auto no-scrollbar backdrop-blur-sm">
         <button
           onClick={() => handlePresetClick('today')}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
             activeFilter === 'today' 
-              ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
           Hoy
         </button>
         <button
           onClick={() => handlePresetClick('yesterday')}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
             activeFilter === 'yesterday' 
-              ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
           Ayer
         </button>
         <button
           onClick={() => handlePresetClick('week')}
-          className={`hidden sm:block px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+          className={`hidden sm:block px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
             activeFilter === 'week' 
-              ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
           7 Días
         </button>
         <button
           onClick={() => handlePresetClick('month')}
-          className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
             activeFilter === 'month' 
-              ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
           Mes
         </button>
         
-        <div className="w-px h-5 bg-slate-200 mx-1"></div>
+        <div className="w-px h-5 bg-white/10 mx-1"></div>
         
         <button 
           onClick={() => setShowCustomRange(!showCustomRange)}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+          className={`flex items-center gap-2 px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
             activeFilter === 'custom' || showCustomRange
-            ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200' 
-            : 'text-slate-500 hover:text-indigo-700 hover:bg-indigo-50'
+            ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)] ring-1 ring-white/20' 
+            : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
           <Calendar size={14} />
@@ -168,29 +168,29 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
       </div>
 
       {showCustomRange && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200 z-[100]">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 rounded-xl shadow-2xl border border-white/10 p-4 animate-in fade-in zoom-in-95 duration-200 z-[100] backdrop-blur-md">
           <div className="flex justify-between items-center mb-4">
-             <h4 className="font-semibold text-slate-800 text-sm">Seleccionar Fecha</h4>
-             <button onClick={() => setShowCustomRange(false)} className="text-slate-400 hover:text-slate-600">
+             <h4 className="font-black text-white text-xs uppercase tracking-widest">Seleccionar Fecha</h4>
+             <button onClick={() => setShowCustomRange(false)} className="text-slate-500 hover:text-white transition-colors">
                <X size={16} />
              </button>
           </div>
           
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Desde</label>
+              <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Desde</label>
               <input 
                 type="date" 
-                className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-900"
+                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
                 value={customRange.start}
                 onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Hasta</label>
+              <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Hasta</label>
               <input 
                 type="date" 
-                className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-900"
+                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
                 value={customRange.end}
                 onChange={(e) => setCustomRange({...customRange, end: e.target.value})}
               />
@@ -199,7 +199,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
             <button 
               onClick={handleApplyRange}
               disabled={!customRange.start || !customRange.end}
-              className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+              className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest py-2 px-4 rounded-lg text-xs flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95"
             >
               <Check size={16} />
               Aplicar

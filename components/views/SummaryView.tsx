@@ -196,17 +196,30 @@ export const SummaryView: React.FC = () => {
   }, [unifiedDetails]);
 
   const byMachine = useMemo(() => {
-    const stats: Record<string, { bags: number, tn: number }> = {};
+    const stats: Record<string, { bags: number, tn: number, availSum: number, perfSum: number, hsMarchaTotal: number, count: number }> = {};
     unifiedDetails.forEach(d => {
-      if (!stats[d.machineName]) stats[d.machineName] = { bags: 0, tn: 0 };
+      if (!stats[d.machineName]) stats[d.machineName] = { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0 };
       stats[d.machineName].tn += (d.valueTn || 0);
       stats[d.machineName].bags += (d.valueBags || 0);
+      
+      const hs = d.hsMarcha || 0;
+      stats[d.machineName].availSum += (d.availability || 0) * hs;
+      stats[d.machineName].perfSum += (d.performance || 0) * hs;
+      stats[d.machineName].hsMarchaTotal += hs;
+      stats[d.machineName].count += 1;
     });
-    return Object.entries(stats).map(([name, s]) => ({
-      name,
-      valueTn: s.tn,
-      value: s.bags
-    }));
+    return Object.entries(stats).map(([name, s]) => {
+      const avgAvail = s.hsMarchaTotal > 0 ? s.availSum / s.hsMarchaTotal : 0;
+      const avgPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 0;
+      return {
+        name,
+        valueTn: s.tn,
+        value: s.bags,
+        availability: avgAvail * 100,
+        performance: avgPerf * 100,
+        oee: (avgAvail * avgPerf) * 100
+      };
+    });
   }, [unifiedDetails]);
 
   const topDowntimesByMachine = useMemo(() => {
@@ -603,26 +616,26 @@ export const SummaryView: React.FC = () => {
               <p className="text-sm font-medium">Sincronizando con Planta...</p>
           </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            
-            {/* LEFT COLUMN (KPIs & Machine Cards) - 4/12 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">            {/* LEFT COLUMN (KPIs & Product Breakdown) - 4/12 */}
             <div className="lg:col-span-4 flex flex-col gap-4">
                 
-                <div data-card="left" className="h-auto min-h-[120px] bg-blue-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden group border border-white/10 flex flex-col justify-center">
-                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                        <PackageCheck size={100} />
+                <div data-card="left" className="h-auto min-h-[120px] bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-3xl shadow-2xl relative overflow-hidden group border border-white/20 flex flex-col justify-center">
+                    <div className="absolute -right-6 -bottom-6 opacity-20 group-hover:scale-110 transition-transform duration-700 blur-sm">
+                        <PackageCheck size={140} />
                     </div>
-                    <p className="text-blue-100 font-bold uppercase tracking-[0.2em] text-[10px] mb-1">Producción Total</p>
-                    <div className="flex items-baseline gap-2">
-                        <h2 className="text-5xl md:text-6xl font-black tracking-tighter drop-shadow-md">
-                            {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </h2>
-                        <span className="text-2xl font-bold text-blue-200/80">Tn</span>
+                    <div className="relative z-10">
+                        <p className="text-blue-100 font-black uppercase tracking-[0.2em] text-[10px] mb-2 opacity-80">Producción Total Hoy</p>
+                        <div className="flex items-baseline gap-3">
+                            <h2 className="text-6xl md:text-7xl font-black tracking-tighter drop-shadow-2xl">
+                                {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </h2>
+                            <span className="text-3xl font-bold text-blue-200/60">Tn</span>
+                        </div>
                     </div>
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col min-h-[300px] overflow-hidden">
+                <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col flex-1 overflow-hidden">
                     <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
                         <TrendingUp className="text-blue-400" size={18} />
                         <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
@@ -646,25 +659,9 @@ export const SummaryView: React.FC = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Producción por Paletizadora (Moved here) */}
-                <div className="grid grid-cols-1 gap-3">
-                    {byMachine.map((m: any) => (
-                        <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex justify-between items-center">
-                            <div>
-                                <div className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{m.name}</div>
-                                <div className="text-[10px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
-                            </div>
-                            <div className={`text-2xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
-                                {m.valueTn.toLocaleString()}
-                                <span className="text-xs ml-1 font-bold text-slate-500">TN</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
             </div>
 
-            {/* RIGHT COLUMN (Stock & Downtime) - 8/12 */}
+            {/* RIGHT COLUMN (Stock, Machines & Downtime) - 8/12 */}
             <div className="lg:col-span-8 flex flex-col gap-4">
                 
                 {/* Stock Section */}
@@ -698,118 +695,162 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Downtime Table Section */}
-                <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
-                    <div className="flex items-center gap-3 bg-amber-600/80 px-5 py-3 relative z-10 border-b border-white/10">
-                        <AlertTriangle className="text-white" size={20} />
-                        <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Paros Internos por Paletizadora (Top 5)</h3>
-                    </div>
-                    <div className="p-4 flex-grow flex flex-col">
-                        <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
-                        {Object.keys(topDowntimesByMachine).length > 0 ? (
-                            <div className="space-y-6">
-                                {Object.entries(topDowntimesByMachine).map(([mId, reasons]) => (
-                                    <div key={mId} className="space-y-2">
-                                        <div className="flex items-center gap-2 border-b border-white/5 pb-1">
-                                            <span className="text-xs font-black text-blue-400 uppercase tracking-widest">{mId}</span>
-                                            <span className="text-[10px] font-bold text-slate-500 bg-white/5 px-2 rounded">{machineHacMap[mId] || 'N/A'}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                    {/* Producción por Paletizadora (Aligned with Downtime) */}
+                    <div className="flex flex-col gap-3">
+                        <div className="bg-blue-600/80 text-white px-5 py-3 rounded-t-2xl flex items-center gap-3 border-b border-white/10">
+                            <Cpu className="text-white" size={20} />
+                            <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Productividad por Paletizadora</h3>
+                        </div>
+                        <div className="flex flex-col gap-3 flex-1">
+                            {byMachine.map((m: any) => (
+                                <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <div className="text-slate-300 text-[10px] font-black uppercase tracking-widest mb-1">{m.name}</div>
+                                            <div className="text-[10px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
                                         </div>
-                                        <table className="w-full text-left border-collapse">
-                                            <thead>
-                                                <tr className="border-b border-white/5">
-                                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">HAC</th>
-                                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">Causa</th>
-                                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-white/5 text-xs">
-                                                {reasons.map((item: any, idx: number) => (
-                                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                        <td className="py-1.5 px-2 text-blue-400 font-bold whitespace-nowrap">{item.hac}</td>
-                                                        <td className="py-1.5 px-2 text-slate-300">{item.reason}</td>
-                                                        <td className="py-1.5 px-2 text-right font-black text-red-400 whitespace-nowrap">
-                                                            {item.duration} <span className="text-[9px] text-slate-500 ml-0.5">min</span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                        <div className={`text-2xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
+                                            {m.valueTn.toLocaleString()}
+                                            <span className="text-xs ml-1 font-bold text-slate-500">TN</span>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin registros de paros internos</div>
-                        )}
+                                    
+                                    {/* Indicators Row */}
+                                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                                        <div className="text-center">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">DISP</p>
+                                            <p className={`text-xs font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
+                                        </div>
+                                        <div className="text-center border-x border-white/5">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">REND</p>
+                                            <p className={`text-xs font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">OEE</p>
+                                            <p className="text-xs font-black text-white">{(m.oee).toFixed(1)}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Downtime Table Section */}
+                    <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-full">
+                        <div className="flex items-center gap-3 bg-amber-600/80 px-5 py-3 relative z-10 border-b border-white/10">
+                            <AlertTriangle className="text-white" size={20} />
+                            <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Paros Internos (Top 5)</h3>
+                        </div>
+                        <div className="p-4 flex-grow flex flex-col">
+                            <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
+                            {Object.keys(topDowntimesByMachine).length > 0 ? (
+                                <div className="space-y-6">
+                                    {Object.entries(topDowntimesByMachine).map(([mId, reasons]) => (
+                                        <div key={mId} className="space-y-2">
+                                            <div className="flex items-center gap-2 border-b border-white/5 pb-1">
+                                                <span className="text-xs font-black text-blue-400 uppercase tracking-widest">{mId}</span>
+                                                <span className="text-[10px] font-bold text-slate-400 bg-white/5 px-2 rounded">{machineHacMap[mId] || 'N/A'}</span>
+                                            </div>
+                                            <table className="w-full text-left border-collapse">
+                                                <thead>
+                                                    <tr className="border-b border-white/5">
+                                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">HAC</th>
+                                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">Causa</th>
+                                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-white/5 text-xs">
+                                                    {reasons.map((item: any, idx: number) => (
+                                                        <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                                            <td className="py-1.5 px-2 text-blue-400 font-bold whitespace-nowrap">{item.hac}</td>
+                                                            <td className="py-1.5 px-2 text-slate-300">{item.reason}</td>
+                                                            <td className="py-1.5 px-2 text-right font-black text-red-400 whitespace-nowrap">
+                                                                {item.duration} <span className="text-[9px] text-slate-500 ml-0.5">min</span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin registros de paros internos</div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         {/* Producción por Turno (Full Width Row) */}
-        <div className="grid grid-cols-1 gap-6 mt-4">
-            <div data-chart="shift" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group">
-            <div className="flex items-center gap-3 bg-slate-800/80 px-5 py-3 relative z-10 border-b border-white/10">
-                <TableProperties className="text-blue-400" size={20} />
-                <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Producción y Métricas por Turno</h3>
+        <div className="w-full mt-8">
+            <div data-chart="shift" className="bg-white/[0.03] backdrop-blur-md rounded-3xl shadow-2xl border border-white/10 flex flex-col relative overflow-hidden group">
+            <div className="flex items-center gap-4 bg-[#0f172a]/80 px-6 py-4 relative z-10 border-b border-white/10">
+                <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                    <TableProperties className="text-blue-400" size={20} />
+                </div>
+                <h3 className="font-black text-white uppercase text-sm tracking-[0.2em]">Producción y Métricas por Turno</h3>
             </div>
-            <div className="p-4 flex-grow flex flex-col">
-                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
+            <div className="p-6 flex-grow flex flex-col">
+                <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar w-full">
                 {shiftData.length > 0 ? (
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
                         <thead>
-                            <tr className="border-b border-white/5">
-                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Turno / Paletizadora</th>
-                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Producción (Tn)</th>
-                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">HS Marcha</th>
-                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Disp %</th>
-                                <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Rend %</th>
+                            <tr className="border-b border-white/10">
+                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500">Turno / Paletizadora</th>
+                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Producción (Tn)</th>
+                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">HS Marcha</th>
+                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Disp %</th>
+                                <th className="py-4 px-4 text-[11px] font-black uppercase tracking-widest text-slate-500 text-right">Rend %</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {shiftData.map((shift, idx) => (
                                 <React.Fragment key={shift.name}>
-                                    <tr className="bg-white/5 transition-colors group/row">
-                                        <td className="py-2 px-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
-                                                <span className="text-xs font-black text-white uppercase tracking-tight">{shift.name}</span>
+                                    <tr className="bg-white/[0.02] transition-colors group/row">
+                                        <td className="py-4 px-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse"></div>
+                                                <span className="text-sm font-black text-white uppercase tracking-tight">{shift.name}</span>
                                             </div>
                                         </td>
-                                        <td className="py-2 px-3 text-right">
-                                            <span className="text-lg font-black text-white tracking-tighter">
+                                        <td className="py-4 px-4 text-right">
+                                            <span className="text-2xl font-black text-white tracking-tighter">
                                                 {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
+                                            <span className="text-xs font-bold text-slate-500 ml-1.5 uppercase">Tn</span>
                                         </td>
-                                        <td className="py-2 px-3 text-right">
-                                            <span className="text-lg font-black text-emerald-400 tracking-tighter">
+                                        <td className="py-4 px-4 text-right">
+                                            <span className="text-2xl font-black text-emerald-400 tracking-tighter">
                                                 {(shift.hsMarcha || 0).toFixed(1)}
                                             </span>
                                         </td>
-                                        <td className="py-2 px-3 text-right">
-                                            <span className="text-lg font-black text-amber-400 tracking-tighter">{shift.disp}%</span>
+                                        <td className="py-4 px-4 text-right">
+                                            <span className="text-2xl font-black text-amber-400 tracking-tighter">{shift.disp}%</span>
                                         </td>
-                                        <td className="py-2 px-3 text-right">
-                                            <span className="text-lg font-black text-indigo-400 tracking-tighter">{shift.rend}%</span>
+                                        <td className="py-4 px-4 text-right">
+                                            <span className="text-2xl font-black text-indigo-400 tracking-tighter">{shift.rend}%</span>
                                         </td>
                                     </tr>
                                     {shift.breakdown.map((m: any, mIdx: number) => (
-                                        <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
-                                            <td className="py-2 px-8">
-                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{m.machineName}</span>
+                                        <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/[0.05] transition-colors border-b border-white/5 last:border-0">
+                                            <td className="py-3 px-10">
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{m.machineName}</span>
                                             </td>
-                                            <td className="py-2 px-3 text-right">
-                                                <span className={`text-sm font-black tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                                <span className="text-[9px] font-medium text-slate-500 ml-1">Tn</span>
+                                            <td className="py-3 px-4 text-right">
+                                                <span className={`text-lg font-black tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                <span className="text-[10px] font-medium text-slate-500 ml-1.5">Tn</span>
                                             </td>
-                                            <td className="py-2 px-3 text-right">
-                                                <span className="text-sm font-black text-emerald-500/80 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
+                                            <td className="py-3 px-4 text-right">
+                                                <span className="text-lg font-black text-emerald-500/80 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                             </td>
-                                            <td className="py-2 px-3 text-right">
-                                                <span className={`text-sm font-black tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
+                                            <td className="py-3 px-4 text-right">
+                                                <span className={`text-lg font-black tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
                                             </td>
-                                            <td className="py-2 px-3 text-right">
-                                                <span className={`text-sm font-black tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
+                                            <td className="py-3 px-4 text-right">
+                                                <span className={`text-lg font-black tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
                                             </td>
                                         </tr>
                                     ))}
