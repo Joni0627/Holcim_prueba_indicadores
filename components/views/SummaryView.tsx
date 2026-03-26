@@ -111,39 +111,37 @@ export const SummaryView: React.FC = () => {
   };
 
   // Data processing using useMemo for performance
-  const downtimesByMachine = useMemo(() => {
-    if (!downtimeResult) return [];
+  const topDowntimesByMachine = useMemo(() => {
+    if (!downtimeResult) return {};
     
     const internalStops = downtimeResult.filter(d => d.downtimeType === 'Interno');
     
-    const grouped = internalStops.reduce((acc: Record<string, any[]>, curr) => {
-      const machine = curr.machineId || 'Desconocida';
-      if (!acc[machine]) acc[machine] = [];
-      acc[machine].push(curr);
-      return acc;
-    }, {});
+    const grouped: Record<string, any[]> = {};
     
-    return Object.entries(grouped).map(([machineId, events]) => {
-      const reasonMap = events.reduce((acc: Record<string, number>, curr) => {
-        acc[curr.reason] = (acc[curr.reason] || 0) + curr.durationMinutes;
-        return acc;
-      }, {});
-      
-      const topReasons = Object.entries(reasonMap)
-        .sort(([, a], [, b]) => (b as number) - (a as number))
-        .slice(0, 5)
-        .map(([reason, duration]) => ({ reason, duration: duration as number }));
-        
-      const totalDuration = topReasons.reduce((acc, r) => acc + r.duration, 0);
-      const hac = events[0]?.hac || 'N/A';
-      
-      return {
-        machineId,
-        hac,
-        totalDuration,
-        reasons: topReasons
-      };
-    }).sort((a, b) => b.totalDuration - a.totalDuration);
+    internalStops.forEach(curr => {
+      if (!grouped[curr.machineId]) grouped[curr.machineId] = [];
+      const existing = grouped[curr.machineId].find(r => r.reason === curr.reason);
+      if (existing) {
+        existing.duration += curr.durationMinutes;
+      } else {
+        grouped[curr.machineId].push({
+          machineId: curr.machineId,
+          hac: curr.hac || 'N/A',
+          reason: curr.reason,
+          duration: curr.durationMinutes
+        });
+      }
+    });
+    
+    // Sort each machine's reasons and take top 5
+    const result: Record<string, any[]> = {};
+    Object.keys(grouped).forEach(mId => {
+      result[mId] = grouped[mId]
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 5);
+    });
+    
+    return result;
   }, [downtimeResult]);
 
   const detailedMetrics = useMemo(() => prodResult?.details || [], [prodResult]);
@@ -151,11 +149,15 @@ export const SummaryView: React.FC = () => {
   // Map of machine to HAC from downtime data
   const machineHacMap = useMemo(() => {
     const map: Record<string, string> = {};
-    downtimesByMachine.forEach(m => {
-      map[m.machineId] = m.hac;
-    });
+    if (downtimeResult) {
+      downtimeResult.forEach(d => {
+        if (d.machineId && d.hac) {
+          map[d.machineId] = d.hac;
+        }
+      });
+    }
     return map;
-  }, [downtimesByMachine]);
+  }, [downtimeResult]);
 
   const toLocalISO = (date: Date) => {
     const y = date.getFullYear();
@@ -172,17 +174,12 @@ export const SummaryView: React.FC = () => {
       if (tn < 430) return 'text-amber-500';
       return 'text-emerald-500';
     }
-    if (mId.includes('673')) {
+    if (mId.includes('673') || mId.includes('674')) {
       if (tn < 443) return 'text-red-500';
       if (tn < 492) return 'text-amber-500';
       return 'text-emerald-500';
     }
-    if (mId.includes('674')) {
-      if (tn < 498) return 'text-red-500';
-      if (tn < 554) return 'text-amber-500';
-      return 'text-emerald-500';
-    }
-    return 'text-slate-700';
+    return 'text-white';
   };
 
   const getPerformanceColor = (val: number) => {
@@ -199,6 +196,14 @@ export const SummaryView: React.FC = () => {
     return 'text-emerald-500';
   };
 
+  const sheetDateToISO = (sheetDate: string) => {
+    if (!sheetDate) return '';
+    if (sheetDate.includes('-')) return sheetDate; // Already ISO
+    const parts = sheetDate.split('/');
+    if (parts.length !== 3) return sheetDate;
+    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  };
+
   const shiftData = useMemo(() => {
     if (!prodResult?.details) return [];
 
@@ -206,7 +211,10 @@ export const SummaryView: React.FC = () => {
     const endStr = toLocalISO(dateRange.end);
     const isSingleDay = startStr === endStr;
 
-    let filteredDetails = prodResult.details;
+    let filteredDetails = prodResult.details.map(d => ({
+      ...d,
+      dateISO: sheetDateToISO(d.date || '')
+    }));
 
     if (isSingleDay) {
       const yesterday = new Date(dateRange.start);
@@ -214,23 +222,30 @@ export const SummaryView: React.FC = () => {
       const yesterdayStr = toLocalISO(yesterday);
 
       // Unify Noche: Today's 3.NOCHE + Yesterday's 4.NOCHE FIN
-      const machines = Array.from(new Set(prodResult.details.map(d => d.machineId)));
-      const unifiedDetails: ShiftMetric[] = [];
+      const machines = Array.from(new Set(filteredDetails.map(d => d.machineId)));
+      const unifiedDetails: any[] = [];
 
       // Add Mañana and Tarde for today
-      prodResult.details.filter(d => d.date === startStr && (d.shift === '1.MAÑANA' || d.shift === '2.TARDE')).forEach(d => unifiedDetails.push(d));
+      filteredDetails.filter(d => d.dateISO === startStr && (d.shift.includes('MAÑANA') || d.shift.includes('TARDE'))).forEach(d => unifiedDetails.push(d));
 
       // Aggregate Noche for each machine
       machines.forEach(m => {
-        const todayNoche = prodResult.details.find(d => d.machineId === m && d.shift === '3.NOCHE' && d.date === startStr);
-        const yesterdayNocheFin = prodResult.details.find(d => d.machineId === m && d.shift === '4.NOCHE FIN' && d.date === yesterdayStr);
+        const todayNoche = filteredDetails.find(d => d.machineId === m && d.shift.includes('NOCHE') && !d.shift.includes('FIN') && d.dateISO === startStr);
+        const yesterdayNocheFin = filteredDetails.find(d => d.machineId === m && d.shift.includes('NOCHE') && d.shift.includes('FIN') && d.dateISO === yesterdayStr);
 
         if (todayNoche || yesterdayNocheFin) {
           const totalTn = (todayNoche?.valueTn || 0) + (yesterdayNocheFin?.valueTn || 0);
           const totalHsMarcha = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0);
-          const count = (todayNoche ? 1 : 0) + (yesterdayNocheFin ? 1 : 0);
-          const avgAvailability = ((todayNoche?.availability || 0) + (yesterdayNocheFin?.availability || 0)) / count;
-          const avgPerformance = ((todayNoche?.performance || 0) + (yesterdayNocheFin?.performance || 0)) / count;
+          
+          // Weighted averages for KPIs
+          const totalWeight = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0) || 1;
+          const avgAvailability = todayNoche && yesterdayNocheFin 
+            ? ((todayNoche.availability * todayNoche.hsMarcha) + (yesterdayNocheFin.availability * yesterdayNocheFin.hsMarcha)) / totalWeight
+            : (todayNoche?.availability || yesterdayNocheFin?.availability || 0);
+            
+          const avgPerformance = todayNoche && yesterdayNocheFin
+            ? ((todayNoche.performance * todayNoche.hsMarcha) + (yesterdayNocheFin.performance * yesterdayNocheFin.hsMarcha)) / totalWeight
+            : (todayNoche?.performance || yesterdayNocheFin?.performance || 0);
 
           unifiedDetails.push({
             machineId: m,
@@ -242,11 +257,14 @@ export const SummaryView: React.FC = () => {
             oee: avgAvailability * avgPerformance,
             valueTn: totalTn,
             hsMarcha: totalHsMarcha,
-            date: startStr
+            dateISO: startStr
           });
         }
       });
       filteredDetails = unifiedDetails;
+    } else {
+      // For range, filter by ISO dates
+      filteredDetails = filteredDetails.filter(d => d.dateISO >= startStr && d.dateISO <= endStr);
     }
 
     // Group by shift for the summary table
@@ -520,36 +538,36 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 pb-8 overflow-x-hidden min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-200">
+    <div className="space-y-4 animate-in fade-in duration-500 pb-8 overflow-x-hidden min-h-screen bg-[#0a0f1e] p-4 md:p-6 text-slate-200">
       
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-200 pb-2 relative z-30">
-        <div className="flex flex-col gap-0">
-            <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-600 rounded-lg shadow-lg">
-                    <Layout size={20} className="text-white" />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4 relative z-30">
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-600 rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+                    <Layout size={24} className="text-white" />
                 </div>
-                <h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-slate-800">EXPEDICION MALAGUEÑO</h1>
+                <h1 className="text-3xl font-black tracking-tighter uppercase leading-none text-white">EXPEDICION MALAGUEÑO</h1>
             </div>
-            <div className="flex flex-wrap items-center gap-3 ml-0 sm:ml-7">
-                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Resumen de productividad Expedición Malagueño</p>
+            <div className="flex flex-wrap items-center gap-3 ml-0 sm:ml-10">
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-widest opacity-80">Resumen de productividad Expedición Malagueño</p>
                 <button 
                     onClick={handleShare}
                     disabled={isSharing}
-                    className={`p-1 rounded-lg transition-colors flex items-center gap-1.5 px-2.5 text-[9px] font-black shadow-sm border ${isSharing ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-700'}`}
+                    className={`p-1.5 rounded-lg transition-all flex items-center gap-2 px-4 text-[10px] font-black shadow-lg border ${isSharing ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-400/30 hover:scale-105 active:scale-95'}`}
                     title="Copiar o Compartir Reporte"
                 >
-                    {isSharing ? <Loader2 size={12} className="animate-spin" /> : <Share2 size={12} />}
+                    {isSharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
                     <span>{isSharing ? 'GENERANDO...' : 'REPORTE'}</span>
                 </button>
             </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 items-center w-full md:w-auto scale-90 origin-right">
+        <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
           <DateFilter onFilterChange={handleFilterChange} />
         </div>
       </div>
 
-      <div id="summary-view-content" className="space-y-3 bg-white p-2 md:p-4 rounded-xl border border-slate-200 shadow-lg">
+      <div id="summary-view-content" className="space-y-6">
         
         {isLoading ? (
            <div className="h-64 flex flex-col items-center justify-center text-slate-400">
@@ -563,41 +581,41 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-3 flex flex-col gap-4 lg:h-full">
                 
                 {/* Producción Total Card */}
-                <div data-card="left" className="h-auto min-h-[100px] bg-gradient-to-br from-blue-600 to-blue-400 text-white p-4 rounded-lg shadow-md relative overflow-hidden group border border-blue-300/30 flex flex-col justify-center">
-                    <div className="absolute -right-2 -bottom-2 opacity-10 group-hover:scale-110 transition-transform duration-500">
-                        <PackageCheck size={80} />
+                <div data-card="left" className="h-auto min-h-[120px] bg-blue-600 text-white p-5 rounded-2xl shadow-lg relative overflow-hidden group border border-white/10 flex flex-col justify-center">
+                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <PackageCheck size={100} />
                     </div>
-                    <p className="text-white font-bold uppercase tracking-wider text-[10px] mb-0.5">Producción Total</p>
-                    <div className="flex items-baseline gap-1">
-                        <h2 className="text-4xl md:text-5xl font-black tracking-tighter">
+                    <p className="text-blue-100 font-bold uppercase tracking-[0.2em] text-[10px] mb-1">Producción Total</p>
+                    <div className="flex items-baseline gap-2">
+                        <h2 className="text-5xl md:text-6xl font-black tracking-tighter drop-shadow-md">
                             {(prodResult?.totalTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </h2>
-                        <span className="text-xl font-bold text-blue-100">Tn</span>
+                        <span className="text-2xl font-bold text-blue-200/80">Tn</span>
                     </div>
                 </div>
 
                 {/* TN por PRODUCTO */}
-                <div data-card="left" className="flex-grow bg-white text-slate-800 rounded-lg shadow-sm border border-slate-200 flex flex-col min-h-[380px] overflow-hidden">
-                    <div className="bg-slate-700 px-4 py-2 flex items-center gap-2">
-                        <TrendingUp className="text-white" size={14} />
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white">TN por PRODUCTO</h3>
+                <div data-card="left" className="flex-grow bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col min-h-[400px] overflow-hidden">
+                    <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
+                        <TrendingUp className="text-blue-400" size={18} />
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
                     </div>
-                    <div className="p-4 space-y-6 flex-grow overflow-y-auto no-scrollbar py-4">
+                    <div className="p-5 space-y-8 flex-grow overflow-y-auto no-scrollbar">
                         {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
-                            <div key={prod.name} className="space-y-1.5">
-                                <div className="flex justify-between text-[11px] font-black uppercase tracking-tight">
-                                    <span className="text-slate-600 truncate max-w-[140px]">{prod.name}</span>
-                                    <span className="text-slate-900">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn</span>
+                            <div key={prod.name} className="space-y-3">
+                                <div className="flex justify-between text-sm font-black uppercase tracking-wider">
+                                    <span className="text-slate-300 truncate max-w-[180px] text-base">{prod.name}</span>
+                                    <span className="text-white text-2xl tracking-tighter">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs text-slate-500 ml-0.5">Tn</span></span>
                                 </div>
-                                <div className="h-2 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                                <div className="h-3 bg-white/5 rounded-full overflow-hidden p-[1px]">
                                     <div 
-                                        className="h-full bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]" 
+                                        className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.5)]" 
                                         style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
                                     />
                                 </div>
                             </div>
                         )) : (
-                            <p className="text-[10px] text-slate-400 italic">Sin datos</p>
+                            <p className="text-xs text-slate-500 italic text-center py-10">Sin datos de producción</p>
                         )}
                     </div>
                 </div>
@@ -609,82 +627,69 @@ export const SummaryView: React.FC = () => {
             <div className="lg:col-span-9 flex flex-col gap-4 lg:h-full">
                 
                 {/* Stock Section */}
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="bg-emerald-600 text-white px-4 py-1.5 flex justify-between items-center shadow-sm">
-                        <h3 className="font-black uppercase tracking-widest text-[10px]">Stock a las 06:00 hs.</h3>
-                        <Clock size={14} />
+                <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 overflow-hidden">
+                    <div className="bg-emerald-600/80 text-white px-5 py-2.5 flex justify-between items-center border-b border-white/5">
+                        <h3 className="font-black uppercase tracking-[0.2em] text-[11px]">Stock a las 06:00 hs.</h3>
+                        <Clock size={18} />
                     </div>
-                    <div className="p-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div className="p-5 grid grid-cols-2 md:grid-cols-5 gap-4">
                         {producedStock.length > 0 ? producedStock.map((item, idx) => (
-                            <div key={item.id} className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center group hover:bg-emerald-50 transition-colors">
-                                <p className="text-[9px] uppercase font-black text-slate-400 mb-0.5 tracking-widest group-hover:text-emerald-600 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
-                                <p className="text-4xl font-black tracking-tighter text-slate-800">
+                            <div key={item.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-emerald-500/10 transition-all hover:scale-[1.02]">
+                                <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-400 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
+                                <p className="text-5xl font-black tracking-tighter text-white">
                                     {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-sm font-bold text-slate-400 ml-1">Tn</span>
+                                    <span className="text-sm font-bold text-slate-500 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) : (
-                            <div className="col-span-full py-4 text-center text-slate-400 italic text-xs">Sin datos de stock</div>
+                            <div className="col-span-full py-10 text-center text-slate-500 italic text-sm">Sin datos de stock</div>
                         )}
                         
                         {producedStock.length > 0 && (
-                            <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100 flex flex-col items-center justify-center text-center shadow-inner">
-                                <p className="text-[8px] uppercase font-bold text-emerald-700 mb-0.5 leading-tight">TOTAL STOCK</p>
-                                <p className="text-4xl font-black tracking-tighter text-emerald-600">
+                            <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20 flex flex-col items-center justify-center text-center shadow-inner">
+                                <p className="text-[9px] uppercase font-black text-emerald-400 mb-1 tracking-widest">TOTAL STOCK</p>
+                                <p className="text-5xl font-black tracking-tighter text-emerald-400">
                                     {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-sm font-bold text-emerald-700 ml-1">Tn</span>
+                                    <span className="text-sm font-bold text-emerald-500/60 ml-1">Tn</span>
                                 </p>
                             </div>
                         )}
                     </div>
                 </div>
-                               {/* Downtime Table Section */}
-                <div data-chart="downtime" className="bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
-                    <div className="flex items-center gap-2 bg-amber-600 px-4 py-2 relative z-10 shadow-sm">
-                        <AlertTriangle className="text-white" size={16} />
-                        <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Ranking de Paros Internos (Top 5)</h3>
+
+                {/* Downtime Table Section */}
+                <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-auto lg:flex-1">
+                    <div className="flex items-center gap-3 bg-amber-600/80 px-5 py-3 relative z-10 border-b border-white/10">
+                        <AlertTriangle className="text-white" size={20} />
+                        <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Paros Internos por Paletizadora (Top 5)</h3>
                     </div>
-                    <div className="p-3 flex-grow flex flex-col">
-                        <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto">
-                        {downtimesByMachine.length > 0 ? (
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-slate-100">
-                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Máquina</th>
-                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">HAC</th>
-                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 w-1/2">Motivos Principales</th>
-                                        <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Total (min)</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {downtimesByMachine.map((machine, idx) => (
-                                        <tr key={machine.machineId} className="hover:bg-slate-50 transition-colors">
-                                            <td className="py-1 px-2">
-                                                <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{machine.machineId}</span>
-                                            </td>
-                                            <td className="py-1 px-2">
-                                                <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">{machine.hac}</span>
-                                            </td>
-                                            <td className="py-1 px-2">
-                                                <div className="space-y-0.5">
-                                                    {machine.reasons.slice(0, 5).map((r: any, rIdx: number) => (
-                                                        <div key={rIdx} className="flex justify-between gap-4 text-[10px] border-b border-slate-50 last:border-0 py-0.5">
-                                                            <span className="text-slate-600 truncate max-w-[450px]">{r.reason}</span>
-                                                            <span className="text-red-500 font-bold whitespace-nowrap">{r.duration}m</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </td>
-                                            <td className="py-1 px-2 text-right align-top">
-                                                <span className="text-sm font-black text-slate-900 tracking-tighter">{machine.totalDuration}</span>
-                                                <span className="text-[9px] font-bold text-slate-400 ml-0.5 uppercase">min</span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <div className="p-4 flex-grow flex flex-col">
+                        <div data-chart-wrapper className="flex-grow relative z-10 overflow-x-auto no-scrollbar">
+                        {Object.keys(topDowntimesByMachine).length > 0 ? (
+                            <div className="space-y-6">
+                                {Object.entries(topDowntimesByMachine).map(([mId, reasons]) => (
+                                    <div key={mId} className="space-y-2">
+                                        <div className="flex items-center gap-2 border-b border-white/5 pb-1">
+                                            <span className="text-xs font-black text-blue-400 uppercase tracking-widest">{mId}</span>
+                                            <span className="text-[10px] font-bold text-slate-500 bg-white/5 px-2 rounded">{machineHacMap[mId] || 'N/A'}</span>
+                                        </div>
+                                        <table className="w-full text-left border-collapse">
+                                            <tbody className="divide-y divide-white/5 text-xs">
+                                                {reasons.map((item: any, idx: number) => (
+                                                    <tr key={idx} className="hover:bg-white/5 transition-colors">
+                                                        <td className="py-1.5 px-2 text-slate-300 w-2/3">{item.reason}</td>
+                                                        <td className="py-1.5 px-2 text-right font-black text-red-400">
+                                                            {item.duration} <span className="text-[9px] text-slate-500 ml-0.5">min</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ))}
+                            </div>
                         ) : (
-                            <div className="h-full flex items-center justify-center text-slate-400 italic text-xs py-6">Sin registros de paros internos</div>
+                            <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin registros de paros internos</div>
                         )}
                     </div>
                 </div>
@@ -692,69 +697,69 @@ export const SummaryView: React.FC = () => {
         </div>
 
             {/* Producción por Turno (Tabla) */}
-            <div data-chart="shift" className="lg:col-span-6 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center gap-2 bg-slate-800 px-4 py-2 relative z-10 shadow-sm">
-                    <TableProperties className="text-white" size={18} />
-                    <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Producción y Métricas por Turno</h3>
+            <div data-chart="shift" className="lg:col-span-6 bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center gap-3 bg-slate-800/80 px-5 py-3 relative z-10 border-b border-white/10">
+                    <TableProperties className="text-blue-400" size={20} />
+                    <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Producción y Métricas por Turno</h3>
                 </div>
-                <div className="p-3 flex-grow flex flex-col">
+                <div className="p-4 flex-grow flex flex-col">
                     <div data-chart-wrapper data-table="shift" className="flex-grow relative z-10 overflow-x-auto no-scrollbar min-w-0">
                     {shiftData.length > 0 ? (
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-slate-100">
-                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Turno / Paletizadora</th>
-                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Producción (Tn)</th>
-                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">HS Marcha</th>
-                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Disp %</th>
-                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Rend %</th>
+                                <tr className="border-b border-white/5">
+                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500">Turno / Paletizadora</th>
+                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Producción (Tn)</th>
+                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">HS Marcha</th>
+                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Disp %</th>
+                                    <th className="py-2 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Rend %</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-white/5">
                                 {shiftData.map((shift, idx) => (
                                     <React.Fragment key={shift.name}>
-                                        <tr className="bg-slate-50/50 transition-colors group/row">
-                                            <td className="py-1 px-2">
+                                        <tr className="bg-white/5 transition-colors group/row">
+                                            <td className="py-2 px-3">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                                                    <span className="text-xs font-black text-slate-900 uppercase tracking-tight">{shift.name}</span>
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+                                                    <span className="text-xs font-black text-white uppercase tracking-tight">{shift.name}</span>
                                                 </div>
                                             </td>
-                                            <td className="py-1 px-2 text-right">
-                                                <span className="text-sm font-black text-slate-900 tracking-tighter">
+                                            <td className="py-2 px-3 text-right">
+                                                <span className="text-lg font-black text-white tracking-tighter">
                                                     {(shift.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                                 </span>
-                                                <span className="text-[9px] font-bold text-slate-400 ml-0.5 uppercase">Tn</span>
+                                                <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
                                             </td>
-                                            <td className="py-1 px-2 text-right">
-                                                <span className="text-sm font-black text-emerald-600 tracking-tighter">
+                                            <td className="py-2 px-3 text-right">
+                                                <span className="text-lg font-black text-emerald-400 tracking-tighter">
                                                     {(shift.hsMarcha || 0).toFixed(1)}
                                                 </span>
                                             </td>
-                                            <td className="py-1 px-2 text-right">
-                                                <span className="text-sm font-black text-amber-600 tracking-tighter">{shift.disp}%</span>
+                                            <td className="py-2 px-3 text-right">
+                                                <span className="text-lg font-black text-amber-400 tracking-tighter">{shift.disp}%</span>
                                             </td>
-                                            <td className="py-1 px-2 text-right">
-                                                <span className="text-sm font-black text-indigo-600 tracking-tighter">{shift.rend}%</span>
+                                            <td className="py-2 px-3 text-right">
+                                                <span className="text-lg font-black text-indigo-400 tracking-tighter">{shift.rend}%</span>
                                             </td>
                                         </tr>
                                         {shift.breakdown.map((m: any, mIdx: number) => (
-                                            <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
-                                                <td className="py-1 px-6">
-                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
+                                            <tr key={`${shift.name}-${m.machineName}`} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                                                <td className="py-2 px-8">
+                                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
-                                                <td className="py-1 px-2 text-right">
-                                                    <span className={`text-xs font-bold tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                                                    <span className="text-[8px] font-medium text-slate-400 ml-0.5">Tn</span>
+                                                <td className="py-2 px-3 text-right">
+                                                    <span className={`text-sm font-black tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                    <span className="text-[9px] font-medium text-slate-500 ml-1">Tn</span>
                                                 </td>
-                                                <td className="py-1 px-2 text-right">
-                                                    <span className="text-xs font-bold text-emerald-600 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
+                                                <td className="py-2 px-3 text-right">
+                                                    <span className="text-sm font-black text-emerald-500/80 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                                 </td>
-                                                <td className="py-1 px-2 text-right">
-                                                    <span className={`text-xs font-bold tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
+                                                <td className="py-2 px-3 text-right">
+                                                    <span className={`text-sm font-black tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
                                                 </td>
-                                                <td className="py-1 px-2 text-right">
-                                                    <span className={`text-xs font-bold tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
+                                                <td className="py-2 px-3 text-right">
+                                                    <span className={`text-sm font-black tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
                                                 </td>
                                             </tr>
                                         ))}
@@ -763,30 +768,30 @@ export const SummaryView: React.FC = () => {
                             </tbody>
                         </table>
                     ) : (
-                        <div className="h-full flex items-center justify-center text-slate-400 italic text-xs py-6">Sin datos de producción por turno</div>
+                        <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin datos de producción por turno</div>
                     )}
                 </div>
             </div>
             {/* Footer decorativo para la tabla */}
-                <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center relative z-10">
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Resumen Operativo</p>
-                    <div className="flex gap-1">
-                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-slate-200"></div>)}
+                <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center relative z-10">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.3em]">Resumen Operativo</p>
+                    <div className="flex gap-1.5">
+                        {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/10"></div>)}
                     </div>
                 </div>
             </div>
 
-            <div className="lg:col-span-6 bg-white rounded-lg shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
-                <div className="flex items-center bg-blue-900 px-4 py-2 relative z-10 shadow-sm">
-                    <div className="flex items-center gap-2">
-                        <Cpu className="text-white" size={16} />
-                        <h3 className="font-bold text-white uppercase text-[10px] tracking-widest">Producción por Paletizadora</h3>
+            <div className="lg:col-span-6 bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group">
+                <div className="flex items-center bg-blue-900/80 px-5 py-3 relative z-10 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <Cpu className="text-blue-400" size={20} />
+                        <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Producción por Paletizadora</h3>
                     </div>
                 </div>
                 
-                <div className="p-4 flex-grow flex flex-col">
+                <div className="p-5 flex-grow flex flex-col">
                     {prodResult?.byMachine && prodResult.byMachine.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {prodResult.byMachine.map((m, i) => {
                             const machineMetrics = detailedMetrics.filter(met => met.machineName === m.name);
                             const avg = machineMetrics.length > 0 ? {
@@ -798,74 +803,42 @@ export const SummaryView: React.FC = () => {
                             return (
                                 <div 
                                     key={m.name} 
-                                    className="bg-slate-50 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col overflow-hidden"
+                                    className="bg-white/5 p-4 rounded-xl border border-white/5 hover:bg-white/[0.08] transition-all group/card"
                                 >
-                                    {/* Card Header */}
-                                    <div className="px-3 py-1.5 border-b border-slate-100 flex justify-between items-center bg-slate-100/50">
-                                        <span className="text-[9px] font-black text-slate-800 uppercase tracking-widest">{m.name}</span>
-                                        <Activity size={10} className="text-emerald-500" />
-                                    </div>
-
-                                    {/* Main Value Area */}
-                                    <div className="p-3 flex-grow flex flex-col">
-                                        <div className="bg-white rounded-xl p-3 mb-3 relative overflow-hidden border border-slate-100">
-                                            <p className="text-slate-400 text-[7px] font-bold uppercase mb-0.5 tracking-widest">Producción Total</p>
-                                            <div className="flex items-baseline gap-1">
-                                                <span className="text-3xl font-black text-slate-900 tracking-tighter">
-                                                    {(m.valueTn || 0).toFixed(0)}
-                                                </span>
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Tn</span>
-                                            </div>
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h4 className="text-lg font-black text-white tracking-tighter">{m.name}</h4>
+                                            <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">{machineHacMap[m.name] || 'N/A'}</p>
                                         </div>
-
-                                        {/* KPIs Grid - Modernized */}
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <div className="flex flex-col items-center">
-                                                <div className="w-full h-1 bg-slate-200 rounded-full mb-1 overflow-hidden">
-                                                    <div 
-                                                        className="h-full bg-slate-400" 
-                                                        style={{ width: `${Math.min((avg.oee || 0) * 100, 100)}%` }}
-                                                    />
-                                                </div>
-                                                <p className="text-[7px] font-bold text-slate-400 uppercase">OEE</p>
-                                                <p className="text-xs font-black text-slate-800">{((avg.oee || 0) * 100).toFixed(0)}%</p>
-                                            </div>
-                                            <div className="flex flex-col items-center">
-                                                <div className="w-full h-1 bg-slate-200 rounded-full mb-1 overflow-hidden">
-                                                    <div 
-                                                        className="h-full bg-emerald-500" 
-                                                        style={{ width: `${Math.min((avg.disp || 0) * 100, 100)}%` }}
-                                                    />
-                                                </div>
-                                                <p className="text-[7px] font-bold text-slate-400 uppercase">Disp</p>
-                                                <p className={`text-xs font-black ${getAvailabilityColor(Math.round((avg.disp || 0) * 100))}`}>{((avg.disp || 0) * 100).toFixed(0)}%</p>
-                                            </div>
-                                            <div className="flex flex-col items-center">
-                                                <div className="w-full h-1 bg-slate-200 rounded-full mb-1 overflow-hidden">
-                                                    <div 
-                                                        className="h-full bg-amber-500" 
-                                                        style={{ width: `${Math.min((avg.rend || 0) * 100, 100)}%` }}
-                                                    />
-                                                </div>
-                                                <p className="text-[7px] font-bold text-slate-400 uppercase">Rend</p>
-                                                <p className={`text-xs font-black ${getPerformanceColor(Math.round((avg.rend || 0) * 100))}`}>{((avg.rend || 0) * 100).toFixed(0)}%</p>
-                                            </div>
+                                        <div className="text-right">
+                                            <p className={`text-2xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
+                                                {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                                <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="bg-black/20 p-2 rounded-lg text-center border border-white/5">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase mb-1">DISP</p>
+                                            <p className={`text-sm font-black ${getAvailabilityColor(Math.round(avg.disp * 100))}`}>{Math.round(avg.disp * 100)}%</p>
+                                        </div>
+                                        <div className="bg-black/20 p-2 rounded-lg text-center border border-white/5">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase mb-1">REND</p>
+                                            <p className={`text-sm font-black ${getPerformanceColor(Math.round(avg.rend * 100))}`}>{Math.round(avg.rend * 100)}%</p>
+                                        </div>
+                                        <div className="bg-black/20 p-2 rounded-lg text-center border border-white/5">
+                                            <p className="text-[8px] font-black text-slate-500 uppercase mb-1">OEE</p>
+                                            <p className="text-sm font-black text-blue-400">{Math.round(avg.oee * 100)}%</p>
                                         </div>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
-                ) : (
-                    <div className="flex-grow flex items-center justify-center text-slate-400 py-8 italic text-xs">Sin datos de máquinas</div>
-                )}
-                </div>
-                {/* Footer decorativo para la tabla */}
-                <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between items-center relative z-10">
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Resumen Operativo</p>
-                    <div className="flex gap-1">
-                        {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 rounded-full bg-slate-200"></div>)}
-                    </div>
+                    ) : (
+                        <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin datos de paletizadoras</div>
+                    )}
                 </div>
             </div>
         </div>
