@@ -231,13 +231,17 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   // Queries with 20 min refresh
   const { data: prodResult, isLoading: loadingProd } = useQuery({
     queryKey: ['monitor-prod'],
-    queryFn: () => fetchProductionStats(today, today),
+    queryFn: async () => {
+      return fetchProductionStats(today, today);
+    },
     refetchInterval: 1200000, // 20 minutes
   });
 
   const { data: downtimeResult = [], isLoading: loadingDowntime } = useQuery({
     queryKey: ['monitor-downtimes'],
-    queryFn: () => fetchDowntimes(today, today),
+    queryFn: async () => {
+      return fetchDowntimes(today, today);
+    },
     refetchInterval: 1200000,
   });
 
@@ -254,9 +258,22 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     }
   }, [prodResult, downtimeResult, stockResult]);
 
-  const topShift = useMemo(() => {
-    if (!prodResult?.byShift || prodResult.byShift.length === 0) return null;
-    return [...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0];
+  const toLocalISO = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const todayStr = useMemo(() => toLocalISO(today), [today]);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    return toLocalISO(d);
+  }, [today]);
+
+  const unifiedProd = useMemo(() => {
+    return prodResult;
   }, [prodResult]);
 
   const producedStock = useMemo(() => {
@@ -317,18 +334,29 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   }, [downtimeResult]);
 
   const allDowntimesOrdered = useMemo(() => {
-    return [...downtimeResult]
-      .sort((a, b) => b.durationMinutes - a.durationMinutes)
-      .slice(0, 10)
-      .map((d, idx) => ({
-        rank: idx + 1,
-        shift: getVisualShift(d.startTime || '00:00').split('.')[1] || getVisualShift(d.startTime || '00:00'),
-        hac: d.hac || 'S/HAC',
-        reason: d.reason.length > 35 ? d.reason.substring(0, 35) + '...' : d.reason,
-        fullName: d.reason,
-        duration: d.durationMinutes,
-        machine: d.machineId
-      }));
+    const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+    const result: any[] = [];
+
+    machines.forEach(m => {
+      const machineDowntimes = downtimeResult
+        .filter(d => d.machineId === m && (d.downtimeType || '').toLowerCase().includes('interno'))
+        .sort((a, b) => b.durationMinutes - a.durationMinutes)
+        .slice(0, 5);
+      
+      machineDowntimes.forEach((d, idx) => {
+        result.push({
+          rank: idx + 1,
+          shift: getVisualShift(d.startTime || '00:00').split('.')[1] || getVisualShift(d.startTime || '00:00'),
+          hac: d.hac || 'S/HAC',
+          reason: d.reason.length > 25 ? d.reason.substring(0, 25) + '...' : d.reason,
+          fullName: d.reason,
+          duration: d.durationMinutes,
+          machine: d.machineId
+        });
+      });
+    });
+
+    return result;
   }, [downtimeResult]);
 
   const ITEMS_PER_PAGE = 5;
@@ -349,10 +377,22 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     };
   }, [prodResult]);
 
+  const getTnColor = (machineId: string, tn: number) => {
+    return 'text-white';
+  };
+
+  const getPerformanceColor = (val: number) => {
+    return 'text-emerald-500';
+  };
+
+  const getAvailabilityColor = (val: number) => {
+    return 'text-emerald-500';
+  };
+
   const machineKPIs = useMemo(() => {
     const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
     return machines.map(m => {
-      const machineDetails = prodResult?.details?.filter(d => d.machineId === m) || [];
+      const machineDetails = unifiedProd?.details?.filter(d => d.machineId === m) || [];
       const totalTn = machineDetails.reduce((acc, curr) => acc + (curr.valueTn || 0), 0);
       if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0, totalTn: 0 };
       const count = machineDetails.length;
@@ -364,13 +404,13 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         totalTn
       };
     });
-  }, [prodResult]);
+  }, [unifiedProd]);
 
   const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
 
   const { data: topRecords = [], isLoading: loadingTop } = useQuery({
     queryKey: ['monitor-top-records'],
-    queryFn: () => fetchTopRecords(1),
+    queryFn: () => fetchTopRecords(3),
     refetchInterval: 3600000, // 1 hour
   });
 
@@ -385,9 +425,10 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
   return (
     <div className="fixed inset-0 bg-slate-950 text-white flex flex-col overflow-hidden z-[60]">
+      <div className="absolute inset-0 bg-slate-900 opacity-100 pointer-events-none" />
       
       {/* Top Bar: Title, Date, Time, and Stocks */}
-      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 border-b border-blue-400/30 px-6 py-3 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.4)] relative z-10">
+      <div className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between shadow-xl relative z-10">
         <div className="flex items-center gap-6">
           {onBack && (
             <button 
@@ -403,8 +444,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               <Layout size={20} className="text-white" />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-xl font-black tracking-tighter uppercase leading-none text-white">Monitor de Producción</h1>
-              <div className="flex items-center gap-2 mt-0.5">
+              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-white">MONITOR DE PRODUCTIVIDAD</h1>
+              <div className="flex items-center gap-2 mt-1">
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -432,13 +473,13 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-6">
             {producedStock.map(item => (
-              <div key={item.id} className="flex flex-col items-center bg-black/20 px-4 py-1.5 rounded-xl border border-white/5 backdrop-blur-md">
-                <span className="text-[8px] font-black text-blue-200 uppercase tracking-widest mb-0.5">{item.product.replace('CEMENTO ', '')}</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-black text-white tracking-tighter leading-none">
+              <div key={item.id} className="flex flex-col items-center bg-black/30 px-6 py-2 rounded-2xl border border-white/10 backdrop-blur-xl shadow-lg">
+                <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.15em] mb-1">{item.product.replace('CEMENTO ', '')}</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl font-black text-white tracking-tighter leading-none">
                     {Math.floor(item.tonnage).toLocaleString()}
                   </span>
-                  <span className="text-[8px] text-blue-300 font-black uppercase">Tn</span>
+                  <span className="text-[10px] text-blue-300 font-black uppercase">Tn</span>
                 </div>
               </div>
             ))}
@@ -475,20 +516,20 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/50 flex flex-col items-center justify-center gap-1 group-hover:bg-blue-500/5 group-hover:border-blue-500/20 transition-all">
                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Disponibilidad</span>
-                      <span className={`text-lg font-black tracking-tighter ${m.availability > 0.9 ? 'text-blue-400' : 'text-slate-300'}`}>
+                      <span className={`text-lg font-black tracking-tighter ${getAvailabilityColor(m.availability)}`}>
                         {(m.availability * 100).toFixed(0)}%
                       </span>
                       <div className="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                        <div className="h-full bg-blue-500" style={{ width: `${m.availability * 100}%` }} />
+                        <div className={`h-full ${getAvailabilityColor(m.availability).replace('text-', 'bg-')}`} style={{ width: `${m.availability * 100}%` }} />
                       </div>
                     </div>
                     <div className="bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/50 flex flex-col items-center justify-center gap-1 group-hover:bg-amber-500/5 group-hover:border-amber-500/20 transition-all">
                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Rendimiento</span>
-                      <span className={`text-lg font-black tracking-tighter ${m.performance > 0.9 ? 'text-amber-400' : 'text-slate-300'}`}>
+                      <span className={`text-lg font-black tracking-tighter ${getPerformanceColor(m.performance)}`}>
                         {(m.performance * 100).toFixed(0)}%
                       </span>
                       <div className="w-full h-1 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                        <div className="h-full bg-amber-500" style={{ width: `${m.performance * 100}%` }} />
+                        <div className={`h-full ${getPerformanceColor(m.performance).replace('text-', 'bg-')}`} style={{ width: `${m.performance * 100}%` }} />
                       </div>
                     </div>
                   </div>
@@ -497,35 +538,39 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
 
             {/* Top Downtimes List (Relocated) */}
-            <div className="w-[400px] bg-slate-800/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50 flex-shrink-0">
+            <div className="w-[450px] bg-slate-800/80 p-3 rounded-2xl border border-slate-700/50 flex flex-col shadow-xl border-l-4 border-l-red-500/50 flex-shrink-0">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] flex items-center gap-2">
-                  <AlertCircle size={12} /> Ranking de Paros (Minutos)
+                  <AlertCircle size={12} /> Top 5 Paros Internos por Máquina
                 </p>
-                {allDowntimesOrdered.length > ITEMS_PER_PAGE && (
-                  <span className="text-[8px] font-bold text-slate-500 uppercase">
-                    Pág {(currentDowntimePage % Math.ceil(allDowntimesOrdered.length / ITEMS_PER_PAGE)) + 1} / {Math.ceil(allDowntimesOrdered.length / ITEMS_PER_PAGE)}
-                  </span>
-                )}
+                <span className="text-[8px] font-bold text-slate-500 uppercase">
+                  Pág {(currentDowntimePage % 3) + 1} / 3
+                </span>
               </div>
               <div className="flex-1 overflow-hidden">
                 <table className="w-full text-[9px] border-collapse">
                   <thead>
                     <tr className="text-slate-500 uppercase font-black border-b border-slate-800">
                       <th className="text-left pb-1 w-6">#</th>
-                      <th className="text-left pb-1">Turno</th>
+                      <th className="text-left pb-1">Máquina</th>
                       <th className="text-left pb-1">HAC</th>
                       <th className="text-left pb-1">Motivo</th>
                       <th className="text-right pb-1">Min</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedDowntimes.map((d, idx) => (
+                    {allDowntimesOrdered
+                      .filter(d => {
+                        const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+                        const targetMachine = machines[currentDowntimePage % 3];
+                        return d.machine === targetMachine;
+                      })
+                      .map((d, idx) => (
                       <tr key={idx} className="border-b border-slate-800/30 last:border-0 hover:bg-white/5 transition-colors">
                         <td className="py-1.5 text-slate-500 font-black">{d.rank}</td>
-                        <td className="py-1.5 text-slate-400 font-bold uppercase">{d.shift}</td>
+                        <td className="py-1.5 text-slate-400 font-bold uppercase">{d.machine.split('-')[0]}</td>
                         <td className="py-1.5 text-blue-400 font-black">{d.hac}</td>
-                        <td className="py-1.5 text-slate-300 font-bold truncate max-w-[180px]" title={d.fullName}>
+                        <td className="py-1.5 text-slate-300 font-bold truncate max-w-[150px]" title={d.fullName}>
                           {d.reason}
                         </td>
                         <td className="py-1.5 text-right text-red-400 font-black">
@@ -533,9 +578,9 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                         </td>
                       </tr>
                     ))}
-                    {paginatedDowntimes.length === 0 && (
+                    {allDowntimesOrdered.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="py-4 text-center text-slate-500 italic">Sin paros registrados</td>
+                        <td colSpan={5} className="py-4 text-center text-slate-500 italic">Sin paros internos registrados</td>
                       </tr>
                     )}
                   </tbody>
@@ -569,21 +614,21 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 </div>
 
                 {/* Today's Leader Highlight */}
-                {prodResult?.byShift && prodResult.byShift.length > 0 && (
+                {unifiedProd?.byShift && unifiedProd.byShift.length > 0 && (
                   <div className="bg-gradient-to-r from-amber-500/20 to-transparent border-l-4 border-amber-500 p-4 rounded-r-2xl">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-[10px] font-black text-amber-500/70 uppercase tracking-widest leading-none mb-1">Líder del Día (Puesto 1)</p>
                         <p className="text-xl font-black text-white uppercase tracking-tighter">
-                          {([...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name.split('.')[1] || [...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name)}
+                          {([...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name.split('.')[1] || [...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name)}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-black text-emerald-400 tracking-tighter leading-none">
-                          {Math.floor([...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn).toLocaleString()}
+                          {Math.floor([...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn).toLocaleString()}
                           <span className="text-[10px] font-bold text-slate-500 ml-1 uppercase">Tn</span>
                         </p>
-                        {topRecords[0] && [...prodResult.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn >= topRecords[0].valueTn && (
+                        {topRecords[0] && [...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn >= topRecords[0].valueTn && (
                           <span className="text-[8px] font-black text-emerald-500 uppercase animate-bounce block mt-1">¡Récord Superado!</span>
                         )}
                       </div>
@@ -594,8 +639,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
               
               <div className="flex-1 flex flex-col gap-2 overflow-y-auto no-scrollbar">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">Desempeño por Turno</p>
-                {prodResult?.byShift && prodResult.byShift.length > 0 ? (
-                  [...prodResult.byShift]
+                {unifiedProd?.byShift && unifiedProd.byShift.length > 0 ? (
+                  [...unifiedProd.byShift]
                     .sort((a, b) => b.valueTn - a.valueTn)
                     .map((shift, idx) => {
                       const isTop = idx === 0;
@@ -721,8 +766,15 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                     </div>
                     <div className="flex-1 flex flex-col justify-around min-h-0">
                       {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
+                        const machineProd = unifiedProd?.details?.find(d => d.machineId === machine && d.shift === shiftsOrdered[currentShiftIndex]);
                         return (
                           <div key={machine} className="w-full">
+                            <div className="flex justify-between items-center mb-1 px-2">
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{machine.split('-')[0]}</span>
+                              <span className={`text-[10px] font-black uppercase tracking-widest ${getTnColor(machine, machineProd?.valueTn || 0)}`}>
+                                {Math.floor(machineProd?.valueTn || 0).toLocaleString()} Tn
+                              </span>
+                            </div>
                             <MonitorTimelineBar 
                               shiftKey={shiftsOrdered[currentShiftIndex]} 
                               machineId={machine} 

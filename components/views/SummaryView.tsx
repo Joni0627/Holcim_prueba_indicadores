@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity, Clock, Share2, Download, Cpu } from 'lucide-react';
+import { PackageCheck, Timer, AlertTriangle, TrendingUp, TableProperties, CircleDashed, Loader2, Weight, BarChart2, Calendar, Activity, Clock, Share2, Download, Cpu, Layout } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend, LabelList } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
@@ -63,7 +63,19 @@ export const SummaryView: React.FC = () => {
 
   const { data: prodResult, isLoading: loadingProd } = useQuery({
     queryKey: ['production', dateRange.start.toISOString(), dateRange.end.toISOString()],
-    queryFn: () => fetchProductionStats(dateRange.start, dateRange.end),
+    queryFn: async () => {
+      const start = new Date(dateRange.start);
+      const end = new Date(dateRange.end);
+      
+      // If single day, fetch yesterday too for shift unification
+      if (start.getTime() === end.getTime()) {
+        const yesterday = new Date(start);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return fetchProductionStats(yesterday, end);
+      }
+      
+      return fetchProductionStats(start, end);
+    },
   });
 
   const { data: stockResult, isLoading: loadingStocks } = useQuery({
@@ -145,36 +157,125 @@ export const SummaryView: React.FC = () => {
     return map;
   }, [downtimesByMachine]);
 
-  const shiftData = useMemo(() => {
-    if (!prodResult?.byShift) return [];
-    return prodResult.byShift.map(s => {
-        const shiftMetrics = detailedMetrics.filter(m => m.shift === s.name);
-        const count = shiftMetrics.length;
-        
-        const totalHsMarcha = shiftMetrics.reduce((acc, m) => acc + (m.hsMarcha || 0), 0);
-        
-        const metrics = count > 0 ? {
-            disp: shiftMetrics.reduce((acc, m) => acc + m.availability, 0) / count,
-            rend: shiftMetrics.reduce((acc, m) => acc + m.performance, 0) / count,
-        } : { disp: 0, rend: 0 };
+  const toLocalISO = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
 
-        return {
-            ...s,
-            valueTn: s.valueTn || 0,
-            hsMarcha: totalHsMarcha || 0,
-            disp: Math.round((metrics.disp || 0) * 100),
-            rend: Math.round((metrics.rend || 0) * 100),
-            breakdown: shiftMetrics.map(m => ({
-                machineName: m.machineName,
-                valueTn: m.valueTn || 0,
-                hsMarcha: m.hsMarcha || 0,
-                disp: Math.round((m.availability || 0) * 100),
-                rend: Math.round((m.performance || 0) * 100),
-                hac: machineHacMap[m.machineName] || 'N/A'
-            }))
-        };
-    });
-  }, [prodResult, detailedMetrics, machineHacMap]);
+  const getTnColor = (machineId: string, tn: number) => {
+    if (tn === 0) return 'text-slate-400';
+    const mId = machineId.toUpperCase();
+    if (mId.includes('672')) {
+      if (tn < 387) return 'text-red-500';
+      if (tn < 430) return 'text-amber-500';
+      return 'text-emerald-500';
+    }
+    if (mId.includes('673')) {
+      if (tn < 443) return 'text-red-500';
+      if (tn < 492) return 'text-amber-500';
+      return 'text-emerald-500';
+    }
+    if (mId.includes('674')) {
+      if (tn < 498) return 'text-red-500';
+      if (tn < 554) return 'text-amber-500';
+      return 'text-emerald-500';
+    }
+    return 'text-slate-700';
+  };
+
+  const getPerformanceColor = (val: number) => {
+    const p = val;
+    if (p < 92) return 'text-red-500';
+    if (p < 95) return 'text-amber-500';
+    return 'text-emerald-500';
+  };
+
+  const getAvailabilityColor = (val: number) => {
+    const a = val;
+    if (a < 76) return 'text-red-500';
+    if (a < 81) return 'text-amber-500';
+    return 'text-emerald-500';
+  };
+
+  const shiftData = useMemo(() => {
+    if (!prodResult?.details) return [];
+
+    const startStr = toLocalISO(dateRange.start);
+    const endStr = toLocalISO(dateRange.end);
+    const isSingleDay = startStr === endStr;
+
+    let filteredDetails = prodResult.details;
+
+    if (isSingleDay) {
+      const yesterday = new Date(dateRange.start);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = toLocalISO(yesterday);
+
+      // Unify Noche: Today's 3.NOCHE + Yesterday's 4.NOCHE FIN
+      const machines = Array.from(new Set(prodResult.details.map(d => d.machineId)));
+      const unifiedDetails: ShiftMetric[] = [];
+
+      // Add Mañana and Tarde for today
+      prodResult.details.filter(d => d.date === startStr && (d.shift === '1.MAÑANA' || d.shift === '2.TARDE')).forEach(d => unifiedDetails.push(d));
+
+      // Aggregate Noche for each machine
+      machines.forEach(m => {
+        const todayNoche = prodResult.details.find(d => d.machineId === m && d.shift === '3.NOCHE' && d.date === startStr);
+        const yesterdayNocheFin = prodResult.details.find(d => d.machineId === m && d.shift === '4.NOCHE FIN' && d.date === yesterdayStr);
+
+        if (todayNoche || yesterdayNocheFin) {
+          const totalTn = (todayNoche?.valueTn || 0) + (yesterdayNocheFin?.valueTn || 0);
+          const totalHsMarcha = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0);
+          const count = (todayNoche ? 1 : 0) + (yesterdayNocheFin ? 1 : 0);
+          const avgAvailability = ((todayNoche?.availability || 0) + (yesterdayNocheFin?.availability || 0)) / count;
+          const avgPerformance = ((todayNoche?.performance || 0) + (yesterdayNocheFin?.performance || 0)) / count;
+
+          unifiedDetails.push({
+            machineId: m,
+            machineName: m,
+            shift: '3.NOCHE',
+            availability: avgAvailability,
+            performance: avgPerformance,
+            quality: 1,
+            oee: avgAvailability * avgPerformance,
+            valueTn: totalTn,
+            hsMarcha: totalHsMarcha,
+            date: startStr
+          });
+        }
+      });
+      filteredDetails = unifiedDetails;
+    }
+
+    // Group by shift for the summary table
+    const shifts = ['1.MAÑANA', '2.TARDE', '3.NOCHE'];
+    return shifts.map(sName => {
+      const sMetrics = filteredDetails.filter(d => d.shift === sName);
+      const totalTn = sMetrics.reduce((acc, m) => acc + (m.valueTn || 0), 0);
+      const totalHsMarcha = sMetrics.reduce((acc, m) => acc + (m.hsMarcha || 0), 0);
+      const count = sMetrics.length;
+      const avgDisp = count > 0 ? sMetrics.reduce((acc, m) => acc + m.availability, 0) / count : 0;
+      const avgRend = count > 0 ? sMetrics.reduce((acc, m) => acc + m.performance, 0) / count : 0;
+
+      return {
+        name: sName,
+        valueTn: totalTn,
+        hsMarcha: totalHsMarcha,
+        disp: Math.round(avgDisp * 100),
+        rend: Math.round(avgRend * 100),
+        breakdown: sMetrics.map(m => ({
+          machineName: m.machineName,
+          valueTn: m.valueTn || 0,
+          hsMarcha: m.hsMarcha || 0,
+          disp: Math.round((m.availability || 0) * 100),
+          rend: Math.round((m.performance || 0) * 100),
+          hac: machineHacMap[m.machineName] || 'N/A'
+        }))
+      };
+    }).filter(s => s.valueTn > 0 || s.breakdown.length > 0);
+  }, [prodResult, dateRange, machineHacMap]);
 
   const productBreakdown = useMemo(() => {
     if (!prodResult?.byMachineProduct) return [];
@@ -419,14 +520,16 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 pb-8 overflow-x-hidden">
+    <div className="space-y-4 animate-in fade-in duration-500 pb-8 overflow-x-hidden min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-200">
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-200 pb-2 relative z-30">
         <div className="flex flex-col gap-0">
             <div className="flex items-center gap-2">
-                <Calendar className="text-slate-400" size={20} />
-                <h1 className="text-lg md:text-xl font-bold text-slate-800">{formatDate(dateRange.start)}</h1>
+                <div className="p-2 bg-blue-600 rounded-lg shadow-lg">
+                    <Layout size={20} className="text-white" />
+                </div>
+                <h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-slate-800">EXPEDICION MALAGUEÑO</h1>
             </div>
             <div className="flex flex-wrap items-center gap-3 ml-0 sm:ml-7">
                 <p className="text-[10px] font-bold text-blue-600 uppercase tracking-tight">Resumen de productividad Expedición Malagueño</p>
@@ -515,9 +618,9 @@ export const SummaryView: React.FC = () => {
                         {producedStock.length > 0 ? producedStock.map((item, idx) => (
                             <div key={item.id} className="bg-slate-50 p-3 rounded-lg border border-slate-100 flex flex-col items-center justify-center text-center group hover:bg-emerald-50 transition-colors">
                                 <p className="text-[9px] uppercase font-black text-slate-400 mb-0.5 tracking-widest group-hover:text-emerald-600 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
-                                <p className="text-xl font-black tracking-tighter text-slate-800">
+                                <p className="text-4xl font-black tracking-tighter text-slate-800">
                                     {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-[10px] font-bold text-slate-400 ml-0.5">Tn</span>
+                                    <span className="text-sm font-bold text-slate-400 ml-1">Tn</span>
                                 </p>
                             </div>
                         )) : (
@@ -527,9 +630,9 @@ export const SummaryView: React.FC = () => {
                         {producedStock.length > 0 && (
                             <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100 flex flex-col items-center justify-center text-center shadow-inner">
                                 <p className="text-[8px] uppercase font-bold text-emerald-700 mb-0.5 leading-tight">TOTAL STOCK</p>
-                                <p className="text-xl font-black tracking-tighter text-emerald-600">
+                                <p className="text-4xl font-black tracking-tighter text-emerald-600">
                                     {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                                    <span className="text-[10px] font-bold text-emerald-700 ml-0.5">Tn</span>
+                                    <span className="text-sm font-bold text-emerald-700 ml-1">Tn</span>
                                 </p>
                             </div>
                         )}
@@ -564,9 +667,9 @@ export const SummaryView: React.FC = () => {
                                             </td>
                                             <td className="py-1 px-2">
                                                 <div className="space-y-0.5">
-                                                    {machine.reasons.slice(0, 2).map((r: any, rIdx: number) => (
-                                                        <div key={rIdx} className="flex justify-between gap-4 text-[10px]">
-                                                            <span className="text-slate-600 truncate max-w-[350px]">{r.reason}</span>
+                                                    {machine.reasons.slice(0, 5).map((r: any, rIdx: number) => (
+                                                        <div key={rIdx} className="flex justify-between gap-4 text-[10px] border-b border-slate-50 last:border-0 py-0.5">
+                                                            <span className="text-slate-600 truncate max-w-[450px]">{r.reason}</span>
                                                             <span className="text-red-500 font-bold whitespace-nowrap">{r.duration}m</span>
                                                         </div>
                                                     ))}
@@ -641,17 +744,17 @@ export const SummaryView: React.FC = () => {
                                                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{m.machineName}</span>
                                                 </td>
                                                 <td className="py-1 px-2 text-right">
-                                                    <span className="text-xs font-bold text-slate-700 tracking-tight">{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                    <span className={`text-xs font-bold tracking-tight ${getTnColor(m.machineName, m.valueTn)}`}>{(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                                                     <span className="text-[8px] font-medium text-slate-400 ml-0.5">Tn</span>
                                                 </td>
                                                 <td className="py-1 px-2 text-right">
                                                     <span className="text-xs font-bold text-emerald-600 tracking-tight">{(m.hsMarcha || 0).toFixed(1)}</span>
                                                 </td>
                                                 <td className="py-1 px-2 text-right">
-                                                    <span className="text-xs font-bold text-amber-600 tracking-tight">{m.disp}%</span>
+                                                    <span className={`text-xs font-bold tracking-tight ${getAvailabilityColor(m.disp)}`}>{m.disp}%</span>
                                                 </td>
                                                 <td className="py-1 px-2 text-right">
-                                                    <span className="text-xs font-bold text-indigo-600 tracking-tight">{m.rend}%</span>
+                                                    <span className={`text-xs font-bold tracking-tight ${getPerformanceColor(m.rend)}`}>{m.rend}%</span>
                                                 </td>
                                             </tr>
                                         ))}
@@ -735,7 +838,7 @@ export const SummaryView: React.FC = () => {
                                                     />
                                                 </div>
                                                 <p className="text-[7px] font-bold text-slate-400 uppercase">Disp</p>
-                                                <p className="text-xs font-black text-emerald-600">{((avg.disp || 0) * 100).toFixed(0)}%</p>
+                                                <p className={`text-xs font-black ${getAvailabilityColor(Math.round((avg.disp || 0) * 100))}`}>{((avg.disp || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                             <div className="flex flex-col items-center">
                                                 <div className="w-full h-1 bg-slate-200 rounded-full mb-1 overflow-hidden">
@@ -745,7 +848,7 @@ export const SummaryView: React.FC = () => {
                                                     />
                                                 </div>
                                                 <p className="text-[7px] font-bold text-slate-400 uppercase">Rend</p>
-                                                <p className="text-xs font-black text-amber-600">{((avg.rend || 0) * 100).toFixed(0)}%</p>
+                                                <p className={`text-xs font-black ${getPerformanceColor(Math.round((avg.rend || 0) * 100))}`}>{((avg.rend || 0) * 100).toFixed(0)}%</p>
                                             </div>
                                         </div>
                                     </div>

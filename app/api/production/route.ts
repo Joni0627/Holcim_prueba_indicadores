@@ -239,6 +239,7 @@ export async function GET(req: Request) {
             machineId: d.machineName,
             machineName: d.machineName,
             shift: d.shift,
+            date: cabecerasFiltradas.find(c => c.get("descripcion_paletizadora") === d.machineName && c.get("turno") === d.shift)?.get("fecha"),
             availability: disponibilidad,
             performance: rendimiento,
             quality: 1, 

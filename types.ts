@@ -46,6 +46,7 @@ export interface ShiftMetric {
   machineId: string;
   machineName: string;
   shift: string; 
+  date?: string;
   availability: number;
   performance: number;
   quality: number;
