@@ -52,6 +52,7 @@ export interface ShiftMetric {
   quality: number;
   oee: number;
   valueTn?: number;
+  valueBags?: number;
   hsMarcha?: number;
   hac?: string;
 }
