@@ -135,7 +135,8 @@ export async function GET(req: Request) {
     cabecerasFiltradas.forEach(row => {
         const maquinaDesc = row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida";
         const turno = row.get("turno") || "Sin Turno";
-        const key = `${maquinaDesc}-${turno}`;
+        const fecha = row.get("fecha") || "Sin Fecha";
+        const key = `${maquinaDesc}-${turno}-${fecha}`;
 
         const tnHeader = parseNumber(row.get("tn_totales_turno")); // Mantener para OEE si es necesario
         const hsMarcha = parseNumber(row.get("hs_marcha"));
@@ -182,6 +183,7 @@ export async function GET(req: Request) {
 
         const turno = cabecera.get("turno") || "Sin Turno";
         const maquinaDesc = cabecera.get("descripcion_paletizadora") || cabecera.get("paletizadora") || "Desconocida";
+        const fecha = cabecera.get("fecha") || "Sin Fecha";
 
         totalBags += bags;
         totalTn += tn; // Sumar desde la lista
@@ -224,7 +226,8 @@ export async function GET(req: Request) {
         ...products // Spread products for Recharts: { name: 'MG.672', 'CPF40': 500, 'Maestro': 200 }
     })).sort((a,b) => a.name.localeCompare(b.name));
 
-    const details = Object.values(detailsMap).map(d => {
+    const details = Object.entries(detailsMap).map(([key, d]) => {
+        const [,, fecha] = key.split('-');
         const disponibilidad = d.duracionSum > 0 
             ? (d.hsParoExtSum + d.hsMarchaSum) / d.duracionSum 
             : 0;
@@ -239,7 +242,7 @@ export async function GET(req: Request) {
             machineId: d.machineName,
             machineName: d.machineName,
             shift: d.shift,
-            date: cabecerasFiltradas.find(c => c.get("descripcion_paletizadora") === d.machineName && c.get("turno") === d.shift)?.get("fecha"),
+            date: fecha,
             availability: disponibilidad,
             performance: rendimiento,
             quality: 1, 

@@ -120,7 +120,8 @@ export const SummaryView: React.FC = () => {
     
     internalStops.forEach(curr => {
       if (!grouped[curr.machineId]) grouped[curr.machineId] = [];
-      const existing = grouped[curr.machineId].find(r => r.reason === curr.reason);
+      // Group by both reason AND hac to be precise as requested
+      const existing = grouped[curr.machineId].find(r => r.reason === curr.reason && r.hac === curr.hac);
       if (existing) {
         existing.duration += curr.durationMinutes;
       } else {
@@ -201,7 +202,9 @@ export const SummaryView: React.FC = () => {
     if (sheetDate.includes('-')) return sheetDate; // Already ISO
     const parts = sheetDate.split('/');
     if (parts.length !== 3) return sheetDate;
-    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    let year = parts[2];
+    if (year.length === 2) year = `20${year}`;
+    return `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
   };
 
   const shiftData = useMemo(() => {
@@ -226,12 +229,12 @@ export const SummaryView: React.FC = () => {
       const unifiedDetails: any[] = [];
 
       // Add Mañana and Tarde for today
-      filteredDetails.filter(d => d.dateISO === startStr && (d.shift.includes('MAÑANA') || d.shift.includes('TARDE'))).forEach(d => unifiedDetails.push(d));
+      filteredDetails.filter(d => d.dateISO === startStr && (d.shift.toUpperCase().includes('MAÑANA') || d.shift.toUpperCase().includes('TARDE'))).forEach(d => unifiedDetails.push(d));
 
       // Aggregate Noche for each machine
       machines.forEach(m => {
-        const todayNoche = filteredDetails.find(d => d.machineId === m && d.shift.includes('NOCHE') && !d.shift.includes('FIN') && d.dateISO === startStr);
-        const yesterdayNocheFin = filteredDetails.find(d => d.machineId === m && d.shift.includes('NOCHE') && d.shift.includes('FIN') && d.dateISO === yesterdayStr);
+        const todayNoche = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && !d.shift.toUpperCase().includes('FIN') && d.dateISO === startStr);
+        const yesterdayNocheFin = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && d.shift.toUpperCase().includes('FIN') && d.dateISO === yesterdayStr);
 
         if (todayNoche || yesterdayNocheFin) {
           const totalTn = (todayNoche?.valueTn || 0) + (yesterdayNocheFin?.valueTn || 0);
@@ -268,9 +271,14 @@ export const SummaryView: React.FC = () => {
     }
 
     // Group by shift for the summary table
-    const shifts = ['1.MAÑANA', '2.TARDE', '3.NOCHE'];
-    return shifts.map(sName => {
-      const sMetrics = filteredDetails.filter(d => d.shift === sName);
+    const shifts = [
+      { id: '1.MAÑANA', label: 'MAÑANA' },
+      { id: '2.TARDE', label: 'TARDE' },
+      { id: '3.NOCHE', label: 'NOCHE' }
+    ];
+
+    return shifts.map(s => {
+      const sMetrics = filteredDetails.filter(d => d.shift.toUpperCase().includes(s.label));
       const totalTn = sMetrics.reduce((acc, m) => acc + (m.valueTn || 0), 0);
       const totalHsMarcha = sMetrics.reduce((acc, m) => acc + (m.hsMarcha || 0), 0);
       const count = sMetrics.length;
@@ -278,7 +286,7 @@ export const SummaryView: React.FC = () => {
       const avgRend = count > 0 ? sMetrics.reduce((acc, m) => acc + m.performance, 0) / count : 0;
 
       return {
-        name: sName,
+        name: s.id,
         valueTn: totalTn,
         hsMarcha: totalHsMarcha,
         disp: Math.round(avgDisp * 100),
@@ -674,11 +682,19 @@ export const SummaryView: React.FC = () => {
                                             <span className="text-[10px] font-bold text-slate-500 bg-white/5 px-2 rounded">{machineHacMap[mId] || 'N/A'}</span>
                                         </div>
                                         <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-white/5">
+                                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">HAC</th>
+                                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500">Causa</th>
+                                                    <th className="py-1 px-2 text-[9px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
+                                                </tr>
+                                            </thead>
                                             <tbody className="divide-y divide-white/5 text-xs">
                                                 {reasons.map((item: any, idx: number) => (
                                                     <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                        <td className="py-1.5 px-2 text-slate-300 w-2/3">{item.reason}</td>
-                                                        <td className="py-1.5 px-2 text-right font-black text-red-400">
+                                                        <td className="py-1.5 px-2 text-blue-400 font-bold whitespace-nowrap">{item.hac}</td>
+                                                        <td className="py-1.5 px-2 text-slate-300">{item.reason}</td>
+                                                        <td className="py-1.5 px-2 text-right font-black text-red-400 whitespace-nowrap">
                                                             {item.duration} <span className="text-[9px] text-slate-500 ml-0.5">min</span>
                                                         </td>
                                                     </tr>
