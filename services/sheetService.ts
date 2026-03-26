@@ -1,10 +1,17 @@
 
 import { DowntimeEvent, ProductionStats, BreakageStats, StockStats } from "../types";
 
+const toLocalISO = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
 export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEvent[]> => {
   try {
-    const startStr = start.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
+    const startStr = toLocalISO(start);
+    const endStr = toLocalISO(end);
     
     // Llamada a la API con el rango de fechas
     const res = await fetch(`/api/paros?start=${startStr}&end=${endStr}`);
@@ -48,8 +55,8 @@ export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEv
 
 export const fetchProductionStats = async (start: Date, end: Date): Promise<ProductionStats | null> => {
     try {
-        const startStr = start.toISOString().split('T')[0];
-        const endStr = end.toISOString().split('T')[0];
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
 
         const res = await fetch(`/api/production?start=${startStr}&end=${endStr}`);
         
@@ -65,8 +72,8 @@ export const fetchProductionStats = async (start: Date, end: Date): Promise<Prod
 
 export const fetchBreakageStats = async (start: Date, end: Date): Promise<BreakageStats | null> => {
     try {
-        const startStr = start.toISOString().split('T')[0];
-        const endStr = end.toISOString().split('T')[0];
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
 
         const res = await fetch(`/api/breakage?start=${startStr}&end=${endStr}`);
         
@@ -82,8 +89,8 @@ export const fetchBreakageStats = async (start: Date, end: Date): Promise<Breaka
 
 export const fetchStocks = async (start: Date, end: Date): Promise<StockStats | null> => {
     try {
-        const startStr = start.toISOString().split('T')[0];
-        const endStr = end.toISOString().split('T')[0];
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
 
         const res = await fetch(`/api/stocks?start=${startStr}&end=${endStr}`);
         

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft } from 'lucide-react';
+import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchTopRecords } from '../../services/sheetService';
@@ -370,7 +370,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
   const { data: topRecords = [], isLoading: loadingTop } = useQuery({
     queryKey: ['monitor-top-records'],
-    queryFn: () => fetchTopRecords(3),
+    queryFn: () => fetchTopRecords(1),
     refetchInterval: 3600000, // 1 hour
   });
 
@@ -640,33 +640,40 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 )}
               </div>
 
-              {/* PODIO HISTÓRICO */}
+              {/* RÉCORD HISTÓRICO (TOP 1) */}
               <div className="mt-6 border-t border-slate-800 pt-6">
                 <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-[10px] mb-4 flex items-center gap-2">
-                  <Trophy size={14} /> Podio Histórico de Producción
+                  <Trophy size={14} /> Récord Histórico de Producción
                 </p>
                 <div className="grid grid-cols-1 gap-3">
-                  {topRecords.map((record: any, idx: number) => (
-                    <div key={idx} className="bg-indigo-500/5 border border-indigo-500/20 p-3 rounded-xl flex items-center justify-between group hover:bg-indigo-500/10 transition-all">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-[10px] ${
-                          idx === 0 ? 'bg-amber-500 text-slate-900' : 
-                          idx === 1 ? 'bg-slate-300 text-slate-900' : 
-                          'bg-amber-700 text-white'
-                        }`}>
-                          {idx + 1}
+                  {topRecords.length > 0 ? (
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-4 rounded-2xl flex items-center justify-between group hover:bg-indigo-500/20 transition-all shadow-lg shadow-indigo-500/5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center font-black text-lg shadow-lg shadow-amber-500/20">
+                          1
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-white uppercase tracking-tighter leading-none">{record.machineId}</span>
-                          <span className="text-[8px] font-bold text-slate-500 uppercase mt-1">{record.date} - {record.shift.split('.')[1] || record.shift}</span>
+                          <span className="text-xs font-black text-white uppercase tracking-wider leading-none">{topRecords[0].machineId}</span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase mt-1.5 flex items-center gap-2">
+                            <Calendar size={10} /> {topRecords[0].date} 
+                            <span className="text-slate-600">•</span>
+                            <Clock size={10} /> {topRecords[0].shift.split('.')[1] || topRecords[0].shift}
+                          </span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-black text-indigo-400 tracking-tighter">{Math.floor(record.valueTn).toLocaleString()}</span>
-                        <span className="text-[8px] font-bold text-slate-600 ml-1 uppercase">Tn</span>
+                        <div className="flex items-baseline justify-end gap-1">
+                          <span className="text-2xl font-black text-indigo-400 tracking-tighter">{Math.floor(topRecords[0].valueTn).toLocaleString()}</span>
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">Tn</span>
+                        </div>
+                        <p className="text-[8px] font-black text-indigo-500/70 uppercase tracking-widest mt-1">Máximo Histórico</p>
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <div className="py-4 text-center text-slate-600 italic text-xs">
+                      Cargando récord...
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
