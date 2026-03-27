@@ -219,6 +219,7 @@ export const MonitorView: React.FC<{
   const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
   const [currentStockIndex, setCurrentStockIndex] = useState(0);
   const [currentDowntimePage, setCurrentDowntimePage] = useState(0);
+  const [currentCarouselPage, setCurrentCarouselPage] = useState(0);
   
   const selectedDate = useMemo(() => dateRange.start, [dateRange.start]);
 
@@ -251,6 +252,22 @@ export const MonitorView: React.FC<{
     }, 10000);
     return () => clearInterval(timer);
   }, []);
+
+  // Cycle carousel every 25 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentCarouselPage((prev) => (prev + 1) % 5);
+    }, 25000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const carouselPages = [
+    { id: 'production', label: 'Producción y Récords' },
+    { id: 'shift-production', label: 'Producción por Turno' },
+    { id: 'downtimes', label: 'Paros y Cronograma' },
+    { id: 'stocks', label: 'Inventario de Stock' },
+    { id: 'news', label: 'Novedades de Turno' }
+  ];
 
   // Queries with 20 min refresh
   const { data: prodResult, isLoading: loadingProd } = useQuery({
@@ -444,7 +461,7 @@ export const MonitorView: React.FC<{
 
   const { data: topRecords = [], isLoading: loadingTop } = useQuery({
     queryKey: ['monitor-top-records'],
-    queryFn: () => fetchTopRecords(3),
+    queryFn: () => fetchTopRecords(15), // Fetch more to find per-machine records
     refetchInterval: 3600000, // 1 hour
   });
 
@@ -533,321 +550,541 @@ export const MonitorView: React.FC<{
       </div>
 
       <div className="flex-1 p-4 lg:p-6 flex flex-col gap-4 lg:gap-6 overflow-hidden min-h-0">
-        {/* KPI Header Section */}
+        {/* KPI Header Section - Always Visible */}
         <div className="flex items-center justify-between border-b border-white/5 pb-4 lg:pb-6 flex-shrink-0">
           <div className="flex-1 flex items-center gap-4 lg:gap-8 overflow-x-auto no-scrollbar">
             {/* Machine KPIs & Totalizers */}
             <div className="flex-1 flex items-center gap-4">
               {machineKPIs.map(m => (
-                <div key={m.id} className="flex-1 bg-white/[0.03] backdrop-blur-sm p-6 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-6 min-w-[220px] relative overflow-hidden group hover:bg-white/[0.05] transition-all">
+                <div key={m.id} className="flex-1 bg-white/[0.03] backdrop-blur-sm p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-4 min-w-[200px] relative overflow-hidden group hover:bg-white/[0.05] transition-all">
                   <div className="flex justify-between items-start w-full">
                     <div className="flex flex-col">
-                      <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
-                      <span className="text-xl font-black text-white uppercase tracking-tight mt-1">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
+                      <span className="text-lg font-black text-white uppercase tracking-tight mt-1">
                         {m.id.split('-')[0]}
                       </span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-xs font-black text-emerald-500/70 uppercase tracking-tighter">Total Hoy</span>
+                      <span className="text-[10px] font-black text-emerald-500/70 uppercase tracking-tighter">Total Hoy</span>
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-3xl font-black text-emerald-400 tracking-tighter leading-none">
+                        <span className="text-2xl font-black text-emerald-400 tracking-tighter leading-none">
                           {Math.floor(m.totalTn).toLocaleString()}
                         </span>
-                        <span className="text-xs font-black text-slate-500 uppercase">Tn</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase">Tn</span>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-6">
-                    <div className="bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-3 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
                       <CircularProgress 
                         value={m.oee} 
                         label="OEE" 
-                        size={90} 
-                        strokeWidth={10} 
+                        size={60} 
+                        strokeWidth={6} 
                         color="text-amber-500" 
                       />
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">OEE</span>
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">OEE</span>
                     </div>
-                    <div className="bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-3 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
+                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
                       <CircularProgress 
                         value={m.availability} 
                         label="DISP" 
-                        size={90} 
-                        strokeWidth={10} 
+                        size={60} 
+                        strokeWidth={6} 
                         color="text-blue-400" 
                       />
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Disponibilidad</span>
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Disp.</span>
                     </div>
-                    <div className="bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-3 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all">
+                    <div className="bg-black/40 p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all">
                       <CircularProgress 
                         value={m.performance} 
                         label="REND" 
-                        size={90} 
-                        strokeWidth={10} 
+                        size={60} 
+                        strokeWidth={6} 
                         color="text-emerald-400" 
                       />
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rendimiento</span>
+                      <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Rend.</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Top Downtimes List (Relocated) */}
-            <div className="w-[450px] bg-white/[0.03] backdrop-blur-sm p-3 rounded-2xl border border-white/10 flex flex-col shadow-xl border-l-4 border-l-red-500/50 flex-shrink-0">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-red-400 font-black uppercase tracking-[0.2em] text-[9px] flex items-center gap-2">
-                  <AlertCircle size={12} /> Top 5 Paros Internos por Máquina
-                </p>
-                <span className="text-[8px] font-bold text-slate-500 uppercase">
-                  Pág {(currentDowntimePage % 3) + 1} / 3
-                </span>
+            {/* Global KPI Summary */}
+            <div className="w-[300px] bg-gradient-to-br from-indigo-600/20 to-blue-600/20 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-xl flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <Activity className="text-indigo-400" size={20} />
+                <span className="text-xs font-black text-white uppercase tracking-widest">Eficiencia Global</span>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <table className="w-full text-[9px] border-collapse">
-                  <thead>
-                    <tr className="text-slate-500 uppercase font-black border-b border-white/5">
-                      <th className="text-left pb-1 w-6">#</th>
-                      <th className="text-left pb-1">Máquina</th>
-                      <th className="text-left pb-1">HAC</th>
-                      <th className="text-left pb-1">Motivo</th>
-                      <th className="text-right pb-1">Min</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allDowntimesOrdered
-                      .filter(d => {
-                        const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
-                        const targetMachine = machines[currentDowntimePage % 3];
-                        return d.machine === targetMachine;
-                      })
-                      .map((d, idx) => (
-                      <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
-                        <td className="py-1.5 text-slate-500 font-black">{d.rank}</td>
-                        <td className="py-1.5 text-slate-400 font-bold uppercase">{d.machine.split('-')[0]}</td>
-                        <td className="py-1.5 text-blue-400 font-black">{d.hac}</td>
-                        <td className="py-1.5 text-slate-300 font-bold truncate max-w-[150px]" title={d.fullName}>
-                          {d.reason}
-                        </td>
-                        <td className="py-1.5 text-right text-red-400 font-black">
-                          {d.duration}
-                        </td>
-                      </tr>
-                    ))}
-                    {allDowntimesOrdered.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="py-4 text-center text-slate-500 italic">Sin paros internos registrados</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              <div className="flex items-center justify-around">
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-black text-white">{Math.round(globalKPIs.oee * 100)}%</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">OEE</span>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-black text-white">{Math.round(globalKPIs.availability * 100)}%</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">Disp.</span>
+                </div>
+                <div className="w-px h-8 bg-white/10" />
+                <div className="flex flex-col items-center">
+                  <span className="text-2xl font-black text-white">{Math.round(globalKPIs.performance * 100)}%</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase">Rend.</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
-          
-          {/* Left Column: Ranking (Expanded to 8/12) */}
-          <div className="col-span-8 flex flex-col gap-6 overflow-hidden">
-            
-            {/* Ranking Card (Expanded) */}
-            <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col">
-              <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                <Trophy size={220} />
-              </div>
-              <div className="flex flex-col gap-10 mb-12">
-                <div className="flex items-center justify-between">
-                  <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-3xl flex items-center gap-5">
-                    <Trophy size={42} /> Ranking de Producción
-                  </p>
-                  {topRecords[0] && (
-                    <div className="flex items-center gap-4 bg-indigo-500/20 border border-indigo-500/30 px-8 py-3 rounded-full">
-                      <div className="w-4 h-4 rounded-full bg-indigo-400 animate-pulse" />
-                      <span className="text-base font-black text-indigo-300 uppercase tracking-widest">Récord Histórico: {Math.floor(topRecords[0].valueTn).toLocaleString()} Tn</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Today's Leader Highlight */}
-                {unifiedProd?.byShift && unifiedProd.byShift.length > 0 && (
-                  <div className="bg-gradient-to-r from-amber-500/20 to-transparent border-l-[12px] border-amber-500 p-12 rounded-r-3xl shadow-2xl shadow-amber-500/10">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-lg font-black text-amber-500/70 uppercase tracking-widest leading-none mb-5">Líder del Día (Puesto 1)</p>
-                        <p className="text-7xl font-black text-white uppercase tracking-tighter">
-                          {([...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name.split('.')[1] || [...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-8xl font-black text-emerald-400 tracking-tighter leading-none">
-                          {Math.floor([...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn).toLocaleString()}
-                          <span className="text-3xl font-bold text-slate-500 ml-3 uppercase">Tn</span>
-                        </p>
-                        {topRecords[0] && [...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn >= topRecords[0].valueTn && (
-                          <span className="text-base font-black text-emerald-500 uppercase animate-bounce block mt-5">¡Récord Superado!</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex-1 flex flex-col gap-5 overflow-y-auto no-scrollbar">
-                <p className="text-base font-black text-slate-500 uppercase tracking-widest mb-4 px-1">Desempeño por Turno</p>
-                {unifiedProd?.byShift && unifiedProd.byShift.length > 0 ? (
-                  [...unifiedProd.byShift]
-                    .sort((a, b) => b.valueTn - a.valueTn)
-                    .map((shift, idx) => {
-                      const isTop = idx === 0;
-                      return (
-                        <div 
-                          key={shift.name} 
-                          className={`relative group transition-all duration-500 p-8 rounded-2xl border ${
-                            isTop 
-                              ? 'bg-amber-500/10 border-amber-500/30' 
-                              : 'bg-white/[0.03] border-white/5'
-                          }`}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-8">
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-2xl ${
-                                idx === 0 ? 'bg-amber-500 text-slate-900' : 
-                                idx === 1 ? 'bg-slate-300 text-slate-900' : 
-                                idx === 2 ? 'bg-amber-700 text-white' : 'bg-white/10 text-slate-400'
-                              }`}>
-                                {idx + 1}
-                              </div>
-                              <div>
-                                <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-amber-500 text-3xl' : 'text-slate-400 text-2xl'}`}>
-                                  {shift.name.split('.')[1] || shift.name}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className={`font-black tracking-tighter ${isTop ? 'text-white text-5xl' : 'text-slate-400 text-3xl'}`}>
-                                {Math.floor(shift.valueTn).toLocaleString()}
-                                <span className="text-sm font-bold text-slate-500 ml-2 uppercase">Tn</span>
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <p className="text-slate-500 italic text-sm">Calculando ranking...</p>
-                  </div>
-                )}
-              </div>
-
-              {/* RÉCORD HISTÓRICO (TOP 1) */}
-              <div className="mt-10 border-t border-white/5 pt-10">
-                <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-base mb-8 flex items-center gap-4">
-                  <Trophy size={28} /> Récord Histórico de Producción
-                </p>
-                <div className="grid grid-cols-1 gap-6">
-                  {topRecords.length > 0 ? (
-                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-10 rounded-3xl flex items-center justify-between group hover:bg-indigo-500/20 transition-all shadow-2xl shadow-indigo-500/10">
-                      <div className="flex items-center gap-8">
-                        <div className="w-20 h-20 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center font-black text-4xl shadow-2xl shadow-amber-500/30">
-                          1
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-4xl font-black text-white uppercase tracking-wider leading-none">{topRecords[0].machineId}</span>
-                          <span className="text-lg font-bold text-slate-400 uppercase mt-4 flex items-center gap-5">
-                            <Calendar size={22} /> {topRecords[0].date} 
-                            <span className="text-slate-600">•</span>
-                            <Clock size={22} /> {topRecords[0].shift.split('.')[1] || topRecords[0].shift}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-baseline justify-end gap-3">
-                          <span className="text-8xl font-black text-indigo-400 tracking-tighter">{Math.floor(topRecords[0].valueTn).toLocaleString()}</span>
-                          <span className="text-2xl font-bold text-slate-500 uppercase">Tn</span>
-                        </div>
-                        <p className="text-lg font-black text-indigo-500/70 uppercase tracking-widest mt-3">Máximo Histórico</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="py-8 text-center text-slate-600 italic text-sm">
-                      Cargando récord...
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+        {/* Carousel Section */}
+        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+          {/* Carousel Tabs */}
+          <div className="flex items-center gap-2">
+            {carouselPages.map((page, idx) => (
+              <button
+                key={page.id}
+                onClick={() => setCurrentCarouselPage(idx)}
+                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
+                  currentCarouselPage === idx 
+                    ? 'bg-emerald-500 border-emerald-400 text-slate-900 shadow-lg shadow-emerald-500/20' 
+                    : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                }`}
+              >
+                {page.label}
+              </button>
+            ))}
           </div>
 
-          {/* Right Column: Timeline (Reduced to 4/12) */}
-          <div className="col-span-4 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 border border-white/10 shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Clock className="text-indigo-400" size={24} />
-                <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-sm">Cronograma Diario de Operación</p>
-              </div>
-              <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500/60 rounded-sm"></div> Operativo</div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> Paro</div>
-              </div>
-            </div>
-
-            <div className="flex-1 relative overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div 
-                  key={shiftsOrdered[currentShiftIndex]}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.5 }}
-                  className="h-full flex flex-col"
-                >
-                  <div className="flex-1 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl font-black text-white uppercase tracking-[0.3em] whitespace-nowrap">
-                          {SHIFT_MAP[shiftsOrdered[currentShiftIndex] as keyof typeof SHIFT_MAP].label}
-                        </span>
-                        <div className="h-px w-32 bg-slate-800"></div>
+          <div className="flex-1 relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentCarouselPage}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0 flex flex-col"
+              >
+                {currentCarouselPage === 0 && (
+                  <div className="flex-1 grid grid-cols-12 gap-6">
+                    {/* Podium of the Day */}
+                    <div className="col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8 opacity-10">
+                        <Trophy size={160} />
                       </div>
-                      <div className="flex gap-2">
-                        {shiftsOrdered.map((_, idx) => (
-                          <div 
-                            key={idx} 
-                            className={`h-1.5 rounded-full transition-all duration-500 ${idx === currentShiftIndex ? 'w-8 bg-indigo-500' : 'w-2 bg-slate-800'}`}
-                          />
+                      
+                      <div className="flex items-center justify-between mb-8">
+                        <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-xl flex items-center gap-4">
+                          <Trophy size={28} className="animate-bounce" /> Líderes de Producción (Hoy)
+                        </p>
+                      </div>
+
+                      <div className="flex-1 flex items-end justify-center gap-4 pb-4">
+                        {/* 2nd Place */}
+                        {(() => {
+                          const sorted = [...machineKPIs].sort((a,b) => b.totalTn - a.totalTn);
+                          const second = sorted[1];
+                          if (!second) return null;
+                          return (
+                            <div className="flex flex-col items-center gap-4 w-1/3">
+                              <div className="flex flex-col items-center">
+                                <span className="text-lg font-black text-slate-300 uppercase">{second.id.split('-')[0]}</span>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-2xl font-black text-white">{Math.floor(second.totalTn).toLocaleString()}</span>
+                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Tn</span>
+                                </div>
+                              </div>
+                              <div className="w-full bg-slate-700/50 border border-white/10 rounded-t-2xl flex flex-col items-center justify-center py-8 relative">
+                                <div className="absolute -top-4 w-8 h-8 bg-slate-400 rounded-full flex items-center justify-center text-slate-900 font-black text-sm border-2 border-slate-700">2</div>
+                                <div className="h-24 w-full" />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* 1st Place */}
+                        {(() => {
+                          const sorted = [...machineKPIs].sort((a,b) => b.totalTn - a.totalTn);
+                          const first = sorted[0];
+                          if (!first) return null;
+                          return (
+                            <div className="flex flex-col items-center gap-4 w-1/3">
+                              <div className="flex flex-col items-center">
+                                <Trophy className="text-amber-500 mb-2" size={32} />
+                                <span className="text-xl font-black text-amber-500 uppercase">{first.id.split('-')[0]}</span>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-4xl font-black text-white">{Math.floor(first.totalTn).toLocaleString()}</span>
+                                  <span className="text-xs font-bold text-slate-500 uppercase">Tn</span>
+                                </div>
+                              </div>
+                              <div className="w-full bg-amber-500/20 border-x border-t border-amber-500/40 rounded-t-3xl flex flex-col items-center justify-center py-12 relative shadow-[0_-20px_50px_-12px_rgba(245,158,11,0.3)]">
+                                <div className="absolute -top-6 w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-slate-900 font-black text-xl border-4 border-amber-600 shadow-lg">1</div>
+                                <div className="h-40 w-full" />
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* 3rd Place */}
+                        {(() => {
+                          const sorted = [...machineKPIs].sort((a,b) => b.totalTn - a.totalTn);
+                          const third = sorted[2];
+                          if (!third) return null;
+                          return (
+                            <div className="flex flex-col items-center gap-4 w-1/3">
+                              <div className="flex flex-col items-center">
+                                <span className="text-lg font-black text-amber-700 uppercase">{third.id.split('-')[0]}</span>
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-2xl font-black text-white">{Math.floor(third.totalTn).toLocaleString()}</span>
+                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Tn</span>
+                                </div>
+                              </div>
+                              <div className="w-full bg-amber-900/30 border border-white/10 rounded-t-2xl flex flex-col items-center justify-center py-6 relative">
+                                <div className="absolute -top-4 w-8 h-8 bg-amber-700 rounded-full flex items-center justify-center text-white font-black text-sm border-2 border-amber-900">3</div>
+                                <div className="h-16 w-full" />
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Historical Records per Machine */}
+                    <div className="col-span-7 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col">
+                      <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-xl mb-8 flex items-center gap-4">
+                        <Trophy size={24} /> Récords Históricos: Hitos a Superar
+                      </p>
+                      <div className="grid grid-cols-3 gap-6 flex-1">
+                        {['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'].map(machineId => {
+                          const record = topRecords.find(r => isMachineMatch(r.machineId, machineId)) || topRecords[0];
+                          const current = machineKPIs.find(m => isMachineMatch(m.id, machineId));
+                          const progress = current ? (current.totalTn / (record?.valueTn || 1)) * 100 : 0;
+
+                          return (
+                            <div key={machineId} className="bg-black/40 p-6 rounded-3xl border border-white/5 flex flex-col justify-between group hover:bg-indigo-500/10 transition-all relative overflow-hidden">
+                              <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <Trophy size={100} />
+                              </div>
+                              
+                              <div className="flex justify-between items-start relative z-10">
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Paletizadora</span>
+                                  <span className="text-2xl font-black text-white uppercase">{machineId.split('-')[0]}</span>
+                                </div>
+                                <div className="p-2 bg-indigo-500/20 rounded-lg">
+                                  <Trophy size={16} className="text-indigo-400" />
+                                </div>
+                              </div>
+                              
+                              <div className="my-6 relative z-10">
+                                <p className="text-[10px] font-black text-indigo-400/70 uppercase tracking-widest mb-1">Récord Histórico</p>
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-5xl font-black text-indigo-400 tracking-tighter">{Math.floor(record?.valueTn || 0).toLocaleString()}</span>
+                                  <span className="text-xs font-bold text-slate-500 uppercase">Tn</span>
+                                </div>
+                                <p className="text-[9px] font-bold text-slate-600 uppercase mt-1 flex items-center gap-2">
+                                  <Calendar size={10} /> {record?.date || '---'}
+                                </p>
+                              </div>
+
+                              <div className="space-y-3 relative z-10">
+                                <div className="flex justify-between items-end">
+                                  <div className="flex flex-col">
+                                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Producción Hoy</span>
+                                    <span className="text-lg font-black text-white">{Math.floor(current?.totalTn || 0).toLocaleString()} Tn</span>
+                                  </div>
+                                  <span className="text-xl font-black text-emerald-400">{Math.round(progress)}%</span>
+                                </div>
+                                <div className="h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(progress, 100)}%` }}
+                                    className={`h-full relative ${progress >= 100 ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-indigo-500'}`}
+                                  >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+                                  </motion.div>
+                                </div>
+                                {progress >= 100 && (
+                                  <motion.p 
+                                    animate={{ scale: [1, 1.1, 1] }}
+                                    transition={{ repeat: Infinity, duration: 1 }}
+                                    className="text-[10px] font-black text-emerald-400 uppercase text-center tracking-widest"
+                                  >
+                                    ¡NUEVO RÉCORD ALCANZADO!
+                                  </motion.p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentCarouselPage === 1 && (
+                  <div className="flex-1 grid grid-cols-12 gap-6">
+                    {/* Production per Shift and Paletizer */}
+                    <div className="col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col">
+                      <div className="flex items-center justify-between mb-8">
+                        <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-2xl flex items-center gap-4">
+                          <Activity size={32} /> Producción por Turno y Paletizadora
+                        </p>
+                        <div className="flex gap-4">
+                          {shiftsOrdered.map(s => (
+                            <div key={s} className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500`} />
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-8 flex-1">
+                        {['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'].map(machineId => {
+                          const machineDetails = unifiedProd?.details?.filter(d => isMachineMatch(d.machineId, machineId)) || [];
+                          
+                          return (
+                            <div key={machineId} className="bg-black/40 rounded-3xl border border-white/5 flex flex-col overflow-hidden">
+                              <div className="bg-white/5 p-6 border-b border-white/5 flex justify-between items-center">
+                                <span className="text-2xl font-black text-white uppercase tracking-tighter">{machineId.split('-')[0]}</span>
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Diario</span>
+                                  <span className="text-xl font-black text-emerald-400">{Math.floor(machineKPIs.find(m => isMachineMatch(m.id, machineId))?.totalTn || 0).toLocaleString()} Tn</span>
+                                </div>
+                              </div>
+                              
+                              <div className="p-6 flex-1 flex flex-col gap-4">
+                                {shiftsOrdered.map(shiftKey => {
+                                  const shiftData = machineDetails.find(d => d.shift === shiftKey);
+                                  const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
+                                  const value = shiftData?.valueTn || 0;
+                                  const maxInShift = Math.max(...machineDetails.map(d => d.valueTn || 0), 1);
+                                  const barWidth = (value / maxInShift) * 100;
+
+                                  return (
+                                    <div key={shiftKey} className="flex flex-col gap-2">
+                                      <div className="flex justify-between items-end">
+                                        <span className={`text-xs font-black uppercase tracking-widest text-${config.color}-400`}>{config.label}</span>
+                                        <span className="text-lg font-black text-white">{Math.floor(value).toLocaleString()} <span className="text-[10px] text-slate-500">Tn</span></span>
+                                      </div>
+                                      <div className="h-4 bg-white/5 rounded-lg overflow-hidden border border-white/5 p-0.5">
+                                        <motion.div 
+                                          initial={{ width: 0 }}
+                                          animate={{ width: `${barWidth}%` }}
+                                          className={`h-full rounded-md bg-${config.color}-500/60 border border-${config.color}-500/30`}
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentCarouselPage === 2 && (
+                  <div className="flex-1 grid grid-cols-12 gap-6">
+                    {/* Top 5 Paros - Larger */}
+                    <div className="col-span-7 bg-white/[0.03] backdrop-blur-sm p-8 rounded-3xl border border-white/10 shadow-2xl border-l-8 border-l-red-500/50 flex flex-col">
+                      <div className="flex justify-between items-center mb-8">
+                        <p className="text-red-400 font-black uppercase tracking-[0.2em] text-2xl flex items-center gap-4">
+                          <AlertCircle size={32} /> Top 5 Paros Internos por Máquina
+                        </p>
+                        <div className="flex gap-2">
+                          {['672', '673', '674'].map((m, idx) => (
+                            <button 
+                              key={m}
+                              onClick={() => setCurrentDowntimePage(idx)}
+                              className={`px-4 py-1.5 rounded-full text-[10px] font-black transition-all ${currentDowntimePage === idx ? 'bg-red-500 text-white' : 'bg-white/5 text-slate-500'}`}
+                            >
+                              PZ{m}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr className="text-slate-500 uppercase font-black border-b border-white/10">
+                              <th className="text-left pb-4 w-12">#</th>
+                              <th className="text-left pb-4">HAC</th>
+                              <th className="text-left pb-4">Motivo del Paro</th>
+                              <th className="text-right pb-4">Duración (Min)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {allDowntimesOrdered
+                              .filter(d => {
+                                const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+                                const targetMachine = machines[currentDowntimePage];
+                                return d.machine === targetMachine;
+                              })
+                              .slice(0, 5)
+                              .map((d, idx) => (
+                              <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors group">
+                                <td className="py-4 text-slate-500 font-black text-lg">{idx + 1}</td>
+                                <td className="py-4 text-blue-400 font-black text-lg">{d.hac}</td>
+                                <td className="py-4">
+                                  <p className="text-white font-bold text-lg">{d.reason}</p>
+                                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">{d.fullName}</p>
+                                </td>
+                                <td className="py-4 text-right">
+                                  <span className="text-2xl font-black text-red-400">{d.duration}</span>
+                                  <span className="text-[10px] text-slate-500 font-bold ml-2 uppercase">Min</span>
+                                </td>
+                              </tr>
+                            ))}
+                            {allDowntimesOrdered.length === 0 && (
+                              <tr>
+                                <td colSpan={4} className="py-20 text-center text-slate-500 italic text-xl">Sin paros internos registrados para esta máquina</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-4">
+                          <Clock className="text-indigo-400" size={32} />
+                          <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-xl">Cronograma Diario</p>
+                        </div>
+                        <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest">
+                          <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500/60 rounded-sm"></div> Operativo</div>
+                          <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> Paro</div>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 relative overflow-hidden">
+                        <AnimatePresence mode="wait">
+                          <motion.div 
+                            key={shiftsOrdered[currentShiftIndex]}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.5 }}
+                            className="h-full flex flex-col"
+                          >
+                            <div className="flex-1 flex flex-col gap-8">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-6">
+                                  <span className="text-4xl font-black text-white uppercase tracking-[0.3em] whitespace-nowrap">
+                                    {SHIFT_MAP[shiftsOrdered[currentShiftIndex] as keyof typeof SHIFT_MAP].label}
+                                  </span>
+                                  <div className="h-px w-32 bg-slate-800"></div>
+                                </div>
+                                <div className="flex gap-3">
+                                  {shiftsOrdered.map((_, idx) => (
+                                    <div 
+                                      key={idx} 
+                                      className={`h-2 rounded-full transition-all duration-500 ${idx === currentShiftIndex ? 'w-12 bg-indigo-500' : 'w-3 bg-slate-800'}`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex-1 flex flex-col justify-around min-h-0 gap-6">
+                                {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
+                                  const machineProd = unifiedProd?.details?.find(d => d.machineId === machine && d.shift === shiftsOrdered[currentShiftIndex]);
+                                  return (
+                                    <div key={machine} className="w-full">
+                                      <div className="flex justify-between items-center mb-2 px-2">
+                                        <span className="text-sm font-black text-slate-400 uppercase tracking-widest">{machine.split('-')[0]}</span>
+                                        <span className={`text-sm font-black uppercase tracking-widest ${getTnColor(machine, machineProd?.valueTn || 0)}`}>
+                                          {Math.floor(machineProd?.valueTn || 0).toLocaleString()} Tn
+                                        </span>
+                                      </div>
+                                      <MonitorTimelineBar 
+                                        shiftKey={shiftsOrdered[currentShiftIndex]} 
+                                        machineId={machine} 
+                                        events={data.events} 
+                                        longestEvent={data.longestEvent}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </motion.div>
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {currentCarouselPage === 3 && (
+                  <div className="flex-1 grid grid-cols-12 gap-6">
+                    {/* Stock Detailed View */}
+                    <div className="col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col">
+                      <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-2xl mb-12 flex items-center gap-4">
+                        <Package size={32} /> Inventario de Stock de Productos Producidos
+                      </p>
+                      <div className="grid grid-cols-4 gap-8 flex-1">
+                        {producedStock.map(item => (
+                          <div key={item.id} className="bg-black/40 p-10 rounded-3xl border border-white/5 flex flex-col justify-between group hover:bg-blue-500/10 transition-all shadow-xl">
+                            <div className="flex flex-col gap-2">
+                              <span className="text-xs font-black text-blue-400/70 uppercase tracking-widest">Producto</span>
+                              <span className="text-3xl font-black text-white uppercase tracking-tight leading-tight">{item.product}</span>
+                            </div>
+                            
+                            <div className="mt-12">
+                              <div className="flex items-baseline gap-3">
+                                <span className="text-7xl font-black text-white tracking-tighter">{Math.floor(item.tonnage).toLocaleString()}</span>
+                                <span className="text-2xl font-bold text-slate-500 uppercase">Tn</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-white/5 rounded-full mt-6 overflow-hidden">
+                                <div className="h-full bg-blue-500 w-3/4" />
+                              </div>
+                            </div>
+
+                            <div className="mt-8 flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-500">
+                              <span>Actualizado Hoy</span>
+                              <span className="text-blue-400">En Stock</span>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
-                    <div className="flex-1 flex flex-col justify-around min-h-0 gap-2">
-                      {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
-                        const machineProd = unifiedProd?.details?.find(d => d.machineId === machine && d.shift === shiftsOrdered[currentShiftIndex]);
-                        return (
-                          <div key={machine} className="w-full">
-                            <div className="flex justify-between items-center mb-0.5 px-2">
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{machine.split('-')[0]}</span>
-                              <span className={`text-[9px] font-black uppercase tracking-widest ${getTnColor(machine, machineProd?.valueTn || 0)}`}>
-                                {Math.floor(machineProd?.valueTn || 0).toLocaleString()} Tn
-                              </span>
+                  </div>
+                )}
+
+                {currentCarouselPage === 4 && (
+                  <div className="flex-1 grid grid-cols-12 gap-6">
+                    {/* Novedades / News Section */}
+                    <div className="col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl flex flex-col">
+                      <p className="text-emerald-400 font-black uppercase tracking-[0.2em] text-2xl mb-12 flex items-center gap-4">
+                        <Activity size={32} /> Novedades y Observaciones de Turno
+                      </p>
+                      <div className="flex-1 grid grid-cols-3 gap-8">
+                        {['MAÑANA', 'TARDE', 'NOCHE'].map(shift => (
+                          <div key={shift} className="bg-black/40 p-8 rounded-3xl border border-white/5 flex flex-col gap-6">
+                            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                              <span className="text-xl font-black text-white uppercase tracking-widest">Turno {shift}</span>
+                              <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
                             </div>
-                            <MonitorTimelineBar 
-                              shiftKey={shiftsOrdered[currentShiftIndex]} 
-                              machineId={machine} 
-                              events={data.events} 
-                              longestEvent={data.longestEvent}
-                            />
+                            <div className="flex-1 flex flex-col gap-4 text-slate-400 italic text-sm">
+                              <p className="p-4 bg-white/5 rounded-xl border border-white/5">Sin novedades reportadas para este turno.</p>
+                              <p className="p-4 bg-white/5 rounded-xl border border-white/5">Operación estable dentro de los parámetros normales.</p>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                              <Clock size={12} /> Última actualización: {currentTime.toLocaleTimeString()}
+                            </div>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
-
         </div>
       </div>
     </div>
