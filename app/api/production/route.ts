@@ -120,7 +120,7 @@ export async function GET(req: Request) {
     let totalTn = 0;
     const shiftTotalsTn: Record<string, number> = {};
     const shiftTotalsBags: Record<string, number> = {};
-    const machineStats: Record<string, { bags: number, tn: number }> = {};
+    const machineStats: Record<string, { bags: number, tn: number, name: string }> = {};
     
     // New Aggregation for Stacked Bar (Machine -> Product -> Quantity)
     const machineProductMap: Record<string, Record<string, number>> = {};
@@ -134,6 +134,7 @@ export async function GET(req: Request) {
         weightedRendDenom: number,
         bagsSum: number,
         count: number,
+        machineId: string,
         machineName: string,
         shift: string
     }> = {};
