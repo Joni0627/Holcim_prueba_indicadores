@@ -23,6 +23,20 @@ const timeToMinutes = (timeStr: string) => {
   return h * 60 + m;
 };
 
+const isMachineMatch = (id1: string, id2: string) => {
+  const s1 = String(id1 || '').toUpperCase();
+  const s2 = String(id2 || '').toUpperCase();
+  if (s1 === s2) return true;
+  if (s1.includes(s2) || s2.includes(s1)) return true;
+  
+  // Extract numbers (e.g., 672, 673, 674)
+  const n1 = s1.match(/\d+/)?.[0];
+  const n2 = s2.match(/\d+/)?.[0];
+  if (n1 && n2 && n1 === n2) return true;
+  
+  return false;
+};
+
 const getVisualShift = (startTime: string) => {
     const mins = timeToMinutes(startTime);
     if (mins >= 360 && mins < 840) return '1.MAÑANA';
@@ -190,13 +204,18 @@ const CircularProgress: React.FC<{ value: number, label: string, size?: number, 
   );
 };
 
-export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+export const MonitorView: React.FC<{ 
+  onBack?: () => void,
+  dateRange: { start: Date, end: Date },
+  setDateRange: (range: { start: Date, end: Date }) => void
+}> = ({ onBack, dateRange, setDateRange }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
   const [currentStockIndex, setCurrentStockIndex] = useState(0);
   const [currentDowntimePage, setCurrentDowntimePage] = useState(0);
-  const today = useMemo(() => new Date(), []);
+  
+  const selectedDate = useMemo(() => dateRange.start, [dateRange.start]);
 
   // Update clock every second
   useEffect(() => {
@@ -230,24 +249,24 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
   // Queries with 20 min refresh
   const { data: prodResult, isLoading: loadingProd } = useQuery({
-    queryKey: ['monitor-prod'],
+    queryKey: ['monitor-prod', selectedDate.toISOString()],
     queryFn: async () => {
-      return fetchProductionStats(today, today);
+      return fetchProductionStats(selectedDate, selectedDate);
     },
     refetchInterval: 1200000, // 20 minutes
   });
 
   const { data: downtimeResult = [], isLoading: loadingDowntime } = useQuery({
-    queryKey: ['monitor-downtimes'],
+    queryKey: ['monitor-downtimes', selectedDate.toISOString()],
     queryFn: async () => {
-      return fetchDowntimes(today, today);
+      return fetchDowntimes(selectedDate, selectedDate);
     },
     refetchInterval: 1200000,
   });
 
   const { data: stockResult, isLoading: loadingStock } = useQuery({
-    queryKey: ['monitor-stocks'],
-    queryFn: () => fetchStocks(today, today),
+    queryKey: ['monitor-stocks', selectedDate.toISOString()],
+    queryFn: () => fetchStocks(selectedDate, selectedDate),
     refetchInterval: 1200000,
   });
 
@@ -265,12 +284,12 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     return `${y}-${m}-${d}`;
   };
 
-  const todayStr = useMemo(() => toLocalISO(today), [today]);
+  const todayStr = useMemo(() => toLocalISO(selectedDate), [selectedDate]);
   const yesterdayStr = useMemo(() => {
-    const d = new Date(today);
+    const d = new Date(selectedDate);
     d.setDate(d.getDate() - 1);
     return toLocalISO(d);
-  }, [today]);
+  }, [selectedDate]);
 
   const unifiedProd = useMemo(() => {
     return prodResult;
@@ -312,9 +331,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     downtimeResult.forEach((curr) => {
       const visualShift = getVisualShift(curr.startTime || '00:00');
       if (result[visualShift]) {
-        // Flexible matching for timeline as well
         const machineKey = Object.keys(result[visualShift]).find(m => 
-          curr.machineId === m || m.includes(curr.machineId) || curr.machineId.includes(m.split('-')[0].replace('MG.', ''))
+          isMachineMatch(curr.machineId, m) || isMachineMatch(curr.hac, m)
         );
         
         if (machineKey) {
@@ -346,7 +364,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
     machines.forEach(m => {
       const machineDowntimes = downtimeResult
-        .filter(d => d.machineId === m && (d.downtimeType || '').toLowerCase().includes('interno'))
+        .filter(d => isMachineMatch(d.machineId, m) && (d.downtimeType || '').toLowerCase().includes('interno'))
         .sort((a, b) => b.durationMinutes - a.durationMinutes)
         .slice(0, 5);
       
@@ -358,7 +376,7 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           reason: d.reason.length > 25 ? d.reason.substring(0, 25) + '...' : d.reason,
           fullName: d.reason,
           duration: d.durationMinutes,
-          machine: d.machineId
+          machine: m // Use the matched machine ID from our list
         });
       });
     });
@@ -400,17 +418,9 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
     return machines.map(m => {
       // Use even more flexible matching for machine IDs
-      const machineDetails = unifiedProd?.details?.filter(d => {
-        const dId = String(d.machineId || '').toUpperCase();
-        const mId = String(m).toUpperCase();
-        const shortM = mId.split('-')[0].replace('MG.', '');
-        
-        return dId === mId || 
-               mId.includes(dId) || 
-               dId.includes(mId) || 
-               dId.includes(shortM) ||
-               shortM.includes(dId);
-      }) || [];
+      const machineDetails = unifiedProd?.details?.filter(d => 
+        isMachineMatch(d.machineId, m) || isMachineMatch(d.machineName, m)
+      ) || [];
       
       const totalTn = machineDetails.reduce((acc, curr) => acc + (curr.valueTn || 0), 0);
       if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0, totalTn: 0 };
@@ -483,9 +493,20 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             <p className="text-xl font-black tracking-tighter font-mono leading-none text-white">
               {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
             </p>
-            <p className="text-white/50 font-bold uppercase tracking-widest text-[8px] mt-0.5">
-              {currentTime.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' })}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+               <p className="text-white/50 font-bold uppercase tracking-widest text-[8px]">
+                 {currentTime.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' })}
+               </p>
+               <input 
+                 type="date" 
+                 value={toLocalISO(selectedDate)}
+                 onChange={(e) => {
+                   const newDate = new Date(e.target.value + 'T12:00:00');
+                   setDateRange({ start: newDate, end: newDate });
+                 }}
+                 className="bg-white/5 border border-white/10 rounded px-1 text-[8px] font-black uppercase tracking-widest text-emerald-400 focus:outline-none focus:border-emerald-500/50"
+               />
+            </div>
           </div>
         </div>
 
@@ -513,47 +534,57 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             {/* Machine KPIs & Totalizers */}
             <div className="flex-1 flex items-center gap-4">
               {machineKPIs.map(m => (
-                <div key={m.id} className="flex-1 bg-white/[0.03] backdrop-blur-sm p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-4 min-w-[180px] relative overflow-hidden group hover:bg-white/[0.05] transition-all">
+                <div key={m.id} className="flex-1 bg-white/[0.03] backdrop-blur-sm p-6 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-6 min-w-[220px] relative overflow-hidden group hover:bg-white/[0.05] transition-all">
                   <div className="flex justify-between items-start w-full">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
-                      <span className="text-sm font-black text-white uppercase tracking-tight mt-0.5">
-                        {m.id}
+                      <span className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
+                      <span className="text-xl font-black text-white uppercase tracking-tight mt-1">
+                        {m.id.split('-')[0]}
                       </span>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-black text-emerald-500/70 uppercase tracking-tighter">Total Hoy</span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-xl font-black text-emerald-400 tracking-tighter leading-none">
+                      <span className="text-xs font-black text-emerald-500/70 uppercase tracking-tighter">Total Hoy</span>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl font-black text-emerald-400 tracking-tighter leading-none">
                           {Math.floor(m.totalTn).toLocaleString()}
                         </span>
-                        <span className="text-[8px] font-black text-slate-500 uppercase">Tn</span>
+                        <span className="text-xs font-black text-slate-500 uppercase">Tn</span>
                       </div>
                     </div>
                   </div>
                   
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-black/40 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
-                  <CircularProgress 
-                    value={m.availability} 
-                    label="Disponibilidad" 
-                    size={64} 
-                    strokeWidth={7} 
-                    color={getAvailabilityColor(m.availability)} 
-                  />
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Disponibilidad</span>
-                </div>
-                <div className="bg-black/40 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-2 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all">
-                  <CircularProgress 
-                    value={m.performance} 
-                    label="Rendimiento" 
-                    size={64} 
-                    strokeWidth={7} 
-                    color={getPerformanceColor(m.performance)} 
-                  />
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rendimiento</span>
-                </div>
-              </div>
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-3 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
+                      <CircularProgress 
+                        value={m.oee} 
+                        label="OEE" 
+                        size={72} 
+                        strokeWidth={8} 
+                        color="text-amber-500" 
+                      />
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">OEE</span>
+                    </div>
+                    <div className="bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-3 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
+                      <CircularProgress 
+                        value={m.availability} 
+                        label="DISP" 
+                        size={72} 
+                        strokeWidth={8} 
+                        color="text-blue-400" 
+                      />
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Disponibilidad</span>
+                    </div>
+                    <div className="bg-black/40 p-5 rounded-2xl border border-white/5 flex flex-col items-center justify-center gap-3 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all">
+                      <CircularProgress 
+                        value={m.performance} 
+                        label="REND" 
+                        size={72} 
+                        strokeWidth={8} 
+                        color="text-emerald-400" 
+                      />
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rendimiento</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -613,44 +644,44 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
         <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
           
-          {/* Left Column: Ranking (Expanded to 6/12) */}
-          <div className="col-span-6 flex flex-col gap-6 overflow-hidden">
+          {/* Left Column: Ranking (Expanded to 7/12) */}
+          <div className="col-span-7 flex flex-col gap-6 overflow-hidden">
             
             {/* Ranking Card (Expanded) */}
             <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-10 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col">
               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                 <Trophy size={220} />
               </div>
-              <div className="flex flex-col gap-8 mb-10">
+              <div className="flex flex-col gap-10 mb-12">
                 <div className="flex items-center justify-between">
-                  <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-xl flex items-center gap-4">
-                    <Trophy size={32} /> Ranking de Producción
+                  <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-3xl flex items-center gap-5">
+                    <Trophy size={42} /> Ranking de Producción
                   </p>
                   {topRecords[0] && (
-                    <div className="flex items-center gap-3 bg-indigo-500/20 border border-indigo-500/30 px-5 py-2 rounded-full">
-                      <div className="w-3 h-3 rounded-full bg-indigo-400 animate-pulse" />
-                      <span className="text-xs font-black text-indigo-300 uppercase tracking-widest">Récord Histórico: {Math.floor(topRecords[0].valueTn).toLocaleString()} Tn</span>
+                    <div className="flex items-center gap-4 bg-indigo-500/20 border border-indigo-500/30 px-8 py-3 rounded-full">
+                      <div className="w-4 h-4 rounded-full bg-indigo-400 animate-pulse" />
+                      <span className="text-base font-black text-indigo-300 uppercase tracking-widest">Récord Histórico: {Math.floor(topRecords[0].valueTn).toLocaleString()} Tn</span>
                     </div>
                   )}
                 </div>
 
                 {/* Today's Leader Highlight */}
                 {unifiedProd?.byShift && unifiedProd.byShift.length > 0 && (
-                  <div className="bg-gradient-to-r from-amber-500/20 to-transparent border-l-8 border-amber-500 p-8 rounded-r-3xl shadow-2xl shadow-amber-500/10">
+                  <div className="bg-gradient-to-r from-amber-500/20 to-transparent border-l-[12px] border-amber-500 p-12 rounded-r-3xl shadow-2xl shadow-amber-500/10">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-black text-amber-500/70 uppercase tracking-widest leading-none mb-3">Líder del Día (Puesto 1)</p>
-                        <p className="text-5xl font-black text-white uppercase tracking-tighter">
+                        <p className="text-lg font-black text-amber-500/70 uppercase tracking-widest leading-none mb-5">Líder del Día (Puesto 1)</p>
+                        <p className="text-7xl font-black text-white uppercase tracking-tighter">
                           {([...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name.split('.')[1] || [...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].name)}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-6xl font-black text-emerald-400 tracking-tighter leading-none">
+                        <p className="text-8xl font-black text-emerald-400 tracking-tighter leading-none">
                           {Math.floor([...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn).toLocaleString()}
-                          <span className="text-lg font-bold text-slate-500 ml-2 uppercase">Tn</span>
+                          <span className="text-3xl font-bold text-slate-500 ml-3 uppercase">Tn</span>
                         </p>
                         {topRecords[0] && [...unifiedProd.byShift].sort((a, b) => b.valueTn - a.valueTn)[0].valueTn >= topRecords[0].valueTn && (
-                          <span className="text-xs font-black text-emerald-500 uppercase animate-bounce block mt-3">¡Récord Superado!</span>
+                          <span className="text-base font-black text-emerald-500 uppercase animate-bounce block mt-5">¡Récord Superado!</span>
                         )}
                       </div>
                     </div>
@@ -658,8 +689,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                 )}
               </div>
               
-              <div className="flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
-                <p className="text-sm font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Desempeño por Turno</p>
+              <div className="flex-1 flex flex-col gap-5 overflow-y-auto no-scrollbar">
+                <p className="text-base font-black text-slate-500 uppercase tracking-widest mb-4 px-1">Desempeño por Turno</p>
                 {unifiedProd?.byShift && unifiedProd.byShift.length > 0 ? (
                   [...unifiedProd.byShift]
                     .sort((a, b) => b.valueTn - a.valueTn)
@@ -668,15 +699,15 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                       return (
                         <div 
                           key={shift.name} 
-                          className={`relative group transition-all duration-500 p-6 rounded-2xl border ${
+                          className={`relative group transition-all duration-500 p-8 rounded-2xl border ${
                             isTop 
                               ? 'bg-amber-500/10 border-amber-500/30' 
                               : 'bg-white/[0.03] border-white/5'
                           }`}
                         >
                           <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-6">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${
+                            <div className="flex items-center gap-8">
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-2xl ${
                                 idx === 0 ? 'bg-amber-500 text-slate-900' : 
                                 idx === 1 ? 'bg-slate-300 text-slate-900' : 
                                 idx === 2 ? 'bg-amber-700 text-white' : 'bg-white/10 text-slate-400'
@@ -684,15 +715,15 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
                                 {idx + 1}
                               </div>
                               <div>
-                                <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-amber-500 text-2xl' : 'text-slate-400 text-lg'}`}>
+                                <p className={`font-black uppercase tracking-tighter ${isTop ? 'text-amber-500 text-3xl' : 'text-slate-400 text-2xl'}`}>
                                   {shift.name.split('.')[1] || shift.name}
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className={`font-black tracking-tighter ${isTop ? 'text-white text-4xl' : 'text-slate-400 text-2xl'}`}>
+                              <p className={`font-black tracking-tighter ${isTop ? 'text-white text-5xl' : 'text-slate-400 text-3xl'}`}>
                                 {Math.floor(shift.valueTn).toLocaleString()}
-                                <span className="text-xs font-bold text-slate-500 ml-2 uppercase">Tn</span>
+                                <span className="text-sm font-bold text-slate-500 ml-2 uppercase">Tn</span>
                               </p>
                             </div>
                           </div>
@@ -708,31 +739,31 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
 
               {/* RÉCORD HISTÓRICO (TOP 1) */}
               <div className="mt-10 border-t border-white/5 pt-10">
-                <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-sm mb-6 flex items-center gap-4">
-                  <Trophy size={24} /> Récord Histórico de Producción
+                <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-base mb-8 flex items-center gap-4">
+                  <Trophy size={28} /> Récord Histórico de Producción
                 </p>
                 <div className="grid grid-cols-1 gap-6">
                   {topRecords.length > 0 ? (
-                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-8 rounded-3xl flex items-center justify-between group hover:bg-indigo-500/20 transition-all shadow-2xl shadow-indigo-500/10">
-                      <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center font-black text-3xl shadow-2xl shadow-amber-500/30">
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 p-10 rounded-3xl flex items-center justify-between group hover:bg-indigo-500/20 transition-all shadow-2xl shadow-indigo-500/10">
+                      <div className="flex items-center gap-8">
+                        <div className="w-20 h-20 rounded-full bg-amber-500 text-slate-900 flex items-center justify-center font-black text-4xl shadow-2xl shadow-amber-500/30">
                           1
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xl font-black text-white uppercase tracking-wider leading-none">{topRecords[0].machineId}</span>
-                          <span className="text-xs font-bold text-slate-400 uppercase mt-3 flex items-center gap-4">
-                            <Calendar size={16} /> {topRecords[0].date} 
+                          <span className="text-2xl font-black text-white uppercase tracking-wider leading-none">{topRecords[0].machineId}</span>
+                          <span className="text-sm font-bold text-slate-400 uppercase mt-4 flex items-center gap-5">
+                            <Calendar size={18} /> {topRecords[0].date} 
                             <span className="text-slate-600">•</span>
-                            <Clock size={16} /> {topRecords[0].shift.split('.')[1] || topRecords[0].shift}
+                            <Clock size={18} /> {topRecords[0].shift.split('.')[1] || topRecords[0].shift}
                           </span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="flex items-baseline justify-end gap-2">
-                          <span className="text-5xl font-black text-indigo-400 tracking-tighter">{Math.floor(topRecords[0].valueTn).toLocaleString()}</span>
-                          <span className="text-sm font-bold text-slate-500 uppercase">Tn</span>
+                        <div className="flex items-baseline justify-end gap-3">
+                          <span className="text-6xl font-black text-indigo-400 tracking-tighter">{Math.floor(topRecords[0].valueTn).toLocaleString()}</span>
+                          <span className="text-lg font-bold text-slate-500 uppercase">Tn</span>
                         </div>
-                        <p className="text-xs font-black text-indigo-500/70 uppercase tracking-widest mt-2">Máximo Histórico</p>
+                        <p className="text-sm font-black text-indigo-500/70 uppercase tracking-widest mt-3">Máximo Histórico</p>
                       </div>
                     </div>
                   ) : (
@@ -745,8 +776,8 @@ export const MonitorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Right Column: Timeline (Reduced to 6/12) */}
-          <div className="col-span-6 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+          {/* Right Column: Timeline (Reduced to 5/12) */}
+          <div className="col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Clock className="text-indigo-400" size={24} />

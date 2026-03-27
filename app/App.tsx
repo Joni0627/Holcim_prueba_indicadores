@@ -20,6 +20,11 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false); 
   const [showIntro, setShowIntro] = useState(true);
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return { start: d, end: d };
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -47,15 +52,15 @@ function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'home': return <SummaryView />;
+      case 'home': return <SummaryView dateRange={dateRange} setDateRange={setDateRange} />;
       case 'stocks': return <StocksView />;
       case 'timeline': return <DailyTimelineView />;
       case 'downtime': return <DowntimeView />;
       case 'palletizers': return <PalletizerView />;
       case 'breakage': return <BreakageView />;
-      case 'monitor': return <MonitorView onBack={() => setCurrentView('home')} />;
-      case 'admin': return canAccessAdmin ? <AdminPanel /> : <SummaryView />;
-      default: return <SummaryView />;
+      case 'monitor': return <MonitorView onBack={() => setCurrentView('home')} dateRange={dateRange} setDateRange={setDateRange} />;
+      case 'admin': return canAccessAdmin ? <AdminPanel /> : <SummaryView dateRange={dateRange} setDateRange={setDateRange} />;
+      default: return <SummaryView dateRange={dateRange} setDateRange={setDateRange} />;
     }
   };
 

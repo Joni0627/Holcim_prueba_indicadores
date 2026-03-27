@@ -53,12 +53,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
-export const SummaryView: React.FC = () => {
-  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
-    start: new Date(),
-    end: new Date()
-  });
-
+export const SummaryView: React.FC<{ 
+  dateRange: { start: Date, end: Date }, 
+  setDateRange: (range: { start: Date, end: Date }) => void 
+}> = ({ dateRange, setDateRange }) => {
   const [isSharing, setIsSharing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
