@@ -477,7 +477,7 @@ export const SummaryView: React.FC = () => {
   };
 
   const handleDownloadPDF = async () => {
-    const element = document.getElementById('summary-view-content');
+    const element = document.getElementById('summary-view-container');
     if (!element || isSharing) return;
 
     setIsSharing(true);
@@ -540,7 +540,14 @@ export const SummaryView: React.FC = () => {
                 <div className="p-2.5 bg-blue-600 rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]">
                     <Layout size={24} className="text-white" />
                 </div>
-                <h1 className="text-3xl font-black tracking-tighter uppercase leading-none text-white">EXPEDICION MALAGUEÑO</h1>
+                <div className="flex flex-col">
+                    <h1 className="text-3xl font-black tracking-tighter uppercase leading-none text-white">EXPEDICION MALAGUEÑO</h1>
+                    <p className="text-[10px] font-black text-blue-400/80 mt-1 uppercase tracking-widest">
+                        {dateRange.start.toDateString() === dateRange.end.toDateString() 
+                            ? formatDate(dateRange.start) 
+                            : `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`}
+                    </p>
+                </div>
             </div>
             
             <button 
@@ -554,12 +561,12 @@ export const SummaryView: React.FC = () => {
                 <span>{isSharing ? 'GENERANDO...' : 'REPORTE'}</span>
             </button>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
+        <div data-html2canvas-ignore="true" className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
           <DateFilter onFilterChange={handleFilterChange} />
         </div>
       </div>
 
-      <div id="summary-view-content" className="space-y-6 bg-[#0a0f1e]">
+      <div className="space-y-6 bg-[#0a0f1e]">
         {isLoading ? (
           <div className="h-64 flex flex-col items-center justify-center text-slate-400">
             <Loader2 className="animate-spin mb-2" size={40} />
