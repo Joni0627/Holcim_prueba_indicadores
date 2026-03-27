@@ -7,6 +7,10 @@ import { JWT } from "google-auth-library";
 const CACHE_TTL = 30 * 1000; 
 const cache = new Map<string, { data: any; timestamp: number }>();
 
+function getVal(row: any, key: string) {
+    return row.get(key) || row.get(key.toUpperCase()) || row.get(key.toLowerCase());
+}
+
 function hmsToMinutes(hms: string | null | undefined): number {
   if (!hms || typeof hms !== "string") return 0;
   const parts = hms.split(":").map(Number);
@@ -33,11 +37,24 @@ function formatTimeToHHmm(timeStr: string | null | undefined): string {
 
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
-  const parts = dateStr.trim().split("/");
-  if (parts.length !== 3) return null;
-  const [day, month, year] = parts.map(Number);
-  const fullYear = year < 100 ? 2000 + year : year;
-  return new Date(fullYear, month - 1, day);
+  const cleaned = dateStr.trim();
+  let parts: string[] = [];
+  if (cleaned.includes("/")) parts = cleaned.split("/");
+  else if (cleaned.includes("-")) parts = cleaned.split("-");
+  
+  if (parts.length === 3) {
+      let day, month, year;
+      if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          [year, month, day] = parts.map(Number);
+      } else {
+          // DD/MM/YYYY
+          [day, month, year] = parts.map(Number);
+      }
+      if (year < 100) year += 2000;
+      return new Date(year, month - 1, day);
+  }
+  return null;
 }
 
 export async function GET(req: Request) {
@@ -86,25 +103,25 @@ export async function GET(req: Request) {
     const rows = await sheet.getRows();
 
     const filtrado = rows.filter((r) => {
-      const rowDate = parseSheetDate(String(r.get("FECHA")));
+      const rowDate = parseSheetDate(String(getVal(r, "FECHA")));
       return rowDate && rowDate.getTime() >= startDate.getTime() && rowDate.getTime() <= endDate.getTime();
     });
 
     const resultados = filtrado.map((r) => {
-      const inicioRaw = r.get("INICIO") || "00:00:00";
-      const duracionRaw = r.get("DURACIÓN") || "0:00:00";
+      const inicioRaw = getVal(r, "INICIO") || "00:00:00";
+      const duracionRaw = getVal(r, "DURACIÓN") || "0:00:00";
       
       return {
-        id: r.get("IDPARO") || Math.random().toString(36).substr(2, 9),
-        date: r.get("FECHA"),
-        machineId: r.get("MÁQUINA AFECTADA"),
-        shift: r.get("TURNO"),
+        id: getVal(r, "IDPARO") || Math.random().toString(36).substr(2, 9),
+        date: getVal(r, "FECHA"),
+        machineId: getVal(r, "MÁQUINA AFECTADA"),
+        shift: getVal(r, "TURNO"),
         startTime: formatTimeToHHmm(inicioRaw),
         durationMinutes: hmsToMinutes(duracionRaw),
-        hac: r.get("HAC"),
-        reason: r.get("TEXTO DE CAUSA"),
-        sapCause: r.get("CAUSA SAP"),
-        downtimeType: r.get("TIPO PARO")
+        hac: getVal(r, "HAC"),
+        reason: getVal(r, "TEXTO DE CAUSA"),
+        sapCause: getVal(r, "CAUSA SAP"),
+        downtimeType: getVal(r, "TIPO PARO")
       };
     });
 

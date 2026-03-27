@@ -24,11 +24,16 @@ const timeToMinutes = (timeStr: string) => {
 };
 
 const isMachineMatch = (id1: string, id2: string) => {
-  const s1 = String(id1 || '').toUpperCase();
-  const s2 = String(id2 || '').toUpperCase();
+  const s1 = String(id1 || '').toUpperCase().trim();
+  const s2 = String(id2 || '').toUpperCase().trim();
   if (s1 === s2) return true;
   if (s1.includes(s2) || s2.includes(s1)) return true;
   
+  // Handle "PALETIZADORA 1" vs "PZ1" or "MG.672-PZ1"
+  const p1 = s1.replace(/\s+/g, '');
+  const p2 = s2.replace(/\s+/g, '');
+  if (p1.includes(p2) || p2.includes(p1)) return true;
+
   // Extract numbers (e.g., 672, 673, 674)
   const n1 = s1.match(/\d+/)?.[0];
   const n2 = s2.match(/\d+/)?.[0];
@@ -558,8 +563,8 @@ export const MonitorView: React.FC<{
                       <CircularProgress 
                         value={m.oee} 
                         label="OEE" 
-                        size={72} 
-                        strokeWidth={8} 
+                        size={90} 
+                        strokeWidth={10} 
                         color="text-amber-500" 
                       />
                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">OEE</span>
@@ -568,8 +573,8 @@ export const MonitorView: React.FC<{
                       <CircularProgress 
                         value={m.availability} 
                         label="DISP" 
-                        size={72} 
-                        strokeWidth={8} 
+                        size={90} 
+                        strokeWidth={10} 
                         color="text-blue-400" 
                       />
                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Disponibilidad</span>
@@ -578,8 +583,8 @@ export const MonitorView: React.FC<{
                       <CircularProgress 
                         value={m.performance} 
                         label="REND" 
-                        size={72} 
-                        strokeWidth={8} 
+                        size={90} 
+                        strokeWidth={10} 
                         color="text-emerald-400" 
                       />
                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Rendimiento</span>
@@ -644,11 +649,11 @@ export const MonitorView: React.FC<{
 
         <div className="flex-1 grid grid-cols-12 gap-6 overflow-hidden">
           
-          {/* Left Column: Ranking (Expanded to 7/12) */}
-          <div className="col-span-7 flex flex-col gap-6 overflow-hidden">
+          {/* Left Column: Ranking (Expanded to 8/12) */}
+          <div className="col-span-8 flex flex-col gap-6 overflow-hidden">
             
             {/* Ranking Card (Expanded) */}
-            <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-10 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col">
+            <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col">
               <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                 <Trophy size={220} />
               </div>
@@ -750,20 +755,20 @@ export const MonitorView: React.FC<{
                           1
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-2xl font-black text-white uppercase tracking-wider leading-none">{topRecords[0].machineId}</span>
-                          <span className="text-sm font-bold text-slate-400 uppercase mt-4 flex items-center gap-5">
-                            <Calendar size={18} /> {topRecords[0].date} 
+                          <span className="text-4xl font-black text-white uppercase tracking-wider leading-none">{topRecords[0].machineId}</span>
+                          <span className="text-lg font-bold text-slate-400 uppercase mt-4 flex items-center gap-5">
+                            <Calendar size={22} /> {topRecords[0].date} 
                             <span className="text-slate-600">•</span>
-                            <Clock size={18} /> {topRecords[0].shift.split('.')[1] || topRecords[0].shift}
+                            <Clock size={22} /> {topRecords[0].shift.split('.')[1] || topRecords[0].shift}
                           </span>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="flex items-baseline justify-end gap-3">
-                          <span className="text-6xl font-black text-indigo-400 tracking-tighter">{Math.floor(topRecords[0].valueTn).toLocaleString()}</span>
-                          <span className="text-lg font-bold text-slate-500 uppercase">Tn</span>
+                          <span className="text-8xl font-black text-indigo-400 tracking-tighter">{Math.floor(topRecords[0].valueTn).toLocaleString()}</span>
+                          <span className="text-2xl font-bold text-slate-500 uppercase">Tn</span>
                         </div>
-                        <p className="text-sm font-black text-indigo-500/70 uppercase tracking-widest mt-3">Máximo Histórico</p>
+                        <p className="text-lg font-black text-indigo-500/70 uppercase tracking-widest mt-3">Máximo Histórico</p>
                       </div>
                     </div>
                   ) : (
@@ -776,9 +781,9 @@ export const MonitorView: React.FC<{
             </div>
           </div>
 
-          {/* Right Column: Timeline (Reduced to 5/12) */}
-          <div className="col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-6 border border-white/10 shadow-2xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
+          {/* Right Column: Timeline (Reduced to 4/12) */}
+          <div className="col-span-4 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 border border-white/10 shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <Clock className="text-indigo-400" size={24} />
                 <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-sm">Cronograma Diario de Operación</p>

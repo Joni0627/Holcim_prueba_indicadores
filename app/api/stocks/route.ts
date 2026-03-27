@@ -8,16 +8,28 @@ import { JWT } from "google-auth-library";
 const CACHE_TTL = 60 * 1000;
 const cache = new Map<string, { data: any; timestamp: number }>();
 
+function getVal(row: any, key: string) {
+    return row.get(key) || row.get(key.toUpperCase()) || row.get(key.toLowerCase());
+}
+
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
   const cleaned = dateStr.trim();
-  if (cleaned.includes('/')) {
-      const parts = cleaned.split("/");
-      if (parts.length === 3) {
-          const [day, month, year] = parts.map(Number);
-          const fullYear = year < 100 ? 2000 + year : year;
-          return new Date(fullYear, month - 1, day);
+  let parts: string[] = [];
+  if (cleaned.includes("/")) parts = cleaned.split("/");
+  else if (cleaned.includes("-")) parts = cleaned.split("-");
+  
+  if (parts.length === 3) {
+      let day, month, year;
+      if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          [year, month, day] = parts.map(Number);
+      } else {
+          // DD/MM/YYYY
+          [day, month, year] = parts.map(Number);
       }
+      if (year < 100) year += 2000;
+      return new Date(year, month - 1, day);
   }
   return null;
 }
@@ -29,16 +41,18 @@ function parseNumber(val: any): number {
     if (str === '') return 0;
     
     // Formato LATAM: 1.200,50 -> 1200.50
-    // Si tiene punto y coma, el punto es miles
     if (str.includes('.') && str.includes(',')) {
          str = str.replace(/\./g, ''); 
          str = str.replace(',', '.');
     } 
-    // Si solo tiene punto, asumimos miles si parece estructura de miles (ej: 1.200) 
-    // OJO: En roturas usamos una lógica, en Stock asumimos que Excel manda números formateados.
-    // Para seguridad: Eliminamos punto, cambiamos coma por punto.
     else if (str.includes('.') && !str.includes(',')) {
-         str = str.replace(/\./g, '');
+         // Check if it's thousands or decimals
+         if ((str.match(/\./g) || []).length > 1) {
+             str = str.replace(/\./g, '');
+         } else {
+             // If it's something like 1.200, it's likely thousands in this context
+             str = str.replace(/\./g, '');
+         }
     } else if (str.includes(',')) {
         str = str.replace(',', '.');
     }
@@ -46,7 +60,6 @@ function parseNumber(val: any): number {
 }
 
 // Normalización robusta: Trim, Uppercase y Quitar Acentos (NFD)
-// Para que "Rápido" coincida con "RAPIDO"
 function cleanName(str: string): string {
     return String(str || "")
         .trim()
@@ -109,23 +122,23 @@ export async function GET(req: Request) {
 
     // 1. OBTENER PRODUCION NOCHE
     const cabecerasNoche = rowsCabecera.filter(row => {
-        const d = parseSheetDate(row.get("fecha"));
-        const turnoRaw = String(row.get("turno") || "").trim().toUpperCase();
+        const d = parseSheetDate(getVal(row, "fecha"));
+        const turnoRaw = String(getVal(row, "turno") || "").trim().toUpperCase();
         // Lógica Estricta: "3.NOCHE" o empieza con "3."
         const isTurnoNoche = turnoRaw === "3.NOCHE" || turnoRaw.startsWith("3.");
         return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime() && isTurnoNoche;
     });
 
-    const idsNoche = new Set(cabecerasNoche.map(r => r.get("id_produccion")));
+    const idsNoche = new Set(cabecerasNoche.map(r => getVal(r, "id_produccion")));
 
     // Mapa: Producto -> Tn Producidas en Noche
     const nightProductionMap: Record<string, number> = {};
 
     rowsLista.forEach(row => {
-        if (idsNoche.has(row.get("ID_CABECERA"))) {
-            const material = cleanName(row.get("DESCRIPCION_MATERIAL"));
+        if (idsNoche.has(getVal(row, "ID_CABECERA"))) {
+            const material = cleanName(getVal(row, "DESCRIPCION_MATERIAL"));
             // Prioridad a TN_PRODUCIDA, fallback a tn/bdp
-            const tn = parseNumber(row.get("TN_PRODUCIDA") || row.get("tn/bdp"));
+            const tn = parseNumber(getVal(row, "TN_PRODUCIDA") || getVal(row, "tn/bdp"));
             
             if (!nightProductionMap[material]) nightProductionMap[material] = 0;
             nightProductionMap[material] += tn;
@@ -134,7 +147,7 @@ export async function GET(req: Request) {
 
     // 2. OBTENER CONTEO (SNAPSHOT)
     const conteosFiltrados = rowsConteo.filter(row => {
-        const d = parseSheetDate(row.get("FECHA"));
+        const d = parseSheetDate(getVal(row, "FECHA"));
         return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
     });
 
@@ -149,12 +162,12 @@ export async function GET(req: Request) {
     const stockMap: Record<string, { displayName: string, qty: number, tn: number, isProduced: boolean, date: string }> = {};
 
     conteosFiltrados.forEach(row => {
-        const productoOriginal = String(row.get("PRODUCTO") || "").trim();
+        const productoOriginal = String(getVal(row, "PRODUCTO") || "").trim();
         const productoNorm = cleanName(productoOriginal);
         
-        const cantidad = parseNumber(row.get("CANTIDAD"));
-        const tn = parseNumber(row.get("TN"));
-        const fecha = row.get("FECHA");
+        const cantidad = parseNumber(getVal(row, "CANTIDAD"));
+        const tn = parseNumber(getVal(row, "TN"));
+        const fecha = getVal(row, "FECHA");
         
         const isProduced = PRODUCED_PRODUCTS.has(productoNorm);
         

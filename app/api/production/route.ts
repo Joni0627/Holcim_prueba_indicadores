@@ -8,11 +8,35 @@ import { JWT } from "google-auth-library";
 const CACHE_TTL = 60 * 1000; // 60 segundos
 const cache = new Map<string, { data: any; timestamp: number }>();
 
+function getVal(row: any, key: string) {
+    const val = row.get(key) || row.get(key.toUpperCase()) || row.get(key.toLowerCase());
+    if (val !== undefined && val !== null) return val;
+    
+    // Synonyms for machine/paletizadora
+    if (key.toLowerCase() === "paletizadora" || key.toLowerCase() === "maquina") {
+        return row.get("PALETIZADORA") || row.get("paletizadora") || 
+               row.get("MAQUINA") || row.get("maquina") || 
+               row.get("MÁQUINA") || row.get("máquina");
+    }
+    return undefined;
+}
+
 function parseSheetDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== "string") return null;
-  const parts = dateStr.trim().split("/");
+  const cleaned = dateStr.trim();
+  let parts: string[] = [];
+  if (cleaned.includes("/")) parts = cleaned.split("/");
+  else if (cleaned.includes("-")) parts = cleaned.split("-");
+  
   if (parts.length === 3) {
-      let [day, month, year] = parts.map(Number);
+      let day, month, year;
+      if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          [year, month, day] = parts.map(Number);
+      } else {
+          // DD/MM/YYYY
+          [day, month, year] = parts.map(Number);
+      }
       if (year < 100) year += 2000;
       return new Date(year, month - 1, day);
   }
@@ -27,7 +51,13 @@ function parseNumber(val: any): number {
         str = str.replace('%', '');
         return parseFloat(str.replace(',', '.')) / 100;
     }
-    return parseFloat(str.replace(',', '.'));
+    // Handle thousand separators
+    if (str.includes('.') && str.includes(',')) {
+        str = str.replace(/\./g, '').replace(',', '.');
+    } else if (str.includes(',')) {
+        str = str.replace(',', '.');
+    }
+    return parseFloat(str) || 0;
 }
 
 export async function GET(req: Request) {
@@ -89,14 +119,14 @@ export async function GET(req: Request) {
     if (topParam) {
         const topCount = parseInt(topParam);
         const allRecords = rowsCabecera.map(row => {
-            const maquinaId = row.get("paletizadora") || "Desconocida";
-            const maquinaDesc = row.get("descripcion_paletizadora") || maquinaId;
+            const maquinaId = getVal(row, "paletizadora") || "Desconocida";
+            const maquinaDesc = getVal(row, "descripcion_paletizadora") || maquinaId;
             return {
-                date: row.get("fecha"),
-                shift: row.get("turno"),
+                date: getVal(row, "fecha"),
+                shift: getVal(row, "turno"),
                 machineId: maquinaId,
                 machineName: maquinaDesc,
-                valueTn: parseNumber(row.get("tn_totales_turno")),
+                valueTn: parseNumber(getVal(row, "tn_totales_turno")),
             };
         }).sort((a, b) => b.valueTn - a.valueTn).slice(0, topCount);
 
@@ -106,14 +136,14 @@ export async function GET(req: Request) {
 
     // 1. Filtrar Cabeceras por Fecha
     const cabecerasFiltradas = rowsCabecera.filter(row => {
-        const d = parseSheetDate(row.get("fecha"));
+        const d = parseSheetDate(getVal(row, "fecha"));
         return d && startDate && endDate && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
     });
 
-    const cabeceraIds = new Set(cabecerasFiltradas.map(r => r.get("id_produccion")));
+    const cabeceraIds = new Set(cabecerasFiltradas.map(r => getVal(r, "id_produccion")));
 
     // 2. Filtrar Lista por ID de Cabecera válido
-    const listaFiltrada = rowsLista.filter(row => cabeceraIds.has(row.get("ID_CABECERA")));
+    const listaFiltrada = rowsLista.filter(row => cabeceraIds.has(getVal(row, "ID_CABECERA")));
 
     // 3. Estructuras de Agregación
     let totalBags = 0;
@@ -141,18 +171,18 @@ export async function GET(req: Request) {
 
     // --- PROCESAR CABECERA (KPIs y Toneladas) ---
     cabecerasFiltradas.forEach(row => {
-        const maquinaId = row.get("paletizadora") || "Desconocida";
-        const maquinaDesc = row.get("descripcion_paletizadora") || maquinaId;
-        const turno = row.get("turno") || "Sin Turno";
-        const fecha = row.get("fecha") || "Sin Fecha";
+        const maquinaId = getVal(row, "paletizadora") || "Desconocida";
+        const maquinaDesc = getVal(row, "descripcion_paletizadora") || maquinaId;
+        const turno = getVal(row, "turno") || "Sin Turno";
+        const fecha = getVal(row, "fecha") || "Sin Fecha";
         const key = `${maquinaId}|${turno}|${fecha}`;
 
-        const tnHeader = parseNumber(row.get("tn_totales_turno"));
-        const hsMarcha = parseNumber(row.get("hs_marcha"));
-        const hsParoExt = parseNumber(row.get("hs_paro_externo_decimal"));
-        const duracion = parseNumber(row.get("duracion_turno"));
+        const tnHeader = parseNumber(getVal(row, "tn_totales_turno"));
+        const hsMarcha = parseNumber(getVal(row, "hs_marcha"));
+        const hsParoExt = parseNumber(getVal(row, "hs_paro_externo_decimal"));
+        const duracion = parseNumber(getVal(row, "duracion_turno"));
         
-        const rendimientoFila = parseNumber(row.get("rendimiento"));
+        const rendimientoFila = parseNumber(getVal(row, "rendimiento"));
         
         if (!machineStats[maquinaId]) machineStats[maquinaId] = { bags: 0, tn: 0, name: maquinaDesc };
 
@@ -182,18 +212,18 @@ export async function GET(req: Request) {
 
     // --- PROCESAR LISTA (Bolsas y Productos) ---
     listaFiltrada.forEach(row => {
-        const idCab = row.get("ID_CABECERA");
-        const bags = parseNumber(row.get("BOLSAS PRODUCIDAS"));
-        const tn = parseNumber(row.get("TN_PRODUCIDA"));
-        const material = String(row.get("DESCRIPCION_MATERIAL") || "Otros").trim();
+        const idCab = getVal(row, "ID_CABECERA");
+        const bags = parseNumber(getVal(row, "BOLSAS PRODUCIDAS"));
+        const tn = parseNumber(getVal(row, "TN_PRODUCIDA"));
+        const material = String(getVal(row, "DESCRIPCION_MATERIAL") || "Otros").trim();
         
-        const cabecera = cabecerasFiltradas.find(c => c.get("id_produccion") === idCab);
+        const cabecera = cabecerasFiltradas.find(c => getVal(c, "id_produccion") === idCab);
         if (!cabecera) return;
 
-        const turno = cabecera.get("turno") || "Sin Turno";
-        const maquinaId = cabecera.get("paletizadora") || "Desconocida";
-        const maquinaDesc = cabecera.get("descripcion_paletizadora") || maquinaId;
-        const fecha = cabecera.get("fecha") || "Sin Fecha";
+        const turno = getVal(cabecera, "turno") || "Sin Turno";
+        const maquinaId = getVal(cabecera, "paletizadora") || "Desconocida";
+        const maquinaDesc = getVal(cabecera, "descripcion_paletizadora") || maquinaId;
+        const fecha = getVal(cabecera, "fecha") || "Sin Fecha";
         const key = `${maquinaId}|${turno}|${fecha}`;
 
         totalBags += bags;
