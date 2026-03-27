@@ -13,7 +13,8 @@ export async function GET() {
     const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
     
     // Bootstrapping check
-    const user = await clerkClient.users.getUser(userId);
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     const isOwner = primaryEmail === "joni0627@gmail.com";
 
@@ -22,7 +23,7 @@ export async function GET() {
     }
 
     // Fetch all users from Clerk
-    const users = await clerkClient.users.getUserList({
+    const users = await client.users.getUserList({
       limit: 100,
     });
 
@@ -52,7 +53,8 @@ export async function PATCH(req: Request) {
     }
 
     const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
-    const user = await clerkClient.users.getUser(userId);
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     const isOwner = primaryEmail === "joni0627@gmail.com";
 
@@ -67,7 +69,7 @@ export async function PATCH(req: Request) {
     }
 
     // Update user metadata in Clerk
-    await clerkClient.users.updateUserMetadata(targetUserId, {
+    await client.users.updateUserMetadata(targetUserId, {
       publicMetadata: {
         role: newRole,
       },

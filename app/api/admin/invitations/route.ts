@@ -11,7 +11,8 @@ export async function GET() {
     }
 
     const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
-    const user = await clerkClient.users.getUser(userId);
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     const isOwner = primaryEmail === "joni0627@gmail.com";
 
@@ -20,7 +21,7 @@ export async function GET() {
     }
 
     // Fetch pending invitations from Clerk
-    const invitations = await clerkClient.invitations.getInvitationList({
+    const invitations = await client.invitations.getInvitationList({
       status: "pending",
     });
 
@@ -47,7 +48,8 @@ export async function DELETE(req: Request) {
     }
 
     const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
-    const user = await clerkClient.users.getUser(userId);
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     const isOwner = primaryEmail === "joni0627@gmail.com";
 
@@ -62,7 +64,7 @@ export async function DELETE(req: Request) {
       return new NextResponse("Missing invitationId", { status: 400 });
     }
 
-    await clerkClient.invitations.revokeInvitation(invitationId);
+    await client.invitations.revokeInvitation(invitationId);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -14,7 +14,8 @@ export async function POST(req: Request) {
     const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
     
     // Get user details to check email (bootstrapping admin)
-    const user = await clerkClient.users.getUser(userId);
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     const isOwner = primaryEmail === "joni0627@gmail.com";
 
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
     const origin = req.headers.get('origin') || `${protocol}://${host}`;
 
     // Create the invitation using Clerk Backend SDK
-    const invitation = await clerkClient.invitations.createInvitation({
+    const invitation = await client.invitations.createInvitation({
       emailAddress: email,
       redirectUrl: origin, // Redirect to home after sign up
       publicMetadata: {
