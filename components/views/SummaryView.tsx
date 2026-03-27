@@ -80,19 +80,7 @@ export const SummaryView: React.FC = () => {
 
   const { data: prodResult, isLoading: loadingProd } = useQuery({
     queryKey: ['production', dateRange.start.toISOString(), dateRange.end.toISOString()],
-    queryFn: async () => {
-      const start = new Date(dateRange.start);
-      const end = new Date(dateRange.end);
-      
-      // If single day, fetch yesterday too for shift unification
-      if (start.getTime() === end.getTime()) {
-        const yesterday = new Date(start);
-        yesterday.setDate(yesterday.getDate() - 1);
-        return fetchProductionStats(yesterday, end);
-      }
-      
-      return fetchProductionStats(start, end);
-    },
+    queryFn: async () => fetchProductionStats(dateRange.start, dateRange.end),
   });
 
   const { data: stockResult, isLoading: loadingStocks } = useQuery({
@@ -141,55 +129,11 @@ export const SummaryView: React.FC = () => {
     }));
 
     if (isSingleDay) {
-      const yesterday = new Date(dateRange.start);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = toLocalISO(yesterday);
-
-      const machines = Array.from(new Set(filteredDetails.map(d => d.machineId)));
-      const unified: any[] = [];
-
-      // 1. Mañana y Tarde del día actual
-      filteredDetails
-        .filter(d => d.dateISO === startStr && (d.shift.toUpperCase().includes('MAÑANA') || d.shift.toUpperCase().includes('TARDE')))
-        .forEach(d => unified.push(d));
-
-      // 2. Unificar Noche (Hoy) + Noche Fin (Ayer)
-      machines.forEach(m => {
-        const todayNoche = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && !d.shift.toUpperCase().includes('FIN') && d.dateISO === startStr);
-        const yesterdayNocheFin = filteredDetails.find(d => d.machineId === m && d.shift.toUpperCase().includes('NOCHE') && d.shift.toUpperCase().includes('FIN') && d.dateISO === yesterdayStr);
-
-        if (todayNoche || yesterdayNocheFin) {
-          const totalTn = (todayNoche?.valueTn || 0) + (yesterdayNocheFin?.valueTn || 0);
-          const totalBags = (todayNoche?.valueBags || 0) + (yesterdayNocheFin?.valueBags || 0);
-          const totalHsMarcha = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0);
-          
-          const totalWeight = (todayNoche?.hsMarcha || 0) + (yesterdayNocheFin?.hsMarcha || 0) || 1;
-          const avgAvailability = todayNoche && yesterdayNocheFin 
-            ? ((todayNoche.availability * todayNoche.hsMarcha) + (yesterdayNocheFin.availability * yesterdayNocheFin.hsMarcha)) / totalWeight
-            : (todayNoche?.availability || yesterdayNocheFin?.availability || 0);
-            
-          const avgPerformance = todayNoche && yesterdayNocheFin
-            ? ((todayNoche.performance * todayNoche.hsMarcha) + (yesterdayNocheFin.performance * yesterdayNocheFin.hsMarcha)) / totalWeight
-            : (todayNoche?.performance || yesterdayNocheFin?.performance || 0);
-
-          unified.push({
-            machineId: m,
-            machineName: todayNoche?.machineName || yesterdayNocheFin?.machineName || m,
-            shift: '3.NOCHE',
-            valueTn: totalTn,
-            valueBags: totalBags,
-            hsMarcha: totalHsMarcha,
-            availability: avgAvailability,
-            performance: avgPerformance,
-            dateISO: startStr
-          });
-        }
-      });
-      return unified;
+      return filteredDetails.filter(d => d.dateISO === startStr);
     } else {
       return filteredDetails.filter(d => d.dateISO >= startStr && d.dateISO <= endStr);
     }
-  }, [prodResult, dateRange, startStr, endStr, isSingleDay]);
+  }, [prodResult, startStr, endStr, isSingleDay]);
 
   const totalTn = useMemo(() => {
     return unifiedDetails.reduce((acc, d) => acc + (d.valueTn || 0), 0);
@@ -307,7 +251,8 @@ export const SummaryView: React.FC = () => {
     const shifts = [
       { id: '1.MAÑANA', label: 'MAÑANA' },
       { id: '2.TARDE', label: 'TARDE' },
-      { id: '3.NOCHE', label: 'NOCHE' }
+      { id: '3.NOCHE', label: 'NOCHE' },
+      { id: '4.NOCHE FIN', label: 'NOCHE FIN' }
     ];
 
     return shifts.map(s => {
@@ -671,103 +616,108 @@ export const SummaryView: React.FC = () => {
                 </div>
 
                 {/* ROW 2: PRODUCTS, MACHINES & DOWNTIME */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
-                    {/* TN por PRODUCTO */}
-                    <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col overflow-hidden min-h-[400px]">
-                        <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
-                            <TrendingUp className="text-blue-400" size={18} />
-                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                    {/* Left Column: Products & Palletizers */}
+                    <div className="lg:col-span-4 flex flex-col gap-4">
+                        {/* TN por PRODUCTO */}
+                        <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col overflow-hidden min-h-[300px]">
+                            <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
+                                <TrendingUp className="text-blue-400" size={18} />
+                                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
+                            </div>
+                            <div className="p-5 space-y-4 overflow-y-auto no-scrollbar flex-1">
+                                {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
+                                    <div key={prod.name} className="space-y-2">
+                                        <div className="flex justify-between text-sm font-black uppercase tracking-wider">
+                                            <span className="text-slate-300 truncate max-w-[150px] text-sm">{prod.name}</span>
+                                            <span className="text-white text-xl tracking-tighter">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-500 ml-0.5">Tn</span></span>
+                                        </div>
+                                        <div className="h-2 bg-white/5 rounded-full overflow-hidden p-[1px]">
+                                            <div 
+                                                className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.5)]" 
+                                                style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p className="text-xs text-slate-500 italic text-center py-10">Sin datos de producción</p>
+                                )}
+                            </div>
                         </div>
-                        <div className="p-5 space-y-6 overflow-y-auto no-scrollbar flex-1">
-                            {productBreakdown.length > 0 ? productBreakdown.map((prod, idx) => (
-                                <div key={prod.name} className="space-y-2">
-                                    <div className="flex justify-between text-sm font-black uppercase tracking-wider">
-                                        <span className="text-slate-300 truncate max-w-[150px] text-sm">{prod.name}</span>
-                                        <span className="text-white text-xl tracking-tighter">{(prod.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-500 ml-0.5">Tn</span></span>
+
+                        {/* Producción por Paletizadora */}
+                        <div className="flex flex-col gap-3">
+                            <div className="bg-blue-600/80 text-white px-5 py-3 rounded-t-2xl flex items-center gap-3 border-b border-white/10">
+                                <Cpu className="text-white" size={20} />
+                                <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Productividad por Paletizadora</h3>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                {byMachine.map((m: any) => (
+                                    <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <div className="text-slate-300 text-[11px] font-black uppercase tracking-widest mb-1">{m.name}</div>
+                                                <div className="text-[11px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
+                                            </div>
+                                            <div className={`text-3xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
+                                                {m.valueTn.toLocaleString()}
+                                                <span className="text-sm ml-1 font-bold text-slate-500">TN</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Indicators Row */}
+                                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                                            <div className="text-center">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">DISP</p>
+                                                <p className={`text-xs font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
+                                            </div>
+                                            <div className="text-center border-x border-white/5">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">REND</p>
+                                                <p className={`text-xs font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">OEE</p>
+                                                <p className="text-xs font-black text-white">{(m.oee).toFixed(1)}%</p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="h-2 bg-white/5 rounded-full overflow-hidden p-[1px]">
-                                        <div 
-                                            className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full shadow-[0_0_12px_rgba(59,130,246,0.5)]" 
-                                            style={{ width: `${(prod.valueTn / maxProductValue) * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            )) : (
-                                <p className="text-xs text-slate-500 italic text-center py-10">Sin datos de producción</p>
-                            )}
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Producción por Paletizadora */}
-                    <div className="flex flex-col gap-3 h-full">
-                        <div className="bg-blue-600/80 text-white px-5 py-3 rounded-t-2xl flex items-center gap-3 border-b border-white/10">
-                            <Cpu className="text-white" size={20} />
-                            <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Productividad por Paletizadora</h3>
-                        </div>
-                        <div className="flex flex-col gap-3 flex-1">
-                            {byMachine.map((m: any) => (
-                                <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg flex-1 justify-center">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <div className="text-slate-300 text-[11px] font-black uppercase tracking-widest mb-1">{m.name}</div>
-                                            <div className="text-[11px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
-                                        </div>
-                                        <div className={`text-3xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
-                                            {m.valueTn.toLocaleString()}
-                                            <span className="text-sm ml-1 font-bold text-slate-500">TN</span>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Indicators Row */}
-                                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
-                                        <div className="text-center">
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">DISP</p>
-                                            <p className={`text-xs font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
-                                        </div>
-                                        <div className="text-center border-x border-white/5">
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">REND</p>
-                                            <p className={`text-xs font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">OEE</p>
-                                            <p className="text-xs font-black text-white">{(m.oee).toFixed(1)}%</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Downtime Table Section */}
-                    <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-full min-h-[400px]">
+                    {/* Right Column: Downtime Table Section */}
+                    <div data-chart="downtime" className="lg:col-span-8 bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-full min-h-[400px]">
                         <div className="flex items-center gap-3 bg-amber-600/80 px-5 py-3 relative z-10 border-b border-white/10">
                             <AlertTriangle className="text-white" size={20} />
                             <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Paros Internos (Top 5)</h3>
                         </div>
-                        <div className="p-4 flex-grow flex flex-col overflow-y-auto no-scrollbar">
+                        <div className="p-6 flex-grow flex flex-col overflow-y-auto no-scrollbar">
                             <div data-chart-wrapper className="flex-grow relative z-10">
                             {Object.keys(topDowntimesByMachine).length > 0 ? (
-                                <div className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {Object.entries(topDowntimesByMachine).map(([mId, reasons]) => (
-                                        <div key={mId} className="space-y-2">
-                                            <div className="flex items-center gap-2 border-b border-white/5 pb-1">
-                                                <span className="text-xs font-black text-blue-400 uppercase tracking-widest">{mId}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 bg-white/5 px-2 rounded">{machineHacMap[mId] || 'N/A'}</span>
+                                        <div key={mId} className="space-y-4">
+                                            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-sm font-black text-blue-400 uppercase tracking-[0.2em]">{mId}</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/5">{machineHacMap[mId] || 'N/A'}</span>
+                                                </div>
                                             </div>
                                             <table className="w-full text-left border-collapse">
                                                 <thead>
                                                     <tr className="border-b border-white/5">
-                                                        <th className="py-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">HAC</th>
-                                                        <th className="py-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Causa</th>
-                                                        <th className="py-2 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
+                                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">HAC</th>
+                                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Causa</th>
+                                                        <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-white/5 text-sm">
                                                     {reasons.map((item: any, idx: number) => (
-                                                        <tr key={idx} className="hover:bg-white/5 transition-colors">
-                                                            <td className="py-2 px-2 text-blue-400 font-bold whitespace-nowrap">{item.hac}</td>
-                                                            <td className="py-2 px-2 text-slate-300 leading-tight">{item.reason}</td>
-                                                            <td className="py-2 px-2 text-right font-black text-red-400 whitespace-nowrap">
+                                                        <tr key={idx} className="hover:bg-white/5 transition-colors group/row">
+                                                            <td className="py-3 px-2 text-blue-400 font-bold whitespace-nowrap">{item.hac}</td>
+                                                            <td className="py-3 px-2 text-slate-300 leading-tight group-hover/row:text-white transition-colors">{item.reason}</td>
+                                                            <td className="py-3 px-2 text-right font-black text-red-400 whitespace-nowrap">
                                                                 {item.duration} <span className="text-[10px] text-slate-500 ml-0.5">min</span>
                                                             </td>
                                                         </tr>
@@ -778,7 +728,7 @@ export const SummaryView: React.FC = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-10">Sin registros de paros internos</div>
+                                <div className="h-full flex items-center justify-center text-slate-500 italic text-sm py-20">Sin registros de paros internos</div>
                             )}
                             </div>
                         </div>
