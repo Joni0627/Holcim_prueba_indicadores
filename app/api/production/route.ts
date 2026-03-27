@@ -88,12 +88,17 @@ export async function GET(req: Request) {
 
     if (topParam) {
         const topCount = parseInt(topParam);
-        const allRecords = rowsCabecera.map(row => ({
-            date: row.get("fecha"),
-            shift: row.get("turno"),
-            machineId: row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida",
-            valueTn: parseNumber(row.get("tn_totales_turno")),
-        })).sort((a, b) => b.valueTn - a.valueTn).slice(0, topCount);
+        const allRecords = rowsCabecera.map(row => {
+            const maquinaId = row.get("paletizadora") || "Desconocida";
+            const maquinaDesc = row.get("descripcion_paletizadora") || maquinaId;
+            return {
+                date: row.get("fecha"),
+                shift: row.get("turno"),
+                machineId: maquinaId,
+                machineName: maquinaDesc,
+                valueTn: parseNumber(row.get("tn_totales_turno")),
+            };
+        }).sort((a, b) => b.valueTn - a.valueTn).slice(0, topCount);
 
         cache.set(cacheKey, { data: allRecords, timestamp: now });
         return NextResponse.json(allRecords);
@@ -135,22 +140,20 @@ export async function GET(req: Request) {
 
     // --- PROCESAR CABECERA (KPIs y Toneladas) ---
     cabecerasFiltradas.forEach(row => {
-        const maquinaDesc = row.get("descripcion_paletizadora") || row.get("paletizadora") || "Desconocida";
+        const maquinaId = row.get("paletizadora") || "Desconocida";
+        const maquinaDesc = row.get("descripcion_paletizadora") || maquinaId;
         const turno = row.get("turno") || "Sin Turno";
         const fecha = row.get("fecha") || "Sin Fecha";
-        const key = `${maquinaDesc}|${turno}|${fecha}`;
+        const key = `${maquinaId}|${turno}|${fecha}`;
 
-        const tnHeader = parseNumber(row.get("tn_totales_turno")); // Mantener para OEE si es necesario
+        const tnHeader = parseNumber(row.get("tn_totales_turno"));
         const hsMarcha = parseNumber(row.get("hs_marcha"));
         const hsParoExt = parseNumber(row.get("hs_paro_externo_decimal"));
         const duracion = parseNumber(row.get("duracion_turno"));
         
         const rendimientoFila = parseNumber(row.get("rendimiento"));
         
-        // totalTn += tnHeader; // No sumaremos desde la cabecera para evitar discrepancias con la lista
-
-        if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
-        // machineStats[maquinaDesc].tn += tnHeader;
+        if (!machineStats[maquinaId]) machineStats[maquinaId] = { bags: 0, tn: 0, name: maquinaDesc };
 
         if (!detailsMap[key]) {
             detailsMap[key] = { 
@@ -158,7 +161,9 @@ export async function GET(req: Request) {
                 weightedRendNumer: 0, weightedRendDenom: 0,
                 bagsSum: 0,
                 count: 0,
-                machineName: maquinaDesc, shift: turno 
+                machineId: maquinaId,
+                machineName: maquinaDesc, 
+                shift: turno 
             };
         }
         
@@ -185,12 +190,13 @@ export async function GET(req: Request) {
         if (!cabecera) return;
 
         const turno = cabecera.get("turno") || "Sin Turno";
-        const maquinaDesc = cabecera.get("descripcion_paletizadora") || cabecera.get("paletizadora") || "Desconocida";
+        const maquinaId = cabecera.get("paletizadora") || "Desconocida";
+        const maquinaDesc = cabecera.get("descripcion_paletizadora") || maquinaId;
         const fecha = cabecera.get("fecha") || "Sin Fecha";
-        const key = `${maquinaDesc}|${turno}|${fecha}`;
+        const key = `${maquinaId}|${turno}|${fecha}`;
 
         totalBags += bags;
-        totalTn += tn; // Sumar desde la lista
+        totalTn += tn;
 
         if (detailsMap[key]) {
             detailsMap[key].bagsSum += bags;
@@ -202,11 +208,10 @@ export async function GET(req: Request) {
         if (!shiftTotalsBags[turno]) shiftTotalsBags[turno] = 0;
         shiftTotalsBags[turno] += bags;
 
-        if (!machineStats[maquinaDesc]) machineStats[maquinaDesc] = { bags: 0, tn: 0 };
-        machineStats[maquinaDesc].bags += bags;
-        machineStats[maquinaDesc].tn += tn;
+        if (!machineStats[maquinaId]) machineStats[maquinaId] = { bags: 0, tn: 0, name: maquinaDesc };
+        machineStats[maquinaId].bags += bags;
+        machineStats[maquinaId].tn += tn;
         
-        // Stacked Bar Aggregation (en Toneladas ahora)
         if (!machineProductMap[maquinaDesc]) machineProductMap[maquinaDesc] = {};
         if (!machineProductMap[maquinaDesc][material]) machineProductMap[maquinaDesc][material] = 0;
         machineProductMap[maquinaDesc][material] += tn;
@@ -222,8 +227,9 @@ export async function GET(req: Request) {
         target: 0 
     }));
 
-    const byMachine = Object.entries(machineStats).map(([name, stats]) => ({
-        name, 
+    const byMachine = Object.entries(machineStats).map(([id, stats]: [string, any]) => ({
+        name: stats.name,
+        machineId: id,
         value: stats.bags,
         valueTn: stats.tn
     }));
@@ -231,7 +237,7 @@ export async function GET(req: Request) {
     // Convert Stacked Map to Array
     const byMachineProduct = Object.entries(machineProductMap).map(([name, products]) => ({
         name,
-        ...products // Spread products for Recharts: { name: 'MG.672', 'CPF40': 500, 'Maestro': 200 }
+        ...products
     })).sort((a,b) => a.name.localeCompare(b.name));
 
     const details = Object.entries(detailsMap).map(([key, d]) => {
@@ -248,7 +254,7 @@ export async function GET(req: Request) {
         const oee = disponibilidad * rendimiento;
 
         return {
-            machineId: d.machineName,
+            machineId: d.machineId,
             machineName: d.machineName,
             shift: d.shift,
             date: fecha,

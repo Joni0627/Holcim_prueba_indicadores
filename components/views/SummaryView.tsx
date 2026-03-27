@@ -140,24 +140,24 @@ export const SummaryView: React.FC = () => {
   }, [unifiedDetails]);
 
   const byMachine = useMemo(() => {
-    const stats: Record<string, { bags: number, tn: number, availSum: number, perfSum: number, hsMarchaTotal: number, count: number, machineId: string }> = {};
+    const stats: Record<string, { bags: number, tn: number, availSum: number, perfSum: number, hsMarchaTotal: number, count: number, machineId: string, machineName: string }> = {};
     unifiedDetails.forEach(d => {
-      if (!stats[d.machineName]) stats[d.machineName] = { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: d.machineId };
-      stats[d.machineName].tn += (d.valueTn || 0);
-      stats[d.machineName].bags += (d.valueBags || 0);
+      if (!stats[d.machineId]) stats[d.machineId] = { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: d.machineId, machineName: d.machineName };
+      stats[d.machineId].tn += (d.valueTn || 0);
+      stats[d.machineId].bags += (d.valueBags || 0);
       
       const hs = d.hsMarcha || 0;
-      stats[d.machineName].availSum += (d.availability || 0) * hs;
-      stats[d.machineName].perfSum += (d.performance || 0) * hs;
-      stats[d.machineName].hsMarchaTotal += hs;
-      stats[d.machineName].count += 1;
+      stats[d.machineId].availSum += (d.availability || 0) * hs;
+      stats[d.machineId].perfSum += (d.performance || 0) * hs;
+      stats[d.machineId].hsMarchaTotal += hs;
+      stats[d.machineId].count += 1;
     });
-    return Object.entries(stats).map(([name, s]) => {
+    return Object.entries(stats).map(([id, s]) => {
       const avgAvail = s.hsMarchaTotal > 0 ? s.availSum / s.hsMarchaTotal : 0;
       const avgPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 0;
       return {
-        name,
-        machineId: s.machineId,
+        name: s.machineName,
+        machineId: id,
         valueTn: s.tn,
         value: s.bags,
         availability: avgAvail * 100,
@@ -661,33 +661,57 @@ export const SummaryView: React.FC = () => {
                             </div>
                             <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 items-center">
                                 {byMachine.map((m: any) => (
-                                    <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg h-full justify-center">
-                                        <div className="flex justify-between items-end">
-                                            <div>
-                                                <div className="text-white text-lg font-black tracking-tight mb-0.5 uppercase">
-                                                    {machineHacMap[m.machineId] || (m.machineId.includes('67') ? `MG.${m.machineId}-PZ1` : m.machineId)}
+                                    <div key={m.machineId} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg h-full justify-center">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1 min-w-0 mr-2">
+                                                <div className="text-white text-lg font-black tracking-tight mb-0.5 uppercase truncate" title={m.name}>
+                                                    {m.name}
                                                 </div>
-                                                <div className="text-[11px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
+                                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest truncate">Paletizadora</div>
                                             </div>
-                                            <div className={`text-4xl font-black tracking-tighter leading-none ${getTnColor(m.name, m.valueTn)}`}>
+                                            <div className={`text-4xl font-black tracking-tighter leading-none shrink-0 ${getTnColor(m.machineId, m.valueTn)}`}>
                                                 {m.valueTn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 <span className="text-xs ml-1 font-bold text-slate-500">TN</span>
                                             </div>
                                         </div>
                                         
                                         {/* Indicators Row */}
-                                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/5">
-                                            <div className="text-center">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">DISP</p>
-                                                <p className={`text-sm font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
+                                        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-white/5">
+                                            <div className="space-y-1.5">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">DISP</p>
+                                                    <p className={`text-[11px] font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
+                                                </div>
+                                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={`h-full rounded-full ${m.availability < 76 ? 'bg-red-500' : m.availability < 81 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                                        style={{ width: `${Math.min(m.availability, 100)}%` }}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="text-center border-x border-white/5">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">REND</p>
-                                                <p className={`text-sm font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
+                                            <div className="space-y-1.5 border-x border-white/5 px-2">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">REND</p>
+                                                    <p className={`text-[11px] font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
+                                                </div>
+                                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={`h-full rounded-full ${m.performance < 92 ? 'bg-red-500' : m.performance < 95 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                                        style={{ width: `${Math.min(m.performance, 100)}%` }}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="text-center">
-                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">OEE</p>
-                                                <p className="text-sm font-black text-white">{(m.oee).toFixed(1)}%</p>
+                                            <div className="space-y-1.5">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">OEE</p>
+                                                    <p className="text-[11px] font-black text-white">{(m.oee).toFixed(1)}%</p>
+                                                </div>
+                                                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="h-full bg-blue-500 rounded-full"
+                                                        style={{ width: `${Math.min(m.oee, 100)}%` }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
