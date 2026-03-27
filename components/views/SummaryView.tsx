@@ -747,7 +747,6 @@ export const SummaryView: React.FC = () => {
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-black text-blue-400 uppercase tracking-[0.3em]">{mId}</span>
                                                             <div className="h-px flex-1 bg-white/10"></div>
-                                                            <span className="text-[10px] font-bold text-slate-500 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/5">HAC: {machineHacMap[mId] || 'N/A'}</span>
                                                         </div>
                                                     </td>
                                                 </tr>
