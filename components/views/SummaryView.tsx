@@ -621,12 +621,11 @@ export const SummaryView: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ROW 2: PRODUCTS, MACHINES & DOWNTIME */}
+                {/* ROW 2: PRODUCTS & PALLETIZERS */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-                    {/* Left Column: Products & Palletizers */}
-                    <div className="lg:col-span-4 flex flex-col gap-4">
-                        {/* TN por PRODUCTO */}
-                        <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col overflow-hidden min-h-[300px]">
+                    {/* TN por PRODUCTO */}
+                    <div className="lg:col-span-4">
+                        <div data-card="left" className="bg-white/[0.03] backdrop-blur-sm text-white rounded-2xl shadow-xl border border-white/10 flex flex-col overflow-hidden h-full min-h-[300px]">
                             <div className="bg-white/5 px-5 py-3 flex items-center gap-3 border-b border-white/5">
                                 <TrendingUp className="text-blue-400" size={18} />
                                 <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-100">TN por PRODUCTO</h3>
@@ -650,16 +649,18 @@ export const SummaryView: React.FC = () => {
                                 )}
                             </div>
                         </div>
+                    </div>
 
-                        {/* Producción por Paletizadora */}
-                        <div className="flex flex-col gap-3">
-                            <div className="bg-blue-600/80 text-white px-5 py-3 rounded-t-2xl flex items-center gap-3 border-b border-white/10">
+                    {/* Producción por Paletizadora */}
+                    <div className="lg:col-span-8">
+                        <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col h-full overflow-hidden">
+                            <div className="bg-blue-600/80 text-white px-5 py-3 flex items-center gap-3 border-b border-white/10">
                                 <Cpu className="text-white" size={20} />
                                 <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Productividad por Paletizadora</h3>
                             </div>
-                            <div className="flex flex-col gap-3">
+                            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 items-center">
                                 {byMachine.map((m: any) => (
-                                    <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg">
+                                    <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg h-full justify-center">
                                         <div className="flex justify-between items-center">
                                             <div>
                                                 <div className="text-slate-300 text-[11px] font-black uppercase tracking-widest mb-1">{m.name}</div>
@@ -691,43 +692,49 @@ export const SummaryView: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Right Column: Downtime Table Section */}
-                    <div data-chart="downtime" className="lg:col-span-8 bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group h-full min-h-[400px]">
+                {/* ROW 3: DOWNTIME TABLE (Full Width) */}
+                <div className="w-full">
+                    <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group min-h-[400px]">
                         <div className="flex items-center gap-3 bg-amber-600/80 px-5 py-3 relative z-10 border-b border-white/10">
                             <AlertTriangle className="text-white" size={20} />
                             <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Paros Internos (Top 5 por Máquina)</h3>
                         </div>
-                        <div className="p-6 flex-grow flex flex-col overflow-y-auto no-scrollbar">
-                            <div data-chart-wrapper className="flex-grow relative z-10">
+                        <div className="p-6 flex-grow flex flex-col overflow-x-auto no-scrollbar">
+                            <div data-chart-wrapper className="flex-grow relative z-10 min-w-[800px]">
                             {Object.keys(topDowntimesByMachine).length > 0 ? (
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-white/10">
-                                            <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Máquina</th>
-                                            <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">HAC</th>
-                                            <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Causa</th>
-                                            <th className="py-3 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
+                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">HAC</th>
+                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Causa del Paro</th>
+                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Duración</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5 text-sm">
-                                        {Object.entries(topDowntimesByMachine).flatMap(([mId, reasons]) => 
-                                            reasons.map((item: any, idx: number) => (
-                                                <tr key={`${mId}-${idx}`} className="hover:bg-white/5 transition-colors group/row">
-                                                    <td className="py-3 px-2">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-blue-400 font-black text-[10px] uppercase tracking-widest">{mId}</span>
-                                                            <span className="text-[9px] text-slate-500 font-bold">{machineHacMap[mId] || 'N/A'}</span>
+                                        {Object.entries(topDowntimesByMachine).map(([mId, reasons]) => (
+                                            <React.Fragment key={mId}>
+                                                <tr className="bg-white/5">
+                                                    <td colSpan={3} className="py-2 px-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs font-black text-blue-400 uppercase tracking-[0.3em]">{mId}</span>
+                                                            <div className="h-px flex-1 bg-white/10"></div>
+                                                            <span className="text-[10px] font-bold text-slate-500 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/5">HAC: {machineHacMap[mId] || 'N/A'}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-3 px-2 text-slate-400 font-mono text-xs">{item.hac}</td>
-                                                    <td className="py-3 px-2 text-slate-300 leading-tight group-hover/row:text-white transition-colors">{item.reason}</td>
-                                                    <td className="py-3 px-2 text-right font-black text-red-400 whitespace-nowrap">
-                                                        {item.duration} <span className="text-[10px] text-slate-500 ml-0.5">min</span>
-                                                    </td>
                                                 </tr>
-                                            ))
-                                        )}
+                                                {reasons.map((item: any, idx: number) => (
+                                                    <tr key={`${mId}-${idx}`} className="hover:bg-white/[0.08] transition-colors group/row">
+                                                        <td className="py-3 px-4 text-slate-400 font-mono text-xs">{item.hac}</td>
+                                                        <td className="py-3 px-4 text-slate-300 leading-tight group-hover/row:text-white transition-colors">{item.reason}</td>
+                                                        <td className="py-3 px-4 text-right font-black text-red-400 whitespace-nowrap">
+                                                            {item.duration} <span className="text-[10px] text-slate-500 ml-0.5">min</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </React.Fragment>
+                                        ))}
                                     </tbody>
                                 </table>
                             ) : (
