@@ -659,28 +659,29 @@ export const SummaryView: React.FC = () => {
                                 <Cpu className="text-white" size={20} />
                                 <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Productividad por Paletizadora</h3>
                             </div>
-                            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 items-center">
+                            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 items-stretch">
                                 {byMachine.map((m: any) => (
-                                    <div key={m.machineId} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg h-full justify-center">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1 min-w-0 mr-2">
-                                                <div className="text-white text-lg font-black tracking-tight mb-0.5 uppercase truncate" title={m.name}>
+                                    <div key={m.machineId} className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 hover:bg-white/[0.05] transition-all flex flex-col gap-4 shadow-xl h-full">
+                                        {/* Header: Machine Name & TN */}
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                                                <div className="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] truncate" title={m.name}>
                                                     {m.name}
                                                 </div>
-                                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest truncate">Paletizadora</div>
                                             </div>
-                                            <div className={`text-4xl font-black tracking-tighter leading-none shrink-0 ${getTnColor(m.machineId, m.valueTn)}`}>
+                                            <div className={`text-4xl font-black tracking-tighter leading-tight ${getTnColor(m.machineId, m.valueTn)}`}>
                                                 {m.valueTn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                <span className="text-xs ml-1 font-bold text-slate-500">TN</span>
+                                                <span className="text-sm ml-1 font-bold text-slate-500">TN</span>
                                             </div>
                                         </div>
                                         
                                         {/* Indicators Row */}
-                                        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-white/5">
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between items-center">
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">DISP</p>
-                                                    <p className={`text-[11px] font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
+                                        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5 mt-auto">
+                                            <div className="space-y-2">
+                                                <div className="flex flex-col">
+                                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">DISP</p>
+                                                    <p className={`text-[13px] font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
                                                 </div>
                                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                                     <div 
@@ -689,10 +690,10 @@ export const SummaryView: React.FC = () => {
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="space-y-1.5 border-x border-white/5 px-2">
-                                                <div className="flex justify-between items-center">
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">REND</p>
-                                                    <p className={`text-[11px] font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
+                                            <div className="space-y-2 border-x border-white/5 px-2">
+                                                <div className="flex flex-col">
+                                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">REND</p>
+                                                    <p className={`text-[13px] font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
                                                 </div>
                                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                                     <div 
@@ -701,10 +702,10 @@ export const SummaryView: React.FC = () => {
                                                     />
                                                 </div>
                                             </div>
-                                            <div className="space-y-1.5">
-                                                <div className="flex justify-between items-center">
-                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">OEE</p>
-                                                    <p className="text-[11px] font-black text-white">{(m.oee).toFixed(1)}%</p>
+                                            <div className="space-y-2">
+                                                <div className="flex flex-col">
+                                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">OEE</p>
+                                                    <p className="text-[13px] font-black text-white">{(m.oee).toFixed(1)}%</p>
                                                 </div>
                                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                                     <div 
