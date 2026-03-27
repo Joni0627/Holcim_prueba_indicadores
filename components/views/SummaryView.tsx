@@ -140,9 +140,9 @@ export const SummaryView: React.FC = () => {
   }, [unifiedDetails]);
 
   const byMachine = useMemo(() => {
-    const stats: Record<string, { bags: number, tn: number, availSum: number, perfSum: number, hsMarchaTotal: number, count: number }> = {};
+    const stats: Record<string, { bags: number, tn: number, availSum: number, perfSum: number, hsMarchaTotal: number, count: number, machineId: string }> = {};
     unifiedDetails.forEach(d => {
-      if (!stats[d.machineName]) stats[d.machineName] = { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0 };
+      if (!stats[d.machineName]) stats[d.machineName] = { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: d.machineId };
       stats[d.machineName].tn += (d.valueTn || 0);
       stats[d.machineName].bags += (d.valueBags || 0);
       
@@ -157,6 +157,7 @@ export const SummaryView: React.FC = () => {
       const avgPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 0;
       return {
         name,
+        machineId: s.machineId,
         valueTn: s.tn,
         value: s.bags,
         availability: avgAvail * 100,
@@ -661,30 +662,32 @@ export const SummaryView: React.FC = () => {
                             <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 items-center">
                                 {byMachine.map((m: any) => (
                                     <div key={m.name} className="bg-white/[0.03] border border-white/10 rounded-xl p-4 hover:bg-white/[0.05] transition-colors flex flex-col gap-3 shadow-lg h-full justify-center">
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex justify-between items-end">
                                             <div>
-                                                <div className="text-slate-300 text-[11px] font-black uppercase tracking-widest mb-1">{m.name}</div>
+                                                <div className="text-white text-lg font-black tracking-tight mb-0.5 uppercase">
+                                                    {machineHacMap[m.machineId] || (m.machineId.includes('67') ? `MG.${m.machineId}-PZ1` : m.machineId)}
+                                                </div>
                                                 <div className="text-[11px] text-slate-500 font-bold">{m.value.toLocaleString()} Bolsas</div>
                                             </div>
-                                            <div className={`text-3xl font-black tracking-tighter ${getTnColor(m.name, m.valueTn)}`}>
-                                                {m.valueTn.toLocaleString()}
-                                                <span className="text-sm ml-1 font-bold text-slate-500">TN</span>
+                                            <div className={`text-4xl font-black tracking-tighter leading-none ${getTnColor(m.name, m.valueTn)}`}>
+                                                {m.valueTn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                <span className="text-xs ml-1 font-bold text-slate-500">TN</span>
                                             </div>
                                         </div>
                                         
                                         {/* Indicators Row */}
-                                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/5">
                                             <div className="text-center">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">DISP</p>
-                                                <p className={`text-xs font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
+                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">DISP</p>
+                                                <p className={`text-sm font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
                                             </div>
                                             <div className="text-center border-x border-white/5">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">REND</p>
-                                                <p className={`text-xs font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
+                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">REND</p>
+                                                <p className={`text-sm font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
                                             </div>
                                             <div className="text-center">
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">OEE</p>
-                                                <p className="text-xs font-black text-white">{(m.oee).toFixed(1)}%</p>
+                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">OEE</p>
+                                                <p className="text-sm font-black text-white">{(m.oee).toFixed(1)}%</p>
                                             </div>
                                         </div>
                                     </div>
