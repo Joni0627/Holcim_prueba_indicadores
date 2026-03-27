@@ -83,34 +83,34 @@ const TimelineBar: React.FC<{
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row h-auto md:h-24 overflow-visible mb-2">
-      <div className="w-full md:w-64 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-3 flex flex-col justify-center shrink-0">
+    <div className="bg-white/[0.03] backdrop-blur-sm rounded-xl border border-white/10 shadow-sm flex flex-col md:flex-row h-auto md:h-24 overflow-visible mb-2">
+      <div className="w-full md:w-64 bg-white/[0.02] border-b md:border-b-0 md:border-r border-white/10 p-3 flex flex-col justify-center shrink-0">
         <div className="flex items-center gap-2 mb-1">
-          <Box size={14} className="text-indigo-500" />
-          <span className="text-[11px] font-black text-slate-800 uppercase truncate">{machineId}</span>
+          <Box size={14} className="text-blue-400" />
+          <span className="text-[11px] font-black text-white uppercase truncate">{machineId}</span>
         </div>
         
         <div className="grid grid-cols-2 gap-2 mt-1">
           <div className="flex flex-col">
-            <span className="text-[8px] font-bold text-slate-400 uppercase">Producción</span>
-            <span className="text-xs font-black text-slate-900">{productionTn.toLocaleString()} Tn</span>
+            <span className="text-[8px] font-bold text-slate-500 uppercase">Producción</span>
+            <span className="text-xs font-black text-slate-200">{productionTn.toLocaleString()} Tn</span>
           </div>
           <div className="flex flex-col">
-            <span className="text-[8px] font-bold text-slate-400 uppercase">Hs Marcha</span>
-            <span className="text-xs font-black text-emerald-600">{hsMarcha.toFixed(1)} hs</span>
+            <span className="text-[8px] font-bold text-slate-500 uppercase">Hs Marcha</span>
+            <span className="text-xs font-black text-emerald-400">{hsMarcha.toFixed(1)} hs</span>
           </div>
         </div>
 
-        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-200/60">
-            <span className={`text-[9px] font-bold ${availability > 90 ? 'text-emerald-600' : availability > 70 ? 'text-amber-600' : 'text-red-600'}`}>
+        <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+            <span className={`text-[9px] font-bold ${availability > 90 ? 'text-emerald-400' : availability > 70 ? 'text-amber-400' : 'text-red-400'}`}>
                 {availability.toFixed(1)}% Disponibilidad
             </span>
-            <span className="text-[8px] font-bold text-slate-400 uppercase">{downtimeTotal}m paros</span>
+            <span className="text-[8px] font-bold text-slate-500 uppercase">{downtimeTotal}m paros</span>
         </div>
       </div>
 
       <div className="flex-1 p-3 flex flex-col justify-center gap-1.5 overflow-visible">
-        <div className="w-full h-6 bg-slate-100 rounded-md flex border border-slate-200 shadow-inner group relative overflow-visible">
+        <div className="w-full h-6 bg-white/5 rounded-md flex border border-white/10 shadow-inner group relative overflow-visible">
           {blocks.map((block, idx) => (
             <div 
               key={idx}
@@ -118,21 +118,21 @@ const TimelineBar: React.FC<{
               style={{ width: `${(block.duration / totalMins) * 100}%` }}
             >
               {block.type === 'downtime' && block.event && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 bg-slate-900 text-white p-3 rounded-xl shadow-2xl opacity-0 group-hover/block:opacity-100 transition-all z-[100] pointer-events-none transform translate-y-1 group-hover/block:translate-y-0">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 bg-slate-900 border border-white/10 text-white p-3 rounded-xl shadow-2xl opacity-0 group-hover/block:opacity-100 transition-all z-[100] pointer-events-none transform translate-y-1 group-hover/block:translate-y-0">
                   <div className="text-[10px] font-black border-b border-white/10 pb-1 mb-2 flex justify-between uppercase">
-                    <span className="text-indigo-300">{block.event.startTime}</span>
+                    <span className="text-blue-300">{block.event.startTime}</span>
                     <span className="text-white/60">{block.event.downtimeType}</span>
                     <span className="text-red-400">{block.duration} MIN</span>
                   </div>
                   <p className="text-[11px] font-bold text-white mb-1 uppercase tracking-tight">{block.event.hac}</p>
                   <p className="text-[10px] leading-tight text-slate-300 italic">&quot;{block.event.reason}&quot;</p>
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45"></div>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-white/10 rotate-45"></div>
                 </div>
               )}
             </div>
           ))}
         </div>
-        <div className="flex justify-between px-1 text-[8px] text-slate-400 font-mono uppercase">
+        <div className="flex justify-between px-1 text-[8px] text-slate-500 font-mono uppercase">
            {Array.from({ length: (totalMins/60) + 1 }).map((_, i) => (
              <span key={i}>{((config.start + i) % 24).toString().padStart(2, '0')}:00</span>
            ))}
@@ -205,50 +205,50 @@ export const DailyTimelineView: React.FC = () => {
   const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 overflow-visible pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-6 animate-in fade-in duration-500 overflow-visible pb-10 min-h-screen bg-[#0a0f1e] text-slate-200">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4">
         <div className="flex items-center gap-3">
-            <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-100">
+            <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-900/20">
                 <Clock size={24} />
             </div>
             <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Cronograma de Operación</h2>
-                <p className="text-slate-500 text-sm">Paros divididos por línea de producción y turno.</p>
+                <h2 className="text-2xl font-black text-white tracking-tight uppercase">Cronograma de Operación</h2>
+                <p className="text-slate-400 text-sm">Paros divididos por línea de producción y turno.</p>
             </div>
         </div>
 
-        <div className="flex items-center bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-            <button onClick={() => handleDayChange(-1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+        <div className="flex items-center bg-white/[0.03] p-1 rounded-xl border border-white/10 shadow-sm backdrop-blur-sm">
+            <button onClick={() => handleDayChange(-1)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
                 <ChevronLeft size={20} />
             </button>
             <div className="relative flex items-center">
-                <Calendar size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
+                <Calendar size={14} className="absolute left-3 text-blue-400 pointer-events-none" />
                 <input 
                     type="date" 
                     value={selectedDay}
                     onChange={(e) => setSelectedDay(e.target.value)}
-                    className="bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-700 pl-9 pr-4 py-1"
+                    className="bg-transparent border-none focus:ring-0 text-sm font-bold text-white pl-9 pr-4 py-1 [color-scheme:dark]"
                 />
             </div>
-            <button onClick={() => handleDayChange(1)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+            <button onClick={() => handleDayChange(1)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
                 <ChevronRight size={20} />
             </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="h-[60vh] flex flex-col items-center justify-center text-slate-400">
-          <Loader2 className="animate-spin mb-4 text-indigo-500" size={48} />
+        <div className="h-[60vh] flex flex-col items-center justify-center text-slate-500">
+          <Loader2 className="animate-spin mb-4 text-blue-500" size={48} />
           <p className="font-medium uppercase tracking-widest text-xs">Sincronizando cronograma...</p>
         </div>
       ) : (
         <div className="space-y-8 overflow-visible">
-          <div className="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center gap-6 text-[10px] text-slate-500 shadow-sm font-bold uppercase tracking-wider">
+          <div className="bg-white/[0.03] p-4 rounded-xl border border-white/10 flex flex-wrap items-center gap-6 text-[10px] text-slate-400 shadow-sm font-bold uppercase tracking-wider backdrop-blur-sm">
             <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> OPERATIVO</div>
             <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> PARO INTERNO</div>
             <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-400 rounded-sm"></div> PARO EXTERNO</div>
-            <div className="ml-auto flex items-center gap-1.5 font-medium text-slate-400 italic normal-case">
-                <Info size={14} className="text-indigo-400" />
+            <div className="ml-auto flex items-center gap-1.5 font-medium text-slate-500 italic normal-case">
+                <Info size={14} className="text-blue-400" />
                 Visualización detallada por línea de producción.
             </div>
           </div>
@@ -257,11 +257,11 @@ export const DailyTimelineView: React.FC = () => {
             {shiftsOrdered.map(s => (
               <div key={s} className="space-y-3">
                  <div className="flex items-center gap-3 px-1">
-                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-tighter">
+                    <div className="w-2 h-2 rounded-full bg-blue-500/50"></div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-tighter">
                         TURNO {SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}
                     </h3>
-                    <div className="flex-grow h-px bg-slate-100"></div>
+                    <div className="flex-grow h-px bg-white/5"></div>
                  </div>
                  <div className="grid grid-cols-1 gap-1">
                     {Object.entries(groupedData[s] || {}).map(([machine, events]) => {
@@ -282,22 +282,22 @@ export const DailyTimelineView: React.FC = () => {
           </div>
 
           {downtimes.length === 0 ? (
-            <div className="bg-emerald-50 border border-emerald-100 p-12 rounded-3xl flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+            <div className="bg-emerald-500/5 border border-emerald-500/10 p-12 rounded-3xl flex flex-col items-center text-center backdrop-blur-sm">
+                <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-4">
                     <Activity size={32} />
                 </div>
-                <h3 className="text-xl font-bold text-emerald-900 uppercase">Sin Novedades de Parada</h3>
-                <p className="text-emerald-700/70 max-w-sm mt-2 text-sm italic">Planta operando con normalidad teórica.</p>
+                <h3 className="text-xl font-bold text-emerald-400 uppercase">Sin Novedades de Parada</h3>
+                <p className="text-emerald-400/50 max-w-sm mt-2 text-sm italic">Planta operando con normalidad teórica.</p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+            <div className="bg-white/[0.03] rounded-2xl border border-white/10 overflow-hidden shadow-sm backdrop-blur-sm">
+                <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02] flex items-center gap-2">
                     <AlertTriangle size={18} className="text-amber-500" />
-                    <h3 className="font-bold text-slate-800 uppercase text-xs tracking-wider">Detalle del Registro de Paros</h3>
+                    <h3 className="font-bold text-white uppercase text-xs tracking-wider">Detalle del Registro de Paros</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-slate-400 font-bold uppercase text-[10px] tracking-widest border-b border-slate-100">
+                        <thead className="bg-white/[0.02] text-slate-500 font-bold uppercase text-[10px] tracking-widest border-b border-white/5">
                             <tr>
                                 <th className="px-6 py-4">INICIO (REAL)</th>
                                 <th className="px-6 py-4">PALETIZADORA</th>
@@ -308,24 +308,24 @@ export const DailyTimelineView: React.FC = () => {
                                 <th className="px-6 py-4 text-right">DURACIÓN (MIN)</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-white/5">
                             {[...downtimes].sort((a,b) => (a.startTime || '').localeCompare(b.startTime || '')).map((e, i) => (
-                                <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 font-mono font-bold text-indigo-600">{e.startTime || '00:00'}</td>
-                                    <td className="px-6 py-4 font-black text-slate-800 uppercase text-[11px]">{e.machineId}</td>
-                                    <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">{getVisualShift(e.startTime || '')}</td>
+                                <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                                    <td className="px-6 py-4 font-mono font-bold text-blue-400">{e.startTime || '00:00'}</td>
+                                    <td className="px-6 py-4 font-black text-white uppercase text-[11px]">{e.machineId}</td>
+                                    <td className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase">{getVisualShift(e.startTime || '')}</td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
                                             (e.downtimeType || '').toLowerCase().includes('interno') 
-                                            ? 'bg-red-50 text-red-600' 
-                                            : 'bg-slate-100 text-slate-600'
+                                            ? 'bg-red-500/10 text-red-400' 
+                                            : 'bg-slate-500/10 text-slate-400'
                                         }`}>
                                             {e.downtimeType}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 font-medium text-slate-600 text-[11px] uppercase">{e.hac}</td>
-                                    <td className="px-6 py-4 text-slate-500 italic max-w-xs truncate text-xs">&quot;{e.reason}&quot;</td>
-                                    <td className="px-6 py-4 text-right font-black text-red-600">{e.durationMinutes}</td>
+                                    <td className="px-6 py-4 font-medium text-slate-300 text-[11px] uppercase">{e.hac}</td>
+                                    <td className="px-6 py-4 text-slate-400 italic max-w-xs truncate text-xs">&quot;{e.reason}&quot;</td>
+                                    <td className="px-6 py-4 text-right font-black text-red-400">{e.durationMinutes}</td>
                                 </tr>
                             ))}
                         </tbody>
