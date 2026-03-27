@@ -345,7 +345,7 @@ export const SummaryView: React.FC = () => {
   const totalBags = useMemo(() => prodResult?.totalBags || 0, [prodResult]);
 
   const handleShare = async () => {
-    const element = document.getElementById('summary-view-content');
+    const element = document.getElementById('summary-view-container');
     if (!element || isSharing) return;
 
     setIsSharing(true);
@@ -357,7 +357,7 @@ export const SummaryView: React.FC = () => {
         backgroundColor: '#0a0f1e',
         windowWidth: 1400, // Ensure lg: grid classes are active
         onclone: (clonedDoc) => {
-          const el = clonedDoc.getElementById('summary-view-content');
+          const el = clonedDoc.getElementById('summary-view-container');
           if (el) {
             el.style.width = '1400px';
             el.style.padding = '20px';
@@ -531,29 +531,28 @@ export const SummaryView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-8 overflow-x-hidden min-h-screen bg-[#0a0f1e] p-4 md:p-6 text-slate-200">
+    <div id="summary-view-container" className="space-y-6 animate-in fade-in duration-500 pb-8 overflow-x-hidden min-h-screen bg-[#0a0f1e] p-4 md:p-6 text-slate-200">
       
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4 relative z-30">
-        <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-blue-600 rounded-xl shadow-[0_0_15px_rgba(37,99,235,0.4)]">
                     <Layout size={24} className="text-white" />
                 </div>
                 <h1 className="text-3xl font-black tracking-tighter uppercase leading-none text-white">EXPEDICION MALAGUEÑO</h1>
             </div>
-            <div className="flex flex-wrap items-center gap-3 ml-0 sm:ml-10">
-                <p className="text-xs font-bold text-blue-400 uppercase tracking-widest opacity-80">Resumen de productividad Expedición Malagueño</p>
-                <button 
-                    onClick={handleShare}
-                    disabled={isSharing}
-                    className={`p-1.5 rounded-lg transition-all flex items-center gap-2 px-4 text-[10px] font-black shadow-lg border ${isSharing ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-400/30 hover:scale-105 active:scale-95'}`}
-                    title="Copiar o Compartir Reporte"
-                >
-                    {isSharing ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
-                    <span>{isSharing ? 'GENERANDO...' : 'REPORTE'}</span>
-                </button>
-            </div>
+            
+            <button 
+                onClick={handleShare}
+                disabled={isSharing}
+                data-html2canvas-ignore="true"
+                className={`p-2 rounded-xl transition-all flex items-center gap-2 px-5 text-[11px] font-black shadow-lg border ${isSharing ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white border-blue-400/30 hover:scale-105 active:scale-95'}`}
+                title="Copiar Reporte al Portapapeles"
+            >
+                {isSharing ? <Loader2 size={16} className="animate-spin" /> : <Share2 size={16} />}
+                <span>{isSharing ? 'GENERANDO...' : 'REPORTE'}</span>
+            </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
           <DateFilter onFilterChange={handleFilterChange} />
