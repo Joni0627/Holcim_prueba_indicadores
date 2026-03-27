@@ -51,11 +51,11 @@ export const StocksView: React.FC = () => {
   const { producedItems, pallets, packaging, supplies } = processedData;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 overflow-x-hidden text-slate-200">
+    <div className="space-y-8 animate-in fade-in duration-500 overflow-x-hidden text-slate-200 bg-[#0a0f1e] min-h-screen p-4 md:p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-white/5 pb-4">
         <div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Control de Stocks</h2>
-          <p className="text-slate-400 text-xs mt-1 font-bold uppercase tracking-widest opacity-70">Inventario físico ajustado con producción nocturna.</p>
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Control de Stocks</h2>
+          <p className="text-slate-400 text-sm mt-1 font-medium">Inventario físico ajustado con producción nocturna.</p>
         </div>
         <DateFilter onFilterChange={handleFilterChange} />
       </div>
