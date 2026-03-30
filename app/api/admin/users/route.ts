@@ -10,11 +10,9 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
-    
-    // Bootstrapping check
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
+    const role = (user.publicMetadata as { role?: string })?.role;
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     const isOwner = primaryEmail === "joni0627@gmail.com";
 
@@ -52,9 +50,9 @@ export async function PATCH(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const role = (sessionClaims?.publicMetadata as { role?: string })?.role;
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
+    const role = (user.publicMetadata as { role?: string })?.role;
     const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
     const isOwner = primaryEmail === "joni0627@gmail.com";
 
