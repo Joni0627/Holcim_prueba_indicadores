@@ -79,3 +79,43 @@ export async function PATCH(req: Request) {
     return new NextResponse(error.message || "Internal Error", { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const { userId } = auth();
+
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const role = (user.publicMetadata as { role?: string })?.role;
+    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
+    const isOwner = primaryEmail === "joni0627@gmail.com";
+
+    if (role !== "admin" && !isOwner) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const targetUserId = searchParams.get("userId");
+
+    if (!targetUserId) {
+      return new NextResponse("Missing userId", { status: 400 });
+    }
+
+    // Prevent self-deletion
+    if (targetUserId === userId) {
+      return new NextResponse("Cannot delete yourself", { status: 400 });
+    }
+
+    // Delete user from Clerk
+    await client.users.deleteUser(targetUserId);
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("[USER_DELETE_ERROR]", error);
+    return new NextResponse(error.message || "Internal Error", { status: 500 });
+  }
+}

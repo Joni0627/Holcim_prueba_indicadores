@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Mail, Send, CheckCircle2, AlertCircle, Loader2, ShieldCheck, Users, UserCog, Shield, User } from 'lucide-react';
+import { Mail, Send, CheckCircle2, AlertCircle, Loader2, ShieldCheck, Users, UserCog, Shield, User, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ClerkUser {
@@ -24,6 +24,10 @@ export const AdminPanel = () => {
   const [invitations, setInvitations] = useState<any[]>([]);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [isInvitationsLoading, setIsInvitationsLoading] = useState(true);
+  
+  // Confirmation Modal State
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string, name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -86,6 +90,32 @@ export const AdminPanel = () => {
       }
     } catch (err) {
       console.error('Error updating role:', err);
+    }
+  };
+
+  const handleDeleteUser = async (targetUserId: string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/users?userId=${targetUserId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setUsers(users.filter(u => u.id !== targetUserId));
+        setStatus('success');
+        setMessage('Usuario eliminado con éxito');
+        setTimeout(() => setStatus('idle'), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al eliminar usuario');
+      }
+    } catch (err: any) {
+      setStatus('error');
+      setMessage(err.message || 'Error al eliminar usuario');
+      setTimeout(() => setStatus('idle'), 3000);
+    } finally {
+      setIsDeleting(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -347,6 +377,16 @@ export const AdminPanel = () => {
                           >
                             <UserCog size={18} />
                           </button>
+                          <button
+                            onClick={() => setConfirmDelete({ 
+                              id: user.id, 
+                              name: user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.email.split('@')[0] 
+                            })}
+                            className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 hover:text-red-400 transition-all"
+                            title="Eliminar Usuario"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -357,6 +397,56 @@ export const AdminPanel = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6"
+            >
+              <div className="flex items-center gap-4 text-red-400">
+                <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20">
+                  <AlertCircle size={24} />
+                </div>
+                <h3 className="text-xl font-bold">¿Eliminar Usuario?</h3>
+              </div>
+              
+              <p className="text-slate-300">
+                Estás a punto de eliminar a <span className="text-white font-bold">{confirmDelete.name}</span>. 
+                Esta acción revocará permanentemente su acceso a la aplicación y no se puede deshacer.
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={isDeleting}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-2xl transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleDeleteUser(confirmDelete.id)}
+                  disabled={isDeleting}
+                  className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 text-white font-bold py-3 rounded-2xl transition-all flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <>
+                      <Trash2 size={18} />
+                      <span>Eliminar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
