@@ -574,14 +574,14 @@ export const SummaryView: React.FC<{
           <div className="space-y-6">
                 {/* ROW 1: KPI & STOCK */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-                    {/* Producción Total Hoy - 4/12 */}
+                    {/* Producción Total - 4/12 */}
                     <div className="lg:col-span-4">
                         <div data-card="left" className="h-full min-h-[140px] bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-6 rounded-3xl shadow-2xl relative overflow-hidden group border border-white/20 flex flex-col justify-center">
                             <div className="absolute -right-6 -bottom-6 opacity-20 group-hover:scale-110 transition-transform duration-700 blur-sm">
                                 <PackageCheck size={140} />
                             </div>
                             <div className="relative z-10">
-                                <p className="text-blue-100 font-black uppercase tracking-[0.2em] text-[10px] mb-2 opacity-80">Producción Total Hoy</p>
+                                <p className="text-blue-100 font-black uppercase tracking-[0.2em] text-[10px] mb-2 opacity-80">Producción Total</p>
                                 <div className="flex items-baseline gap-3">
                                     <h2 className="text-6xl md:text-7xl font-black tracking-tighter drop-shadow-2xl">
                                         {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -602,7 +602,7 @@ export const SummaryView: React.FC<{
                             <div className="p-5 grid grid-cols-2 md:grid-cols-5 gap-4">
                                 {producedStock.length > 0 ? producedStock.map((item, idx) => (
                                     <div key={item.id} className="bg-white/5 p-4 rounded-xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-emerald-500/10 transition-all hover:scale-[1.02]">
-                                        <p className="text-[10px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-400 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
+                                        <p className="text-[8px] uppercase font-black text-slate-400 mb-1 tracking-widest group-hover:text-emerald-400 transition-colors truncate w-full" title={item.product}>{item.product.replace('CEMENTO ', '')}</p>
                                         <p className="text-4xl font-black tracking-tighter text-white">
                                             {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                                             <span className="text-xs font-bold text-slate-500 ml-1">Tn</span>
