@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchTopRecords } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats } from '../../types';
 
@@ -263,6 +263,20 @@ const CircularProgress: React.FC<{ value: number, label: string, size?: number, 
 };
 
 const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
+
+const MonitorTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-black/30 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-2xl">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-lg font-black text-emerald-400">
+          {Math.floor(payload[0].value).toLocaleString()} <span className="text-[10px] text-slate-500 uppercase">Tn</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const MonitorView: React.FC<{ 
   onBack?: () => void,
@@ -912,29 +926,47 @@ export const MonitorView: React.FC<{
                                 </div>
                               </div>
                               
-                              <div className="p-3 lg:p-4 flex flex-col gap-2 lg:gap-3">
-                                {shiftsOrdered.map(shiftKey => {
-                                  const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
-                                  const value = machine.shiftBreakdown[shiftKey] || 0;
-                                  const maxInShift = Math.max(...Object.values(machine.shiftBreakdown), 1);
-                                  const barWidth = (value / maxInShift) * 100;
-
-                                  return (
-                                    <div key={shiftKey} className="flex flex-col gap-1">
-                                      <div className="flex justify-between items-end">
-                                        <span className={`text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-${config.color}-400`}>{config.label}</span>
-                                        <span className="text-sm lg:text-base font-black text-white">{Math.floor(value).toLocaleString()} <span className="text-[8px] text-slate-500">Tn</span></span>
-                                      </div>
-                                      <div className="h-2.5 lg:h-3 bg-white/5 rounded-lg overflow-hidden border border-white/5 p-0.5">
-                                        <motion.div 
-                                          initial={{ width: 0 }}
-                                          animate={{ width: `${barWidth}%` }}
-                                          className={`h-full rounded-md bg-${config.color}-500/60 border border-${config.color}-500/30`}
-                                        />
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                              <div className="p-3 lg:p-4 flex-1 min-h-0">
+                                <div className="h-48 lg:h-56 w-full">
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart
+                                      data={shiftsOrdered.map(s => ({
+                                        name: SHIFT_MAP[s as keyof typeof SHIFT_MAP].label,
+                                        value: machine.shiftBreakdown[s] || 0
+                                      }))}
+                                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                                    >
+                                      <defs>
+                                        <linearGradient id={`colorValue-${machine.id.replace(/[^a-zA-Z0-9]/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                        </linearGradient>
+                                      </defs>
+                                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#ffffff10" />
+                                      <XAxis 
+                                        dataKey="name" 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 'bold' }}
+                                      />
+                                      <YAxis 
+                                        axisLine={false} 
+                                        tickLine={false} 
+                                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 'bold' }}
+                                      />
+                                      <Tooltip content={<MonitorTooltip />} />
+                                      <Area 
+                                        type="monotone" 
+                                        dataKey="value" 
+                                        stroke="#10b981" 
+                                        strokeWidth={3}
+                                        fillOpacity={1} 
+                                        fill={`url(#colorValue-${machine.id.replace(/[^a-zA-Z0-9]/g, '')})`}
+                                        activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }}
+                                      />
+                                    </AreaChart>
+                                  </ResponsiveContainer>
+                                </div>
                               </div>
                             </div>
                           );
