@@ -126,14 +126,14 @@ const MonitorTimelineBar: React.FC<{
   );
 };
 
-const CircularProgress: React.FC<{ value: number, label: string, size?: number, strokeWidth?: number, color?: string, showValue?: boolean }> = ({ value, label, size = 60, strokeWidth = 6, color = "text-emerald-500", showValue = true }) => {
+const CircularProgress: React.FC<{ value: number, label: string, size?: number, strokeWidth?: number, color?: string, showValue?: boolean }> = ({ value, label, size = 100, strokeWidth = 8, color = "text-emerald-500", showValue = true }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (value * circumference);
 
   return (
-    <div className="flex flex-col items-center justify-center relative w-full aspect-square max-w-[50px] lg:max-w-[60px] xl:max-w-[70px]">
-      <svg viewBox={`0 0 ${size} ${size}`} className="transform -rotate-90 w-full h-full">
+    <div className="flex flex-col items-center justify-center relative w-full aspect-square max-w-[120px]">
+      <svg viewBox={`0 0 ${size} ${size}`} preserveAspectRatio="xMidYMid meet" className="transform -rotate-90 w-full h-full">
         <defs>
           <filter id="glow">
             <feGaussianBlur stdDeviation="2" result="coloredBlur" />
@@ -202,12 +202,14 @@ const CircularProgress: React.FC<{ value: number, label: string, size?: number, 
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        {showValue && <span className="text-[9px] lg:text-[11px] font-black leading-none text-white">{(value * 100).toFixed(0)}%</span>}
-        <span className="text-[6px] lg:text-[7px] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{label}</span>
+        {showValue && <span className="text-[clamp(10px,1.2vw,16px)] font-black leading-none text-white">{(value * 100).toFixed(0)}%</span>}
+        <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{label}</span>
       </div>
     </div>
   );
 };
+
+const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
 
 export const MonitorView: React.FC<{ 
   onBack?: () => void,
@@ -386,7 +388,7 @@ export const MonitorView: React.FC<{
 
     machines.forEach(m => {
       const machineDowntimes = downtimeResult
-        .filter(d => isMachineMatch(d.machineId, m) && (d.downtimeType || '').toLowerCase().includes('interno'))
+        .filter(d => isMachineMatch(d.machineId, m))
         .sort((a, b) => b.durationMinutes - a.durationMinutes)
         .slice(0, 5);
       
@@ -398,7 +400,8 @@ export const MonitorView: React.FC<{
           reason: d.reason.length > 25 ? d.reason.substring(0, 25) + '...' : d.reason,
           fullName: d.reason,
           duration: d.durationMinutes,
-          machine: m // Use the matched machine ID from our list
+          machine: m,
+          type: d.downtimeType || 'Interno'
         });
       });
     });
@@ -457,7 +460,16 @@ export const MonitorView: React.FC<{
     });
   }, [unifiedProd]);
 
-  const shiftsOrdered = ['1.MAÑANA', '2.TARDE', '4.NOCHE FIN', '3.NOCHE'];
+  const shiftTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    shiftsOrdered.forEach(s => totals[s] = 0);
+    unifiedProd?.details?.forEach(d => {
+      if (totals[d.shift] !== undefined) {
+        totals[d.shift] += (d.valueTn || 0);
+      }
+    });
+    return totals;
+  }, [unifiedProd]);
 
   const { data: topRecords = [], isLoading: loadingTop } = useQuery({
     queryKey: ['monitor-top-records'],
@@ -552,88 +564,56 @@ export const MonitorView: React.FC<{
       <div className="flex-1 p-3 lg:p-4 xl:p-6 flex flex-col gap-3 lg:gap-4 xl:gap-6 overflow-hidden min-h-0">
         {/* KPI Header Section - Always Visible */}
         <div className="flex items-center justify-between border-b border-white/5 pb-3 lg:pb-4 xl:pb-6 flex-shrink-0">
-          <div className="flex-1 flex items-center gap-3 lg:gap-4 xl:gap-8 overflow-x-auto no-scrollbar">
+          <div className="flex-1 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3 lg:gap-4 xl:gap-6">
             {/* Machine KPIs & Totalizers */}
-            <div className="flex-1 flex items-center gap-3 lg:gap-4">
-              {machineKPIs.map(m => (
-                <div key={m.id} className="flex-1 bg-white/[0.03] backdrop-blur-sm p-3 lg:p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-3 lg:gap-4 min-w-[180px] lg:min-w-[200px] relative overflow-hidden group hover:bg-white/[0.05] transition-all min-h-0">
-                  <div className="flex justify-between items-start w-full">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] lg:text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
-                      <span className="text-base lg:text-lg font-black text-white uppercase tracking-tight mt-1">
-                        {m.id.split('-')[0]}
+            {machineKPIs.map(m => (
+              <div key={m.id} className="bg-white/[0.03] backdrop-blur-sm p-3 lg:p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-3 lg:gap-4 min-h-0 relative overflow-hidden group hover:bg-white/[0.05] transition-all">
+                <div className="flex justify-between items-start w-full">
+                  <div className="flex flex-col">
+                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
+                    <span className="text-[clamp(14px,1.2vw,18px)] font-black text-white uppercase tracking-tight mt-1">
+                      {m.id.split('-')[0]}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-emerald-500/70 uppercase tracking-tighter hidden sm:block">Total Hoy</span>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl 2xl:text-4xl font-black text-emerald-400 tracking-tighter leading-none">
+                        {Math.floor(m.totalTn).toLocaleString()}
                       </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="text-[8px] lg:text-[10px] font-black text-emerald-500/70 uppercase tracking-tighter hidden sm:block">Total Hoy</span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-xl lg:text-2xl font-black text-emerald-400 tracking-tighter leading-none">
-                          {Math.floor(m.totalTn).toLocaleString()}
-                        </span>
-                        <span className="text-[8px] lg:text-[10px] font-black text-slate-500 uppercase">Tn</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 lg:gap-3 flex-1 min-h-0">
-                    <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
-                      <CircularProgress 
-                        value={m.oee} 
-                        label="OEE" 
-                        size={60} 
-                        strokeWidth={6} 
-                        color="text-amber-500" 
-                      />
-                      <span className="text-[7px] lg:text-[8px] font-black text-slate-500 uppercase tracking-widest hidden lg:block">OEE</span>
-                    </div>
-                    <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all">
-                      <CircularProgress 
-                        value={m.availability} 
-                        label="DISP" 
-                        size={60} 
-                        strokeWidth={6} 
-                        color="text-blue-400" 
-                      />
-                      <span className="text-[7px] lg:text-[8px] font-black text-slate-500 uppercase tracking-widest hidden lg:block">Disp.</span>
-                    </div>
-                    <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all">
-                      <CircularProgress 
-                        value={m.performance} 
-                        label="REND" 
-                        size={60} 
-                        strokeWidth={6} 
-                        color="text-emerald-400" 
-                      />
-                      <span className="text-[7px] lg:text-[8px] font-black text-slate-500 uppercase tracking-widest hidden lg:block">Rend.</span>
+                      <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase">Tn</span>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Global KPI Summary */}
-            <div className="w-[240px] lg:w-[300px] bg-gradient-to-br from-indigo-600/20 to-blue-600/20 backdrop-blur-md p-3 lg:p-4 rounded-2xl border border-white/10 shadow-xl flex flex-col gap-3 lg:gap-4 flex-shrink-0">
-              <div className="flex items-center gap-2 lg:gap-3">
-                <Activity className="text-indigo-400 w-4 h-4 lg:w-5 lg:h-5" />
-                <span className="text-[10px] lg:text-xs font-black text-white uppercase tracking-widest">Eficiencia Global</span>
+                
+                <div className="grid grid-cols-3 gap-2 lg:gap-3 flex-1 min-h-0 items-center">
+                  <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1">
+                    <CircularProgress 
+                      value={m.oee} 
+                      label="OEE" 
+                      color="text-amber-500" 
+                    />
+                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-widest hidden lg:block flex-grow text-center">OEE</span>
+                  </div>
+                  <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1">
+                    <CircularProgress 
+                      value={m.availability} 
+                      label="DISP" 
+                      color="text-blue-400" 
+                    />
+                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-widest hidden lg:block flex-grow text-center">Disp.</span>
+                  </div>
+                  <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all flex-1">
+                    <CircularProgress 
+                      value={m.performance} 
+                      label="REND" 
+                      color="text-emerald-400" 
+                    />
+                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-widest hidden lg:block flex-grow text-center">Rend.</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-around">
-                <div className="flex flex-col items-center">
-                  <span className="text-xl lg:text-2xl font-black text-white">{Math.round(globalKPIs.oee * 100)}%</span>
-                  <span className="text-[7px] lg:text-[8px] font-bold text-slate-400 uppercase">OEE</span>
-                </div>
-                <div className="w-px h-6 lg:h-8 bg-white/10" />
-                <div className="flex flex-col items-center">
-                  <span className="text-xl lg:text-2xl font-black text-white">{Math.round(globalKPIs.availability * 100)}%</span>
-                  <span className="text-[7px] lg:text-[8px] font-bold text-slate-400 uppercase">Disp.</span>
-                </div>
-                <div className="w-px h-6 lg:h-8 bg-white/10" />
-                <div className="flex flex-col items-center">
-                  <span className="text-xl lg:text-2xl font-black text-white">{Math.round(globalKPIs.performance * 100)}%</span>
-                  <span className="text-[7px] lg:text-[8px] font-bold text-slate-400 uppercase">Rend.</span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -829,13 +809,16 @@ export const MonitorView: React.FC<{
                     <div className="col-span-1 md:col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 xl:p-8 border border-white/10 shadow-2xl flex flex-col min-h-0">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 lg:mb-8 gap-4">
                         <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl flex items-center gap-3 lg:gap-4">
-                          <Activity className="w-6 h-6 lg:w-8 lg:h-8" /> Producción por Turno y Paletizadora
+                          <Activity className="w-6 h-6 lg:w-8 lg:h-8" /> Producción por Turno (Totales)
                         </p>
-                        <div className="flex gap-3 lg:gap-4">
+                        <div className="flex flex-wrap gap-3 lg:gap-8 bg-white/5 p-4 rounded-3xl border border-white/10 shadow-inner">
                           {shiftsOrdered.map(s => (
-                            <div key={s} className="flex items-center gap-1.5 lg:gap-2">
-                              <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500`} />
-                              <span className="text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
+                            <div key={s} className="flex flex-col items-center gap-1 min-w-[100px]">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500 shadow-[0_0_10px_rgba(var(--tw-color-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500),0.5)]`} />
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
+                              </div>
+                              <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(shiftTotals[s] || 0).toLocaleString()} <span className="text-xs text-slate-500 uppercase">Tn</span></span>
                             </div>
                           ))}
                         </div>
@@ -923,7 +906,7 @@ export const MonitorView: React.FC<{
                               .filter(d => {
                                 const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
                                 const targetMachine = machines[currentDowntimePage];
-                                return d.machine === targetMachine;
+                                return isMachineMatch(d.machine, targetMachine);
                               })
                               .slice(0, 5)
                               .map((d, idx) => (
