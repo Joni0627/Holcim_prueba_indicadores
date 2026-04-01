@@ -41,10 +41,8 @@ const getVisualShift = (startTime: string) => {
 
 const MonitorTimelineBar: React.FC<{ 
   shiftKey: string, 
-  machineId: string, 
-  events: DowntimeEvent[], 
-  longestEvent: DowntimeEvent | null
-}> = ({ shiftKey, machineId, events, longestEvent }) => {
+  events: DowntimeEvent[]
+}> = ({ shiftKey, events }) => {
   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
   
   const totalMins = config?.duration || 480;
@@ -78,38 +76,23 @@ const MonitorTimelineBar: React.FC<{
 
   if (!config) return null;
 
-  const getBlockColor = (block: any) => {
-    if (block.type === 'uptime') return 'bg-emerald-500/60';
+  const getBlockStyle = (block: any) => {
+    if (block.type === 'uptime') return 'bg-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]';
     const type = (block.event?.downtimeType || '').toLowerCase();
-    if (type.includes('interno')) return 'bg-red-500';
-    if (type.includes('externo')) return 'bg-slate-500';
-    return 'bg-red-500'; 
+    if (type.includes('interno')) return 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]';
+    if (type.includes('externo')) return 'bg-slate-500 shadow-[0_0_10px_rgba(100,116,139,0.3)]';
+    return 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]'; 
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex justify-between items-center px-1">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{machineId}</span>
-        </div>
-        {longestEvent && (
-          <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
-            <AlertCircle size={12} className="text-red-500" />
-            <span className="text-[10px] font-bold text-red-500 uppercase tracking-tight">
-              Paro Mayor: {longestEvent.reason} ({longestEvent.durationMinutes} min)
-            </span>
-          </div>
-        )}
-      </div>
-      <div className="w-full h-4 bg-slate-800/50 rounded-lg flex overflow-hidden border border-slate-700/30 shadow-inner">
-        {blocks.map((block, idx) => (
-          <div 
-            key={idx}
-            className={`h-full border-r border-white/5 last:border-0 ${getBlockColor(block)}`}
-            style={{ width: `${(block.duration / totalMins) * 100}%` }}
-          />
-        ))}
-      </div>
+    <div className="w-full h-10 lg:h-12 bg-white/5 rounded-md flex items-center border border-white/5 shadow-inner px-1 relative">
+      {blocks.map((block, idx) => (
+        <div 
+          key={idx}
+          className={`h-[80%] rounded-sm border-r border-white/5 last:border-0 transition-all ${getBlockStyle(block)}`}
+          style={{ width: `${(block.duration / totalMins) * 100}%` }}
+        />
+      ))}
     </div>
   );
 };
@@ -1078,7 +1061,7 @@ export const MonitorView: React.FC<{
                                   ))}
                                 </div>
                               </div>
-                              <div className="flex-1 flex flex-col justify-around min-h-0 gap-4 lg:gap-6 overflow-y-auto no-scrollbar">
+                              <div className="flex-1 flex flex-col justify-around min-h-0 gap-2 lg:gap-4 overflow-y-auto no-scrollbar">
                                 {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
                                   const machineProdEntries = unifiedProd?.details?.filter(d => 
                                     (isMachineMatch(d.machineId, machine) || isMachineMatch(d.machineName, machine)) && 
@@ -1088,17 +1071,22 @@ export const MonitorView: React.FC<{
                                   
                                   return (
                                     <div key={machine} className="w-full">
-                                      <div className="flex justify-between items-center mb-1.5 lg:mb-2 px-1 lg:px-2">
-                                        <span className="text-[10px] lg:text-sm font-black text-slate-400 uppercase tracking-widest">{machine.split('-')[0]}</span>
-                                        <span className={`text-[10px] lg:text-sm font-black uppercase tracking-widest ${getTnColor(machine, machineProdTn)}`}>
+                                      <div className="flex justify-between items-end mb-1 px-1 lg:px-2">
+                                        <div className="flex flex-col">
+                                          <span className="text-[10px] lg:text-xs font-black text-white uppercase tracking-widest">{machine.split('-')[0]}</span>
+                                          {data.longestEvent && (
+                                            <span className="text-[8px] font-bold text-red-400 uppercase tracking-tighter">
+                                              Paro Mayor: {data.longestEvent.reason} ({data.longestEvent.durationMinutes} min)
+                                            </span>
+                                          )}
+                                        </div>
+                                        <span className={`text-[10px] lg:text-xs font-black uppercase tracking-widest ${getTnColor(machine, machineProdTn)}`}>
                                           {Math.floor(machineProdTn).toLocaleString()} Tn
                                         </span>
                                       </div>
                                       <MonitorTimelineBar 
                                         shiftKey={shiftsOrdered[currentShiftIndex]} 
-                                        machineId={machine} 
                                         events={data.events} 
-                                        longestEvent={data.longestEvent}
                                       />
                                     </div>
                                   );
