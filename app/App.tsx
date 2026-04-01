@@ -33,10 +33,12 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const { user } = useUser();
-  const isAdmin = (user?.publicMetadata as { role?: string })?.role === 'admin';
+  const { user, isLoaded } = useUser();
+  const role = (user?.publicMetadata as { role?: string })?.role;
+  const isAdmin = role === 'admin';
   const isOwner = user?.primaryEmailAddress?.emailAddress === "joni0627@gmail.com";
   const canAccessAdmin = isAdmin || isOwner;
+  const hasAccess = !!role || isOwner;
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
@@ -64,7 +66,7 @@ function App() {
     }
   };
 
-  if (showIntro) {
+  if (!isLoaded || showIntro) {
     return (
       <div className="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
         <div className="flex flex-col items-center space-y-6 animate-pulse">
@@ -82,6 +84,29 @@ function App() {
            </div>
         </div>
         <p className="absolute bottom-8 text-slate-500 text-xs uppercase tracking-widest">Iniciando Sistemas...</p>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl">
+          <div className="inline-flex p-4 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-400">
+            <ShieldCheck size={48} />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-white tracking-tight">Acceso Restringido</h1>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Tu cuenta no tiene permisos para acceder a esta aplicación. 
+              Por favor, solicita una invitación al administrador del sistema.
+            </p>
+          </div>
+          <div className="pt-4">
+            <UserButton afterSignOutUrl="/sign-in" />
+            <p className="mt-4 text-xs text-slate-500 uppercase tracking-widest">Cerrar Sesión para reintentar</p>
+          </div>
+        </div>
       </div>
     );
   }

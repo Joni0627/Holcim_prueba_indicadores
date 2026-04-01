@@ -154,13 +154,13 @@ export const AdminPanel = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 p-6">
+    <div className="max-w-6xl mx-auto space-y-8 p-4 sm:p-6">
       <div className="flex items-center gap-4 mb-8">
         <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
           <ShieldCheck className="text-emerald-400" size={32} />
         </div>
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-emerald-500">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-500">
             Panel de Gestión Usuarios
           </h1>
         </div>
@@ -173,7 +173,7 @@ export const AdminPanel = () => {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden group"
+            className="bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl relative overflow-hidden group"
           >
             {/* Neon Accents */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[80px] rounded-full" />
@@ -340,23 +340,23 @@ export const AdminPanel = () => {
                   {users.map((user) => (
                     <div 
                       key={user.id}
-                      className="bg-slate-950/50 border border-slate-800/50 rounded-2xl p-4 flex items-center justify-between hover:border-emerald-500/30 transition-all group"
+                      className="bg-slate-950/50 border border-slate-800/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:border-emerald-500/30 transition-all group gap-4"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-slate-700">
+                      <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-slate-700 shrink-0">
                           <User className="text-slate-400" size={20} />
                         </div>
-                        <div>
-                          <p className="text-white font-bold">
+                        <div className="min-w-0">
+                          <p className="text-white font-bold truncate">
                             {user.firstName} {user.lastName}
                             {!user.firstName && !user.lastName && user.email.split('@')[0]}
                           </p>
-                          <p className="text-slate-500 text-xs">{user.email}</p>
+                          <p className="text-slate-500 text-xs truncate">{user.email}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-end mr-4">
+                      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t border-slate-800/50 sm:border-0 pt-3 sm:pt-0">
+                        <div className="flex flex-col items-start sm:items-end sm:mr-4">
                           <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md mb-1 ${
                             user.role === 'admin' 
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
