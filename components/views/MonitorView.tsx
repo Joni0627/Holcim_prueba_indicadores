@@ -126,6 +126,71 @@ const MonitorTimelineBar: React.FC<{
   );
 };
 
+const normalizeShift = (shift: string) => {
+  if (!shift) return '';
+  const s = shift.toUpperCase();
+  if (s.includes('MAÑANA')) return '1.MAÑANA';
+  if (s.includes('TARDE')) return '2.TARDE';
+  if (s.includes('NOCHE FIN')) return '4.NOCHE FIN';
+  if (s.includes('NOCHE')) return '3.NOCHE';
+  return shift;
+};
+
+const SemiCircleProgress: React.FC<{ 
+  value: number, 
+  label: string, 
+  color?: string, 
+  showValue?: boolean,
+  suffix?: string,
+  isRawValue?: boolean
+}> = ({ value, label, color = "text-emerald-500", showValue = true, suffix = "%", isRawValue = false }) => {
+  const radius = 40;
+  const circumference = Math.PI * radius;
+  const displayValue = isRawValue ? value : value * 100;
+  const progressValue = isRawValue ? Math.min(value / 8, 1) : value; // HS Marcha max 8
+  const dashOffset = circumference - (Math.min(Math.max(progressValue, 0), 1) * circumference);
+
+  return (
+    <div className="flex flex-col items-center justify-center relative w-full aspect-[2/1.1] overflow-hidden">
+      <svg viewBox="0 0 100 55" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+        <path
+          d="M 10,50 A 40,40 0 0 1 90,50"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="12"
+          className="text-slate-800/50"
+          strokeLinecap="round"
+        />
+        <motion.path
+          d="M 10,50 A 40,40 0 0 1 90,50"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="12"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: dashOffset }}
+          transition={{ 
+            duration: 1.5, 
+            ease: "easeOut",
+            repeat: Infinity,
+            repeatDelay: 8.5
+          }}
+          strokeLinecap="round"
+          className={color}
+        />
+      </svg>
+      <div className="absolute bottom-0 inset-x-0 flex flex-col items-center justify-center">
+        {showValue && (
+          <span className="text-[clamp(12px,1.4vw,20px)] font-black leading-none text-white">
+            {displayValue.toFixed(isRawValue ? 1 : 0)}{suffix}
+          </span>
+        )}
+        <span className="text-[clamp(7px,0.7vw,9px)] font-black text-slate-500 uppercase tracking-tighter mt-0.5">{label}</span>
+      </div>
+    </div>
+  );
+};
+
 const CircularProgress: React.FC<{ value: number, label: string, size?: number, strokeWidth?: number, color?: string, showValue?: boolean }> = ({ value, label, size = 100, strokeWidth = 8, color = "text-emerald-500", showValue = true }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -442,19 +507,19 @@ export const MonitorView: React.FC<{
   const machineKPIs = useMemo(() => {
     const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
     return machines.map(m => {
-      // Use even more flexible matching for machine IDs
       const machineDetails = unifiedProd?.details?.filter(d => 
         isMachineMatch(d.machineId, m) || isMachineMatch(d.machineName, m)
       ) || [];
       
       const totalTn = machineDetails.reduce((acc, curr) => acc + (curr.valueTn || 0), 0);
-      if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0, totalTn: 0 };
+      if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0, hsMarcha: 0, totalTn: 0 };
       const count = machineDetails.length;
       return {
         id: m,
         oee: machineDetails.reduce((acc, curr) => acc + (curr.oee || 0), 0) / count,
         availability: machineDetails.reduce((acc, curr) => acc + (curr.availability || 0), 0) / count,
         performance: machineDetails.reduce((acc, curr) => acc + (curr.performance || 0), 0) / count,
+        hsMarcha: machineDetails.reduce((acc, curr) => acc + (curr.hsMarcha || 0), 0),
         totalTn
       };
     });
@@ -464,8 +529,9 @@ export const MonitorView: React.FC<{
     const totals: Record<string, number> = {};
     shiftsOrdered.forEach(s => totals[s] = 0);
     unifiedProd?.details?.forEach(d => {
-      if (totals[d.shift] !== undefined) {
-        totals[d.shift] += (d.valueTn || 0);
+      const normalized = normalizeShift(d.shift);
+      if (totals[normalized] !== undefined) {
+        totals[normalized] += (d.valueTn || 0);
       }
     });
     return totals;
@@ -561,55 +627,54 @@ export const MonitorView: React.FC<{
         </div>
       </div>
 
-      <div className="flex-1 p-3 lg:p-4 xl:p-6 flex flex-col gap-3 lg:gap-4 xl:gap-6 overflow-hidden min-h-0">
+      <div className="flex-1 p-2 lg:p-3 xl:p-4 flex flex-col gap-2 lg:gap-3 xl:gap-4 overflow-hidden min-h-0">
         {/* KPI Header Section - Always Visible */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-3 lg:pb-4 xl:pb-6 flex-shrink-0">
-          <div className="flex-1 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-3 lg:gap-4 xl:gap-6">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2 lg:pb-3 xl:pb-4 flex-shrink-0">
+          <div className="flex-1 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2 lg:gap-3 xl:gap-4">
             {/* Machine KPIs & Totalizers */}
             {machineKPIs.map(m => (
-              <div key={m.id} className="bg-white/[0.03] backdrop-blur-sm p-3 lg:p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-3 lg:gap-4 min-h-0 relative overflow-hidden group hover:bg-white/[0.05] transition-all">
+              <div key={m.id} className="bg-white/[0.03] backdrop-blur-sm p-3 lg:p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-1 lg:gap-2 min-h-0 relative overflow-hidden group hover:bg-white/[0.05] transition-all">
                 <div className="flex justify-between items-start w-full">
                   <div className="flex flex-col">
                     <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
-                    <span className="text-[clamp(14px,1.2vw,18px)] font-black text-white uppercase tracking-tight mt-1">
+                    <span className="text-[clamp(14px,1.2vw,18px)] font-black text-white uppercase tracking-tight mt-0.5">
                       {m.id.split('-')[0]}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
                     <span className="text-[clamp(8px,0.8vw,10px)] font-black text-emerald-500/70 uppercase tracking-tighter hidden sm:block">Total Hoy</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl 2xl:text-4xl font-black text-emerald-400 tracking-tighter leading-none">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl 2xl:text-5xl font-black text-emerald-400 tracking-tighter leading-none">
                         {Math.floor(m.totalTn).toLocaleString()}
                       </span>
-                      <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase">Tn</span>
+                      <span className="text-[clamp(10px,1vw,12px)] font-black text-slate-500 uppercase">Tn</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 lg:gap-3 flex-1 min-h-0 items-center">
-                  <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1">
-                    <CircularProgress 
-                      value={m.oee} 
-                      label="OEE" 
-                      color="text-amber-500" 
-                    />
-                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-widest hidden lg:block flex-grow text-center">OEE</span>
-                  </div>
-                  <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1">
-                    <CircularProgress 
+                <div className="grid grid-cols-3 gap-2 flex-1 min-h-0 items-end -mt-2">
+                  <div className="bg-black/40 p-2 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1">
+                    <SemiCircleProgress 
                       value={m.availability} 
-                      label="DISP" 
+                      label="Disp." 
                       color="text-blue-400" 
                     />
-                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-widest hidden lg:block flex-grow text-center">Disp.</span>
                   </div>
-                  <div className="bg-black/40 p-2 lg:p-3 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-1 lg:gap-2 group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all flex-1">
-                    <CircularProgress 
+                  <div className="bg-black/40 p-2 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/20 transition-all flex-1">
+                    <SemiCircleProgress 
                       value={m.performance} 
-                      label="REND" 
+                      label="Rend." 
                       color="text-emerald-400" 
                     />
-                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-widest hidden lg:block flex-grow text-center">Rend.</span>
+                  </div>
+                  <div className="bg-black/40 p-2 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all flex-1">
+                    <SemiCircleProgress 
+                      value={m.hsMarcha} 
+                      label="HS Marcha" 
+                      color="text-amber-500"
+                      isRawValue={true}
+                      suffix="h"
+                    />
                   </div>
                 </div>
               </div>
@@ -804,55 +869,55 @@ export const MonitorView: React.FC<{
                 )}
 
                 {currentCarouselPage === 1 && (
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6 overflow-hidden min-h-0">
+                  <div className="flex-1 flex flex-col gap-4 overflow-hidden min-h-0 h-[calc(100vh-280px)]">
                     {/* Production per Shift and Paletizer */}
-                    <div className="col-span-1 md:col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 xl:p-8 border border-white/10 shadow-2xl flex flex-col min-h-0">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 lg:mb-8 gap-4">
-                        <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl flex items-center gap-3 lg:gap-4">
+                    <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 border border-white/10 shadow-2xl flex flex-col min-h-0 overflow-hidden">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 flex-shrink-0">
+                        <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl flex items-center gap-3">
                           <Activity className="w-6 h-6 lg:w-8 lg:h-8" /> Producción por Turno (Totales)
                         </p>
-                        <div className="flex flex-wrap gap-3 lg:gap-8 bg-white/5 p-4 rounded-3xl border border-white/10 shadow-inner">
+                        <div className="flex flex-wrap gap-4 bg-white/5 p-3 rounded-2xl border border-white/10 shadow-inner">
                           {shiftsOrdered.map(s => (
-                            <div key={s} className="flex flex-col items-center gap-1 min-w-[100px]">
+                            <div key={s} className="flex flex-col items-center gap-0.5 min-w-[80px]">
                               <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500 shadow-[0_0_10px_rgba(var(--tw-color-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500),0.5)]`} />
-                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
+                                <div className={`w-2 h-2 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500`} />
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
                               </div>
-                              <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(shiftTotals[s] || 0).toLocaleString()} <span className="text-xs text-slate-500 uppercase">Tn</span></span>
+                              <span className="text-lg lg:text-xl font-black text-white">{Math.floor(shiftTotals[s] || 0).toLocaleString()} <span className="text-[10px] text-slate-500 uppercase">Tn</span></span>
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 xl:gap-8 flex-1 min-h-0">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 flex-1 min-h-0 overflow-y-auto no-scrollbar pb-4">
                         {['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'].map(machineId => {
                           const machineDetails = unifiedProd?.details?.filter(d => isMachineMatch(d.machineId, machineId)) || [];
                           
                           return (
-                            <div key={machineId} className="bg-black/40 rounded-3xl border border-white/5 flex flex-col overflow-hidden min-h-0">
-                              <div className="bg-white/5 p-4 lg:p-6 border-b border-white/5 flex justify-between items-center">
-                                <span className="text-xl lg:text-2xl font-black text-white uppercase tracking-tighter">{machineId.split('-')[0]}</span>
+                            <div key={machineId} className="bg-black/40 rounded-2xl border border-white/5 flex flex-col overflow-hidden min-h-0">
+                              <div className="bg-white/5 p-3 lg:p-4 border-b border-white/5 flex justify-between items-center flex-shrink-0">
+                                <span className="text-lg lg:text-xl font-black text-white uppercase tracking-tighter">{machineId.split('-')[0]}</span>
                                 <div className="flex flex-col items-end">
-                                  <span className="text-[8px] lg:text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Diario</span>
-                                  <span className="text-lg lg:text-xl font-black text-emerald-400">{Math.floor(machineKPIs.find(m => isMachineMatch(m.id, machineId))?.totalTn || 0).toLocaleString()} Tn</span>
+                                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Total Diario</span>
+                                  <span className="text-base lg:text-lg font-black text-emerald-400">{Math.floor(machineKPIs.find(m => isMachineMatch(m.id, machineId))?.totalTn || 0).toLocaleString()} Tn</span>
                                 </div>
                               </div>
                               
-                              <div className="p-4 lg:p-6 flex-1 flex flex-col gap-3 lg:gap-4 overflow-y-auto no-scrollbar">
+                              <div className="p-3 lg:p-4 flex flex-col gap-2 lg:gap-3">
                                 {shiftsOrdered.map(shiftKey => {
-                                  const shiftData = machineDetails.find(d => d.shift === shiftKey);
+                                  const shiftData = machineDetails.find(d => normalizeShift(d.shift) === shiftKey);
                                   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
                                   const value = shiftData?.valueTn || 0;
                                   const maxInShift = Math.max(...machineDetails.map(d => d.valueTn || 0), 1);
                                   const barWidth = (value / maxInShift) * 100;
 
                                   return (
-                                    <div key={shiftKey} className="flex flex-col gap-1.5 lg:gap-2">
+                                    <div key={shiftKey} className="flex flex-col gap-1">
                                       <div className="flex justify-between items-end">
-                                        <span className={`text-[10px] lg:text-xs font-black uppercase tracking-widest text-${config.color}-400`}>{config.label}</span>
-                                        <span className="text-base lg:text-lg font-black text-white">{Math.floor(value).toLocaleString()} <span className="text-[8px] lg:text-[10px] text-slate-500">Tn</span></span>
+                                        <span className={`text-[9px] lg:text-[10px] font-black uppercase tracking-widest text-${config.color}-400`}>{config.label}</span>
+                                        <span className="text-sm lg:text-base font-black text-white">{Math.floor(value).toLocaleString()} <span className="text-[8px] text-slate-500">Tn</span></span>
                                       </div>
-                                      <div className="h-3 lg:h-4 bg-white/5 rounded-lg overflow-hidden border border-white/5 p-0.5">
+                                      <div className="h-2.5 lg:h-3 bg-white/5 rounded-lg overflow-hidden border border-white/5 p-0.5">
                                         <motion.div 
                                           initial={{ width: 0 }}
                                           animate={{ width: `${barWidth}%` }}
