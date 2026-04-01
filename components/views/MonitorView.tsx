@@ -684,18 +684,30 @@ export const MonitorView: React.FC<{
         {/* Carousel Section */}
         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
           {/* Carousel Tabs */}
-          <div className="flex items-center gap-2">
+          <div className="w-full flex items-stretch border-b border-white/10 mb-4 bg-white/[0.02]">
             {carouselPages.map((page, idx) => (
               <button
                 key={page.id}
                 onClick={() => setCurrentCarouselPage(idx)}
-                className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${
+                className={`flex-1 relative py-5 text-[11px] font-black uppercase tracking-[0.2em] transition-all group rounded-t-2xl ${
                   currentCarouselPage === idx 
-                    ? 'bg-emerald-500 border-emerald-400 text-slate-900 shadow-lg shadow-emerald-500/20' 
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                    ? 'text-emerald-400 bg-white/[0.05]' 
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]'
                 }`}
               >
-                {page.label}
+                <span className="relative z-10">{page.label}</span>
+                
+                {currentCarouselPage === idx && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute bottom-0 left-0 right-0 h-[3px] bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+                
+                {/* Subtle hover indicator */}
+                <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-emerald-500/[0.03] transition-colors" />
               </button>
             ))}
           </div>
@@ -868,7 +880,7 @@ export const MonitorView: React.FC<{
                 )}
 
                 {currentCarouselPage === 1 && (
-                  <div className="flex-1 flex flex-col gap-4 overflow-hidden min-h-0 h-[calc(100vh-280px)]">
+                  <div className="flex-1 flex flex-col gap-4 overflow-hidden min-h-0">
                     {/* Production per Shift and Paletizer */}
                     <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 border border-white/10 shadow-2xl flex flex-col min-h-0 overflow-hidden">
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 flex-shrink-0">
