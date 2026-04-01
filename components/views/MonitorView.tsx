@@ -24,22 +24,10 @@ const timeToMinutes = (timeStr: string) => {
 };
 
 const isMachineMatch = (id1: string, id2: string) => {
-  const s1 = String(id1 || '').toUpperCase().trim();
-  const s2 = String(id2 || '').toUpperCase().trim();
-  if (s1 === s2) return true;
-  if (s1.includes(s2) || s2.includes(s1)) return true;
-  
-  // Handle "PALETIZADORA 1" vs "PZ1" or "MG.672-PZ1"
-  const p1 = s1.replace(/\s+/g, '');
-  const p2 = s2.replace(/\s+/g, '');
-  if (p1.includes(p2) || p2.includes(p1)) return true;
-
-  // Extract numbers (e.g., 672, 673, 674)
-  const n1 = s1.match(/\d+/)?.[0];
-  const n2 = s2.match(/\d+/)?.[0];
-  if (n1 && n2 && n1 === n2) return true;
-  
-  return false;
+  if (!id1 || !id2) return false;
+  const s1 = String(id1).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const s2 = String(id2).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return s1.includes(s2) || s2.includes(s1);
 };
 
 const getVisualShift = (startTime: string) => {
@@ -512,7 +500,17 @@ export const MonitorView: React.FC<{
       ) || [];
       
       const totalTn = machineDetails.reduce((acc, curr) => acc + (curr.valueTn || 0), 0);
-      if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0, hsMarcha: 0, totalTn: 0 };
+      
+      const shiftBreakdown: Record<string, number> = {};
+      shiftsOrdered.forEach(s => shiftBreakdown[s] = 0);
+      machineDetails.forEach(d => {
+        const normalized = normalizeShift(d.shift);
+        if (shiftBreakdown[normalized] !== undefined) {
+          shiftBreakdown[normalized] += (d.valueTn || 0);
+        }
+      });
+
+      if (machineDetails.length === 0) return { id: m, oee: 0, availability: 0, performance: 0, hsMarcha: 0, totalTn: 0, shiftBreakdown };
       const count = machineDetails.length;
       return {
         id: m,
@@ -520,7 +518,8 @@ export const MonitorView: React.FC<{
         availability: machineDetails.reduce((acc, curr) => acc + (curr.availability || 0), 0) / count,
         performance: machineDetails.reduce((acc, curr) => acc + (curr.performance || 0), 0) / count,
         hsMarcha: machineDetails.reduce((acc, curr) => acc + (curr.hsMarcha || 0), 0),
-        totalTn
+        totalTn,
+        shiftBreakdown
       };
     });
   }, [unifiedProd]);
@@ -890,25 +889,22 @@ export const MonitorView: React.FC<{
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 flex-1 min-h-0 overflow-y-auto no-scrollbar pb-4">
-                        {['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'].map(machineId => {
-                          const machineDetails = unifiedProd?.details?.filter(d => isMachineMatch(d.machineId, machineId)) || [];
-                          
+                        {machineKPIs.map(machine => {
                           return (
-                            <div key={machineId} className="bg-black/40 rounded-2xl border border-white/5 flex flex-col overflow-hidden min-h-0">
+                            <div key={machine.id} className="bg-black/40 rounded-2xl border border-white/5 flex flex-col overflow-hidden min-h-0">
                               <div className="bg-white/5 p-3 lg:p-4 border-b border-white/5 flex justify-between items-center flex-shrink-0">
-                                <span className="text-lg lg:text-xl font-black text-white uppercase tracking-tighter">{machineId.split('-')[0]}</span>
+                                <span className="text-lg lg:text-xl font-black text-white uppercase tracking-tighter">{machine.id.split('-')[0]}</span>
                                 <div className="flex flex-col items-end">
                                   <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Total Diario</span>
-                                  <span className="text-base lg:text-lg font-black text-emerald-400">{Math.floor(machineKPIs.find(m => isMachineMatch(m.id, machineId))?.totalTn || 0).toLocaleString()} Tn</span>
+                                  <span className="text-base lg:text-lg font-black text-emerald-400">{Math.floor(machine.totalTn).toLocaleString()} Tn</span>
                                 </div>
                               </div>
                               
                               <div className="p-3 lg:p-4 flex flex-col gap-2 lg:gap-3">
                                 {shiftsOrdered.map(shiftKey => {
-                                  const shiftData = machineDetails.find(d => normalizeShift(d.shift) === shiftKey);
                                   const config = SHIFT_MAP[shiftKey as keyof typeof SHIFT_MAP];
-                                  const value = shiftData?.valueTn || 0;
-                                  const maxInShift = Math.max(...machineDetails.map(d => d.valueTn || 0), 1);
+                                  const value = machine.shiftBreakdown[shiftKey] || 0;
+                                  const maxInShift = Math.max(...Object.values(machine.shiftBreakdown), 1);
                                   const barWidth = (value / maxInShift) * 100;
 
                                   return (
@@ -1040,13 +1036,18 @@ export const MonitorView: React.FC<{
                               </div>
                               <div className="flex-1 flex flex-col justify-around min-h-0 gap-4 lg:gap-6 overflow-y-auto no-scrollbar">
                                 {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
-                                  const machineProd = unifiedProd?.details?.find(d => d.machineId === machine && d.shift === shiftsOrdered[currentShiftIndex]);
+                                  const machineProdEntries = unifiedProd?.details?.filter(d => 
+                                    (isMachineMatch(d.machineId, machine) || isMachineMatch(d.machineName, machine)) && 
+                                    normalizeShift(d.shift) === shiftsOrdered[currentShiftIndex]
+                                  ) || [];
+                                  const machineProdTn = machineProdEntries.reduce((acc, curr) => acc + (curr.valueTn || 0), 0);
+                                  
                                   return (
                                     <div key={machine} className="w-full">
                                       <div className="flex justify-between items-center mb-1.5 lg:mb-2 px-1 lg:px-2">
                                         <span className="text-[10px] lg:text-sm font-black text-slate-400 uppercase tracking-widest">{machine.split('-')[0]}</span>
-                                        <span className={`text-[10px] lg:text-sm font-black uppercase tracking-widest ${getTnColor(machine, machineProd?.valueTn || 0)}`}>
-                                          {Math.floor(machineProd?.valueTn || 0).toLocaleString()} Tn
+                                        <span className={`text-[10px] lg:text-sm font-black uppercase tracking-widest ${getTnColor(machine, machineProdTn)}`}>
+                                          {Math.floor(machineProdTn).toLocaleString()} Tn
                                         </span>
                                       </div>
                                       <MonitorTimelineBar 
