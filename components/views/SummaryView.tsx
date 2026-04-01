@@ -675,7 +675,7 @@ export const SummaryView: React.FC<{
                                                 </div>
                                             </div>
                                             <div className={`text-4xl font-black tracking-tighter leading-tight ${getTnColor(m.machineId, m.valueTn)}`}>
-                                                {m.valueTn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                {m.valueTn.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                 <span className="text-sm ml-1 font-bold text-slate-500">TN</span>
                                             </div>
                                         </div>
@@ -685,7 +685,7 @@ export const SummaryView: React.FC<{
                                             <div className="space-y-2">
                                                 <div className="flex flex-col">
                                                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">DISP</p>
-                                                    <p className={`text-[13px] font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(1)}%</p>
+                                                    <p className={`text-[13px] font-black ${getAvailabilityColor(m.availability)}`}>{m.availability.toFixed(0)}%</p>
                                                 </div>
                                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                                     <div 
@@ -697,7 +697,7 @@ export const SummaryView: React.FC<{
                                             <div className="space-y-2 border-x border-white/5 px-2">
                                                 <div className="flex flex-col">
                                                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">REND</p>
-                                                    <p className={`text-[13px] font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(1)}%</p>
+                                                    <p className={`text-[13px] font-black ${getPerformanceColor(m.performance)}`}>{m.performance.toFixed(0)}%</p>
                                                 </div>
                                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                                     <div 
@@ -709,7 +709,7 @@ export const SummaryView: React.FC<{
                                             <div className="space-y-2">
                                                 <div className="flex flex-col">
                                                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-0.5">OEE</p>
-                                                    <p className="text-[13px] font-black text-white">{(m.oee).toFixed(1)}%</p>
+                                                    <p className="text-[13px] font-black text-white">{(m.oee).toFixed(0)}%</p>
                                                 </div>
                                                 <div className="h-1 bg-white/5 rounded-full overflow-hidden">
                                                     <div 
