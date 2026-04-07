@@ -1,5 +1,5 @@
 
-import { DowntimeEvent, ProductionStats, BreakageStats, StockStats } from "../types";
+import { DowntimeEvent, ProductionStats, BreakageStats, StockStats, ShiftNews } from "../types";
 
 const toLocalISO = (date: Date) => {
     const y = date.getFullYear();
@@ -111,6 +111,23 @@ export const fetchTopRecords = async (count: number = 3): Promise<any[]> => {
         return await res.json();
     } catch (error) {
         console.error("Error al obtener podio histórico:", error);
+        return [];
+    }
+};
+
+export const fetchShiftNews = async (start: Date, end: Date): Promise<ShiftNews[]> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+
+        const res = await fetch(`/api/novedades?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return [];
+
+        const data = await res.json();
+        return data as ShiftNews[];
+    } catch (error) {
+        console.error("Error al obtener novedades de turno:", error);
         return [];
     }
 };

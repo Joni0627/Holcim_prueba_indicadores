@@ -130,3 +130,10 @@ export interface AIAnalysisResult {
   recommendations: string[];
   priority: 'low' | 'medium' | 'high';
 }
+
+export interface ShiftNews {
+  id: string;
+  date: string;
+  shift: string;
+  detail: string;
+}
