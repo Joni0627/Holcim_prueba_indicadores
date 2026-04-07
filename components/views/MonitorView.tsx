@@ -1151,22 +1151,24 @@ export const MonitorView: React.FC<{
                       </p>
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 xl:gap-8 overflow-y-auto no-scrollbar">
                         {[
-                          { key: '1.MAÑANA', label: 'MAÑANA' },
-                          { key: '2.TARDE', label: 'TARDE' },
-                          { key: '3.NOCHE', label: 'NOCHE' },
-                          { key: '4.NOCHE FIN', label: 'NOCHE FIN' }
+                          { key: '1.MAÑANA', label: 'MAÑANA', color: 'emerald' },
+                          { key: '2.TARDE', label: 'TARDE', color: 'blue' },
+                          { key: '3.NOCHE', label: 'NOCHE', color: 'indigo' },
+                          { key: '4.NOCHE FIN', label: 'NOCHE FIN', color: 'slate' }
                         ].map(shift => {
                           const news = shiftNews.filter(n => n.shift === shift.key);
                           return (
-                            <div key={shift.key} className="bg-black/40 p-6 lg:p-8 rounded-3xl border border-white/5 flex flex-col gap-4 lg:gap-6 min-h-[350px] max-h-[600px]">
-                              <div className="flex items-center justify-between border-b border-white/10 pb-3 lg:pb-4">
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-lg lg:text-xl font-black text-white uppercase tracking-widest">Turno {shift.label}</span>
-                                  <span className="text-xs lg:text-sm font-bold text-emerald-400/70">[{news.length}]</span>
+                            <div key={shift.key} className="bg-black/40 p-4 lg:p-5 rounded-3xl border border-white/5 flex flex-col gap-4 lg:gap-6 min-h-[450px] max-h-[700px]">
+                              <div className="flex items-center justify-between border-b border-white/10 pb-4 lg:pb-5">
+                                <div className="flex items-baseline gap-3">
+                                  <span className={`text-2xl lg:text-3xl font-black uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(16,185,129,0.3)] text-${shift.color}-400`}>
+                                    {shift.label}
+                                  </span>
+                                  <span className="text-sm lg:text-base font-black text-white/40">[{news.length}]</span>
                                 </div>
-                                <div className="w-2 h-2 lg:w-3 lg:h-3 rounded-full bg-emerald-500 animate-pulse" />
+                                <div className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-${shift.color}-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]`} />
                               </div>
-                              <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                              <div className="flex-1 flex flex-col gap-4 lg:gap-5 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                                 {news.length > 0 ? (
                                   news.map((n, i) => {
                                     const detailUpper = n.detail.toUpperCase();
@@ -1176,32 +1178,32 @@ export const MonitorView: React.FC<{
                                     return (
                                       <div 
                                         key={i} 
-                                        className={`p-3 lg:p-4 bg-white/[0.04] rounded-xl border-l-4 transition-all duration-300 flex gap-3
-                                          ${isError ? 'border-red-500 shadow-[inset_4px_0_10px_-5px_rgba(239,68,68,0.3)]' : 
-                                            isSuccess ? 'border-emerald-500 shadow-[inset_4px_0_10px_-5px_rgba(16,185,129,0.3)]' : 
-                                            'border-white/10'}`}
+                                        className={`p-4 lg:p-6 bg-white/[0.05] rounded-2xl border-l-[6px] transition-all duration-300 flex gap-4 lg:gap-5
+                                          ${isError ? 'border-red-500 shadow-[inset_6px_0_15px_-5px_rgba(239,68,68,0.4)]' : 
+                                            isSuccess ? 'border-emerald-500 shadow-[inset_6px_0_15px_-5px_rgba(16,185,129,0.4)]' : 
+                                            'border-white/20'}`}
                                       >
-                                        <div className="mt-1 shrink-0">
+                                        <div className="mt-1.5 shrink-0">
                                           {isError ? (
-                                            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                                            <AlertCircle className="w-5 h-5 lg:w-6 lg:h-6 text-red-400" />
                                           ) : (
-                                            <MessageSquare className="w-3.5 h-3.5 text-emerald-400/50" />
+                                            <MessageSquare className="w-5 h-5 lg:w-6 lg:h-6 text-emerald-400/40" />
                                           )}
                                         </div>
-                                        <p className="text-[11px] lg:text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
+                                        <p className="text-base lg:text-lg xl:text-xl text-white leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
                                           {n.detail}
                                         </p>
                                       </div>
                                     );
                                   })
                                 ) : (
-                                  <div className="flex-1 flex items-center justify-center text-center p-6 border-2 border-dashed border-white/5 rounded-2xl">
-                                    <p className="text-slate-500 italic text-xs lg:text-sm">Sin novedades reportadas para este turno.</p>
+                                  <div className="flex-1 flex items-center justify-center text-center p-8 border-2 border-dashed border-white/5 rounded-3xl">
+                                    <p className="text-slate-500 font-bold text-sm lg:text-base uppercase tracking-widest opacity-40">Sin novedades reportadas</p>
                                   </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 text-[8px] lg:text-[10px] font-black text-slate-500 uppercase tracking-widest pt-2 border-t border-white/5">
-                                <Clock className="w-2.5 h-2.5 lg:w-3 lg:h-3" /> <span className="hidden sm:inline">Última actualización:</span> {currentTime.toLocaleTimeString()}
+                              <div className="flex items-center gap-2 text-[10px] lg:text-xs font-black text-slate-500 uppercase tracking-widest pt-3 border-t border-white/5">
+                                <Clock className="w-3 h-3 lg:w-4 lg:h-4" /> <span className="hidden sm:inline">Sincronizado:</span> {currentTime.toLocaleTimeString()}
                               </div>
                             </div>
                           );
