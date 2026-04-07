@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare } from 'lucide-react';
+import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchTopRecords, fetchShiftNews } from '../../services/sheetService';
@@ -259,6 +259,85 @@ const MonitorTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
+};
+
+const NewsTicker: React.FC<{ news: ShiftNews[] }> = ({ news }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  const [shouldAnimate, setShouldAnimate] = React.useState(false);
+  const [contentHeight, setContentHeight] = React.useState(0);
+
+  React.useEffect(() => {
+    if (containerRef.current && contentRef.current) {
+      const containerH = containerRef.current.offsetHeight;
+      const contentH = contentRef.current.scrollHeight;
+      setContentHeight(contentH);
+      // Only animate if content is taller than container
+      setShouldAnimate(contentH > containerH);
+    }
+  }, [news]);
+
+  if (news.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-center p-8 border-2 border-dashed border-white/5 rounded-3xl">
+        <p className="text-slate-500 font-bold text-sm lg:text-base uppercase tracking-widest opacity-40">Sin novedades reportadas</p>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      ref={containerRef}
+      className="flex-1 relative overflow-hidden"
+      style={{
+        maskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)'
+      }}
+    >
+      <motion.div
+        ref={contentRef}
+        className="flex flex-col gap-4 lg:gap-5 py-12"
+        animate={shouldAnimate ? {
+          y: [0, -(contentHeight + 20)]
+        } : { y: 0 }}
+        transition={shouldAnimate ? {
+          duration: Math.max(15, news.length * 4),
+          ease: "linear",
+          repeat: Infinity,
+        } : {}}
+      >
+        {/* Render news twice for seamless loop if animating */}
+        {(shouldAnimate ? [...news, ...news] : news).map((n, i) => {
+          const detailUpper = n.detail.toUpperCase();
+          const isError = ['PARADA', 'AVERÍA', 'ERROR', 'FUERA DE SERVICIO', 'BLOQUEADO'].some(k => detailUpper.includes(k));
+          const isSuccess = ['OK', 'INICIO', 'COMPLETO', 'EN MARCHA'].some(k => detailUpper.includes(k));
+          
+          return (
+            <div 
+              key={`${n.id}-${i}`} 
+              className={`p-4 lg:p-6 bg-blue-600/10 rounded-2xl border-l-[6px] transition-all duration-300 flex gap-4 lg:gap-5 shadow-[0_0_20px_rgba(37,99,235,0.05)]
+                ${isError ? 'border-red-500 shadow-[inset_6px_0_15px_-5px_rgba(239,68,68,0.4)]' : 
+                  isSuccess ? 'border-emerald-500 shadow-[inset_6px_0_15px_-5px_rgba(16,185,129,0.4)]' : 
+                  'border-blue-500/50'}`}
+            >
+              <div className="mt-1.5 shrink-0">
+                {isError ? (
+                  <AlertCircle className="w-5 h-5 lg:w-6 lg:h-6 text-red-400" />
+                ) : (
+                  <div className="bg-blue-500/20 p-2 rounded-full">
+                    <User className="w-4 h-4 lg:w-5 lg:h-5 text-blue-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-base lg:text-lg xl:text-xl text-white leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
+                {n.detail}
+              </p>
+            </div>
+          );
+        })}
+      </motion.div>
+    </div>
+  );
 };
 
 export const MonitorView: React.FC<{ 
@@ -1168,39 +1247,8 @@ export const MonitorView: React.FC<{
                                 </div>
                                 <div className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-${shift.color}-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]`} />
                               </div>
-                              <div className="flex-1 flex flex-col gap-4 lg:gap-5 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                                {news.length > 0 ? (
-                                  news.map((n, i) => {
-                                    const detailUpper = n.detail.toUpperCase();
-                                    const isError = ['PARADA', 'AVERÍA', 'ERROR', 'FUERA DE SERVICIO', 'BLOQUEADO'].some(k => detailUpper.includes(k));
-                                    const isSuccess = ['OK', 'INICIO', 'COMPLETO', 'EN MARCHA'].some(k => detailUpper.includes(k));
-                                    
-                                    return (
-                                      <div 
-                                        key={i} 
-                                        className={`p-4 lg:p-6 bg-white/[0.05] rounded-2xl border-l-[6px] transition-all duration-300 flex gap-4 lg:gap-5
-                                          ${isError ? 'border-red-500 shadow-[inset_6px_0_15px_-5px_rgba(239,68,68,0.4)]' : 
-                                            isSuccess ? 'border-emerald-500 shadow-[inset_6px_0_15px_-5px_rgba(16,185,129,0.4)]' : 
-                                            'border-white/20'}`}
-                                      >
-                                        <div className="mt-1.5 shrink-0">
-                                          {isError ? (
-                                            <AlertCircle className="w-5 h-5 lg:w-6 lg:h-6 text-red-400" />
-                                          ) : (
-                                            <MessageSquare className="w-5 h-5 lg:w-6 lg:h-6 text-emerald-400/40" />
-                                          )}
-                                        </div>
-                                        <p className="text-base lg:text-lg xl:text-xl text-white leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
-                                          {n.detail}
-                                        </p>
-                                      </div>
-                                    );
-                                  })
-                                ) : (
-                                  <div className="flex-1 flex items-center justify-center text-center p-8 border-2 border-dashed border-white/5 rounded-3xl">
-                                    <p className="text-slate-500 font-bold text-sm lg:text-base uppercase tracking-widest opacity-40">Sin novedades reportadas</p>
-                                  </div>
-                                )}
+                              <div className="flex-1 flex flex-col min-h-0">
+                                <NewsTicker news={news} />
                               </div>
                               <div className="flex items-center gap-2 text-[10px] lg:text-xs font-black text-slate-500 uppercase tracking-widest pt-3 border-t border-white/5">
                                 <Clock className="w-3 h-3 lg:w-4 lg:h-4" /> <span className="hidden sm:inline">Sincronizado:</span> {currentTime.toLocaleTimeString()}
