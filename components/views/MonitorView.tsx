@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar } from 'lucide-react';
+import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchTopRecords, fetchShiftNews } from '../../services/sheetService';
@@ -1158,23 +1158,49 @@ export const MonitorView: React.FC<{
                         ].map(shift => {
                           const news = shiftNews.filter(n => n.shift === shift.key);
                           return (
-                            <div key={shift.key} className="bg-black/40 p-6 lg:p-8 rounded-3xl border border-white/5 flex flex-col gap-4 lg:gap-6 min-h-[250px]">
+                            <div key={shift.key} className="bg-black/40 p-6 lg:p-8 rounded-3xl border border-white/5 flex flex-col gap-4 lg:gap-6 min-h-[350px] max-h-[600px]">
                               <div className="flex items-center justify-between border-b border-white/10 pb-3 lg:pb-4">
-                                <span className="text-lg lg:text-xl font-black text-white uppercase tracking-widest">Turno {shift.label}</span>
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-lg lg:text-xl font-black text-white uppercase tracking-widest">Turno {shift.label}</span>
+                                  <span className="text-xs lg:text-sm font-bold text-emerald-400/70">[{news.length}]</span>
+                                </div>
                                 <div className="w-2 h-2 lg:w-3 lg:h-3 rounded-full bg-emerald-500 animate-pulse" />
                               </div>
-                              <div className="flex-1 flex flex-col gap-3 lg:gap-4 text-slate-400 italic text-xs lg:text-sm">
+                              <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                                 {news.length > 0 ? (
-                                  news.map((n, i) => (
-                                    <p key={i} className="p-3 lg:p-4 bg-white/5 rounded-xl border border-white/5 whitespace-pre-wrap">
-                                      {n.detail}
-                                    </p>
-                                  ))
+                                  news.map((n, i) => {
+                                    const detailUpper = n.detail.toUpperCase();
+                                    const isError = ['PARADA', 'AVERÍA', 'ERROR', 'FUERA DE SERVICIO', 'BLOQUEADO'].some(k => detailUpper.includes(k));
+                                    const isSuccess = ['OK', 'INICIO', 'COMPLETO', 'EN MARCHA'].some(k => detailUpper.includes(k));
+                                    
+                                    return (
+                                      <div 
+                                        key={i} 
+                                        className={`p-3 lg:p-4 bg-white/[0.04] rounded-xl border-l-4 transition-all duration-300 flex gap-3
+                                          ${isError ? 'border-red-500 shadow-[inset_4px_0_10px_-5px_rgba(239,68,68,0.3)]' : 
+                                            isSuccess ? 'border-emerald-500 shadow-[inset_4px_0_10px_-5px_rgba(16,185,129,0.3)]' : 
+                                            'border-white/10'}`}
+                                      >
+                                        <div className="mt-1 shrink-0">
+                                          {isError ? (
+                                            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                                          ) : (
+                                            <MessageSquare className="w-3.5 h-3.5 text-emerald-400/50" />
+                                          )}
+                                        </div>
+                                        <p className="text-[11px] lg:text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-medium">
+                                          {n.detail}
+                                        </p>
+                                      </div>
+                                    );
+                                  })
                                 ) : (
-                                  <p className="p-3 lg:p-4 bg-white/5 rounded-xl border border-white/5">Sin novedades reportadas para este turno.</p>
+                                  <div className="flex-1 flex items-center justify-center text-center p-6 border-2 border-dashed border-white/5 rounded-2xl">
+                                    <p className="text-slate-500 italic text-xs lg:text-sm">Sin novedades reportadas para este turno.</p>
+                                  </div>
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 text-[8px] lg:text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                              <div className="flex items-center gap-2 text-[8px] lg:text-[10px] font-black text-slate-500 uppercase tracking-widest pt-2 border-t border-white/5">
                                 <Clock className="w-2.5 h-2.5 lg:w-3 lg:h-3" /> <span className="hidden sm:inline">Última actualización:</span> {currentTime.toLocaleTimeString()}
                               </div>
                             </div>
