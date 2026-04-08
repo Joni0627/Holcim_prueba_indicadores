@@ -47,6 +47,45 @@ const getVisualShift = (startTime: string) => {
     return '1.MAÑANA';
 };
 
+const SplitFlapCharacter: React.FC<{ char: string; delay: number }> = ({ char, delay }) => {
+  return (
+    <div className="relative w-[1.1rem] h-[1.6rem] lg:w-[1.4rem] lg:h-[2rem] bg-[#1a1a1a] rounded-sm border border-white/10 flex items-center justify-center overflow-hidden shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]">
+      {/* Top half reflection */}
+      <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-20" />
+      
+      {/* Horizontal divider */}
+      <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/80 z-30" />
+      
+      <motion.div
+        key={char}
+        initial={{ rotateX: 0 }}
+        animate={{ rotateX: [0, 180, 360] }}
+        transition={{
+          duration: 0.8,
+          delay,
+          ease: "easeInOut",
+        }}
+        className="flex items-center justify-center w-full h-full"
+      >
+        <span className="font-mono text-xs lg:text-sm font-black text-amber-50/90 drop-shadow-[0_0_3px_rgba(255,251,235,0.4)]">
+          {char.toUpperCase()}
+        </span>
+      </motion.div>
+    </div>
+  );
+};
+
+const SplitFlapText: React.FC<{ text: string; length: number; staggerDelay?: number }> = ({ text, length, staggerDelay = 0.03 }) => {
+  const paddedText = text.padEnd(length, ' ').substring(0, length);
+  return (
+    <div className="flex gap-[1px]">
+      {paddedText.split('').map((char, i) => (
+        <SplitFlapCharacter key={i} char={char} delay={i * staggerDelay} />
+      ))}
+    </div>
+  );
+};
+
 const MonitorTimelineBar: React.FC<{ 
   shiftKey: string, 
   events: DowntimeEvent[]
@@ -363,6 +402,14 @@ export const MonitorView: React.FC<{
   const [currentShiftIndex, setCurrentShiftIndex] = useState(0);
   const [currentStockIndex, setCurrentStockIndex] = useState(0);
   const [currentDowntimePage, setCurrentDowntimePage] = useState(0);
+  
+  // Auto-rotate downtime ranking every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentDowntimePage(prev => (prev + 1) % 3);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
   const [currentCarouselPage, setCurrentCarouselPage] = useState(0);
   
   const selectedDate = useMemo(() => dateRange.start, [dateRange.start]);
@@ -527,6 +574,30 @@ export const MonitorView: React.FC<{
       const shift = getVisualShift(d.startTime || '00:00');
       result[shift] = (result[shift] || 0) + d.durationMinutes;
     });
+    return result;
+  }, [downtimeResult]);
+
+  const topDowntimesByMachine = useMemo(() => {
+    const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+    const result: Record<string, any[]> = {};
+
+    machines.forEach(m => {
+      const machineDowntimes = downtimeResult.filter(d => isMachineMatch(d.machineId, m));
+      
+      // Group by reason (observaciones)
+      const grouped: Record<string, number> = {};
+      machineDowntimes.forEach(d => {
+        const reason = d.reason || 'S/MOTIVO';
+        grouped[reason] = (grouped[reason] || 0) + d.durationMinutes;
+      });
+
+      // Convert to array and sort
+      result[m] = Object.entries(grouped)
+        .map(([reason, duration]) => ({ reason, duration }))
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 5);
+    });
+
     return result;
   }, [downtimeResult]);
 
@@ -1038,7 +1109,7 @@ export const MonitorView: React.FC<{
                     <div className="col-span-1 md:col-span-12 xl:col-span-7 bg-white/[0.03] backdrop-blur-sm p-4 lg:p-6 xl:p-8 rounded-3xl border border-white/10 shadow-2xl border-l-8 border-l-red-500/50 flex flex-col min-h-0">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 lg:mb-8 gap-4">
                         <p className="text-red-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl flex items-center gap-3 lg:gap-4">
-                          <AlertCircle className="w-6 h-6 lg:w-8 lg:h-8" /> Top 5 Paros Internos
+                          <AlertCircle className="w-6 h-6 lg:w-8 lg:h-8" /> Ranking de Paros (Top 5 Motivos)
                         </p>
                         <div className="flex gap-2">
                           {['672', '673', '674'].map((m, idx) => (
@@ -1052,45 +1123,42 @@ export const MonitorView: React.FC<{
                           ))}
                         </div>
                       </div>
-                      <div className="flex-1 overflow-y-auto no-scrollbar">
-                        <table className="w-full text-xs lg:text-sm border-collapse">
-                          <thead>
-                            <tr className="text-slate-500 uppercase font-black border-b border-white/10">
-                              <th className="text-left pb-2 lg:pb-4 w-8 lg:w-12">#</th>
-                              <th className="text-left pb-2 lg:pb-4">HAC</th>
-                              <th className="text-left pb-2 lg:pb-4">Motivo del Paro</th>
-                              <th className="text-right pb-2 lg:pb-4">Duración (Min)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {allDowntimesOrdered
-                              .filter(d => {
-                                const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
-                                const targetMachine = machines[currentDowntimePage];
-                                return isMachineMatch(d.machine, targetMachine);
-                              })
-                              .slice(0, 5)
-                              .map((d, idx) => (
-                              <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors group">
-                                <td className="py-3 lg:py-4 text-slate-500 font-black text-base lg:text-lg">{idx + 1}</td>
-                                <td className="py-3 lg:py-4 text-blue-400 font-black text-base lg:text-lg">{d.hac}</td>
-                                <td className="py-3 lg:py-4">
-                                  <p className="text-white font-bold text-base lg:text-lg">{d.reason}</p>
-                                  <p className="text-[8px] lg:text-[10px] text-slate-500 uppercase tracking-widest mt-0.5 lg:mt-1">{d.fullName}</p>
-                                </td>
-                                <td className="py-3 lg:py-4 text-right">
-                                  <span className="text-xl lg:text-2xl font-black text-red-400">{d.duration}</span>
-                                  <span className="text-[8px] lg:text-[10px] text-slate-500 font-bold ml-1 lg:ml-2 uppercase">Min</span>
-                                </td>
-                              </tr>
-                            ))}
-                            {allDowntimesOrdered.length === 0 && (
-                              <tr>
-                                <td colSpan={4} className="py-12 lg:py-20 text-center text-slate-500 italic text-lg lg:text-xl">Sin paros internos registrados</td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
+                      <div className="flex-1 flex flex-col justify-center">
+                        <div className="space-y-4 lg:space-y-6">
+                          {(() => {
+                            const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+                            const targetMachine = machines[currentDowntimePage];
+                            const machineData = topDowntimesByMachine[targetMachine] || [];
+                            
+                            if (machineData.length === 0) {
+                              return (
+                                <div className="py-12 lg:py-20 text-center text-slate-500 italic text-lg lg:text-xl">
+                                  Sin paros internos registrados para {targetMachine}
+                                </div>
+                              );
+                            }
+
+                            return machineData.map((d, idx) => {
+                              const hhmm = `${Math.floor(d.duration / 60).toString().padStart(2, '0')}:${Math.floor(d.duration % 60).toString().padStart(2, '0')}`;
+                              return (
+                                <div key={idx} className="flex items-center justify-between group">
+                                  <div className="flex items-center gap-4 lg:gap-6">
+                                    <div className="w-6 lg:w-8">
+                                      <SplitFlapText text={(idx + 1).toString()} length={1} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <SplitFlapText text={d.reason.substring(0, 20)} length={20} />
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <SplitFlapText text={hhmm} length={5} />
+                                    <span className="text-[8px] lg:text-[10px] text-slate-500 font-bold uppercase tracking-tighter">HH:MM</span>
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
                       </div>
                     </div>
 

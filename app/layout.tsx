@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import React from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import QueryProvider from "../components/providers/QueryProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "PSC QUBE | Expedición Malagueño",
@@ -47,7 +48,7 @@ export default function RootLayout({
         }
       }}
     >
-      <html lang="es" className="overflow-x-hidden">
+      <html lang="es" className={`${inter.variable} ${jetbrainsMono.variable} overflow-x-hidden`}>
         <body className={`${inter.className} bg-[#0a0f1e] text-slate-900 antialiased overflow-x-hidden`}>
           <QueryProvider>
             {children}
