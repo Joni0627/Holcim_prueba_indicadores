@@ -397,11 +397,11 @@ export const MonitorView: React.FC<{
     return () => clearInterval(timer);
   }, []);
 
-  // Cycle downtime pages every 10 seconds
+  // Cycle downtime pages every 8 seconds
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentDowntimePage((prev) => prev + 1);
-    }, 10000);
+      setCurrentDowntimePage((prev) => (prev + 1) % 3);
+    }, 8000);
     return () => clearInterval(timer);
   }, []);
 
@@ -1101,10 +1101,28 @@ export const MonitorView: React.FC<{
                               const targetMachine = machines[currentDowntimePage];
                               const machineData = topDowntimesByMachine[targetMachine] || [];
                               
-                              const machineColors: Record<string, { border: string, text: string, badge: string, glow: string }> = {
-                                'MG.672-PZ1': { border: 'border-l-cyan-500', text: 'text-cyan-400', badge: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.3)]', glow: 'shadow-[0_0_15px_rgba(6,182,212,0.2)]' },
-                                'MG.673-PZ1': { border: 'border-l-emerald-500', text: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]', glow: 'shadow-[0_0_15px_rgba(16,185,129,0.2)]' },
-                                'MG.674-PZ1': { border: 'border-l-rose-500', text: 'text-rose-400', badge: 'bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.3)]', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.2)]' },
+                              const machineColors: Record<string, { border: string, text: string, badge: string, glow: string, dot: string }> = {
+                                'MG.672-PZ1': { 
+                                  border: 'border-l-cyan-500', 
+                                  text: 'text-cyan-400', 
+                                  badge: 'bg-black text-cyan-400 border-cyan-500/50', 
+                                  glow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]',
+                                  dot: 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.8)]'
+                                },
+                                'MG.673-PZ1': { 
+                                  border: 'border-l-emerald-500', 
+                                  text: 'text-emerald-400', 
+                                  badge: 'bg-black text-emerald-400 border-emerald-500/50', 
+                                  glow: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]',
+                                  dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+                                },
+                                'MG.674-PZ1': { 
+                                  border: 'border-l-rose-500', 
+                                  text: 'text-rose-400', 
+                                  badge: 'bg-black text-rose-400 border-rose-500/50', 
+                                  glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]',
+                                  dot: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]'
+                                },
                               };
 
                               const colors = machineColors[targetMachine] || machineColors['MG.672-PZ1'];
@@ -1140,28 +1158,29 @@ export const MonitorView: React.FC<{
                                       damping: 18,
                                       mass: 0.8
                                     }}
-                                    className={`flex items-center gap-4 lg:gap-8 p-4 lg:p-6 bg-gradient-to-r from-white/[0.04] to-transparent border-l-4 ${colors.border} border-b border-white/5 last:border-b-0 backdrop-blur-sm group hover:from-white/[0.07] transition-all duration-300 ${colors.glow}`}
+                                    className={`flex items-center gap-3 lg:gap-4 p-2.5 lg:p-3 bg-gradient-to-r from-white/[0.04] to-transparent border-l-4 ${colors.border} border-b border-white/5 last:border-b-0 backdrop-blur-sm group hover:from-white/[0.07] transition-all duration-300 ${colors.glow}`}
                                   >
                                     {/* HAC Badge */}
-                                    <div className={`shrink-0 px-3 py-1.5 rounded-lg border font-mono text-xs lg:text-sm font-black tracking-widest shadow-lg ${colors.badge}`}>
+                                    <div className={`shrink-0 px-2.5 py-1 rounded border font-mono text-[10px] lg:text-xs font-bold tracking-wider flex items-center gap-2 ${colors.badge}`}>
+                                      <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${colors.dot}`} />
                                       {d.hac}
                                     </div>
                                     
                                     {/* Motivo - Full Width */}
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-white font-bold text-sm lg:text-base xl:text-xl leading-snug break-words">
+                                      <p className="text-white font-bold text-xs lg:text-sm xl:text-base leading-tight break-words">
                                         {d.reason}
                                       </p>
                                     </div>
                                     
                                     {/* Duration */}
-                                    <div className="shrink-0 flex items-center gap-4 bg-black/40 px-4 py-2.5 rounded-2xl border border-white/10 shadow-inner">
-                                      <Clock className={`w-5 h-5 lg:w-6 lg:h-6 ${idx === 0 ? 'text-yellow-400' : 'text-cyan-400'}`} />
+                                    <div className="shrink-0 flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-xl border border-white/10 shadow-inner">
+                                      <Clock className={`w-4 h-4 lg:w-5 lg:h-5 ${idx === 0 ? 'text-yellow-400' : colors.text}`} />
                                       <div className="flex flex-col items-end">
-                                        <span className={`font-mono text-xl lg:text-2xl xl:text-3xl font-black leading-none tracking-tighter ${idx === 0 ? 'text-yellow-400' : 'text-cyan-400'}`}>
+                                        <span className={`font-mono text-lg lg:text-xl xl:text-2xl font-black leading-none tracking-tighter ${idx === 0 ? 'text-yellow-400' : colors.text}`}>
                                           {hhmm}
                                         </span>
-                                        <span className="text-[9px] lg:text-[11px] text-slate-500 font-black uppercase tracking-widest mt-0.5">HH:MM</span>
+                                        <span className="text-[8px] lg:text-[9px] text-slate-500 font-black uppercase tracking-widest">HH:MM</span>
                                       </div>
                                     </div>
                                   </motion.div>
