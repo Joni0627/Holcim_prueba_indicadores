@@ -119,42 +119,58 @@ export async function GET(req: Request) {
     if (topParam) {
         const topCount = parseInt(topParam);
         
-        // Group by machine to find the absolute max for each machine
-        const machineMax: Record<string, any> = {};
+        // 1. Calculate daily production per machine (Sum of all shifts in a day)
+        // Key: machineId|date
+        const dailySums: Record<string, { tn: number, machineId: string, machineName: string, date: string }> = {};
         
         rowsCabecera.forEach(row => {
             const maquinaId = getVal(row, "paletizadora") || "Desconocida";
             const maquinaDesc = getVal(row, "descripcion_paletizadora") || maquinaId;
+            const date = getVal(row, "fecha") || "Sin Fecha";
             const valueTn = parseNumber(getVal(row, "tn_totales_turno"));
-            const date = getVal(row, "fecha");
-            const shift = getVal(row, "turno");
-
-            if (!machineMax[maquinaId] || valueTn > machineMax[maquinaId].valueTn) {
-                machineMax[maquinaId] = {
-                    date,
-                    shift,
+            
+            const key = `${maquinaId}|${date}`;
+            if (!dailySums[key]) {
+                dailySums[key] = {
+                    tn: 0,
                     machineId: maquinaId,
                     machineName: maquinaDesc,
-                    valueTn,
+                    date: date
+                };
+            }
+            dailySums[key].tn += valueTn;
+        });
+
+        // 2. Find the absolute maximum daily production for each machine
+        const machineMax: Record<string, any> = {};
+        Object.values(dailySums).forEach(d => {
+            if (!machineMax[d.machineId] || d.tn > machineMax[d.machineId].valueTn) {
+                machineMax[d.machineId] = {
+                    date: d.date,
+                    machineId: d.machineId,
+                    machineName: d.machineName,
+                    valueTn: d.tn,
                 };
             }
         });
 
-        // Also get the top overall records (could be multiple for the same machine)
-        const topOverall = rowsCabecera.map(row => ({
-            date: getVal(row, "fecha"),
-            shift: getVal(row, "turno"),
-            machineId: getVal(row, "paletizadora") || "Desconocida",
-            machineName: getVal(row, "descripcion_paletizadora") || getVal(row, "paletizadora"),
-            valueTn: parseNumber(getVal(row, "tn_totales_turno")),
-        })).sort((a, b) => b.valueTn - a.valueTn).slice(0, topCount);
+        // 3. Get the top overall daily records
+        const topOverall = Object.values(dailySums)
+            .map(d => ({
+                date: d.date,
+                machineId: d.machineId,
+                machineName: d.machineName,
+                valueTn: d.tn,
+            }))
+            .sort((a, b) => b.valueTn - a.valueTn)
+            .slice(0, topCount);
 
-        // Combine them: ensure the absolute best for each machine is included
+        // 4. Combine: ensure the absolute best for each machine is included
         const combined = [...topOverall];
         Object.values(machineMax).forEach((mMax: any) => {
             const alreadyIn = combined.some(r => 
                 r.machineId === mMax.machineId && 
-                r.valueTn === mMax.valueTn && 
+                Math.abs(r.valueTn - mMax.valueTn) < 0.01 && 
                 r.date === mMax.date
             );
             if (!alreadyIn) {

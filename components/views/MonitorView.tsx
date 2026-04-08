@@ -25,8 +25,8 @@ const timeToMinutes = (timeStr: string) => {
 
 const isMachineMatch = (id1: string, id2: string) => {
   if (!id1 || !id2) return false;
-  const s1 = String(id1).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const s2 = String(id2).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const s1 = String(id1).replace(/\s/g, '').toUpperCase();
+  const s2 = String(id2).replace(/\s/g, '').toUpperCase();
   return s1.includes(s2) || s2.includes(s1);
 };
 
@@ -629,6 +629,18 @@ export const MonitorView: React.FC<{
     refetchInterval: 3600000, // 1 hour
   });
 
+  // Memoized historical records to avoid re-calculating on every render
+  const historicalRecords = useMemo(() => {
+    const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+    return machines.map(machineId => {
+      const machineRecords = topRecords.filter(r => isMachineMatch(r.machineId, machineId));
+      const record = machineRecords.length > 0 
+        ? [...machineRecords].sort((a, b) => b.valueTn - a.valueTn)[0]
+        : null;
+      return { machineId, record };
+    });
+  }, [topRecords]);
+
   if (loadingProd || loadingDowntime || loadingStock || loadingTop) {
     return (
       <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
@@ -898,13 +910,7 @@ export const MonitorView: React.FC<{
                         <Trophy className="w-5 h-5 lg:w-6 lg:h-6" /> Récords Históricos: Hitos a Superar
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0">
-                        {['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'].map(machineId => {
-                          // Find the BEST record for this specific machine
-                          const machineRecords = topRecords.filter(r => isMachineMatch(r.machineId, machineId));
-                          const record = machineRecords.length > 0 
-                            ? machineRecords.sort((a, b) => b.valueTn - a.valueTn)[0]
-                            : null;
-                          
+                        {historicalRecords.map(({ machineId, record }) => {
                           if (!record) return null;
 
                           return (
