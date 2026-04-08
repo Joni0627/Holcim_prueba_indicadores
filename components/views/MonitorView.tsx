@@ -47,45 +47,6 @@ const getVisualShift = (startTime: string) => {
     return '1.MAÑANA';
 };
 
-const SplitFlapCharacter: React.FC<{ char: string; delay: number }> = ({ char, delay }) => {
-  return (
-    <div className="relative w-[1.1rem] h-[1.6rem] lg:w-[1.4rem] lg:h-[2rem] bg-[#1a1a1a] rounded-sm border border-white/10 flex items-center justify-center overflow-hidden shadow-[inset_0_0_10px_rgba(0,0,0,0.8)]">
-      {/* Top half reflection */}
-      <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-20" />
-      
-      {/* Horizontal divider */}
-      <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-black/80 z-30" />
-      
-      <motion.div
-        key={char}
-        initial={{ rotateX: 0 }}
-        animate={{ rotateX: [0, 180, 360] }}
-        transition={{
-          duration: 0.8,
-          delay,
-          ease: "easeInOut",
-        }}
-        className="flex items-center justify-center w-full h-full"
-      >
-        <span className="font-mono text-xs lg:text-sm font-black text-amber-50/90 drop-shadow-[0_0_3px_rgba(255,251,235,0.4)]">
-          {char.toUpperCase()}
-        </span>
-      </motion.div>
-    </div>
-  );
-};
-
-const SplitFlapText: React.FC<{ text: string; length: number; staggerDelay?: number }> = ({ text, length, staggerDelay = 0.03 }) => {
-  const paddedText = text.padEnd(length, ' ').substring(0, length);
-  return (
-    <div className="flex gap-[1px]">
-      {paddedText.split('').map((char, i) => (
-        <SplitFlapCharacter key={i} char={char} delay={i * staggerDelay} />
-      ))}
-    </div>
-  );
-};
-
 const MonitorTimelineBar: React.FC<{ 
   shiftKey: string, 
   events: DowntimeEvent[]
@@ -403,11 +364,11 @@ export const MonitorView: React.FC<{
   const [currentStockIndex, setCurrentStockIndex] = useState(0);
   const [currentDowntimePage, setCurrentDowntimePage] = useState(0);
   
-  // Auto-rotate downtime ranking every 10 seconds
+  // Auto-rotate downtime ranking every 8 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentDowntimePage(prev => (prev + 1) % 3);
-    }, 10000);
+    }, 8000);
     return () => clearInterval(interval);
   }, []);
   const [currentCarouselPage, setCurrentCarouselPage] = useState(0);
@@ -1123,42 +1084,81 @@ export const MonitorView: React.FC<{
                           ))}
                         </div>
                       </div>
-                      <div className="flex-1 flex flex-col justify-center">
-                        <div className="space-y-4 lg:space-y-6">
-                          {(() => {
-                            const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
-                            const targetMachine = machines[currentDowntimePage];
-                            const machineData = topDowntimesByMachine[targetMachine] || [];
-                            
-                            if (machineData.length === 0) {
-                              return (
-                                <div className="py-12 lg:py-20 text-center text-slate-500 italic text-lg lg:text-xl">
-                                  Sin paros internos registrados para {targetMachine}
-                                </div>
-                              );
-                            }
+                      <div className="flex-1 flex flex-col justify-center overflow-hidden">
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={currentDowntimePage}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            variants={{
+                              initial: { opacity: 0 },
+                              animate: { opacity: 1, transition: { staggerChildren: 0.1 } },
+                              exit: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: -1 } }
+                            }}
+                            className="space-y-3 lg:space-y-4"
+                          >
+                            {(() => {
+                              const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
+                              const targetMachine = machines[currentDowntimePage];
+                              const machineData = topDowntimesByMachine[targetMachine] || [];
+                              
+                              const machineColors: Record<string, { border: string, text: string, badge: string }> = {
+                                'MG.672-PZ1': { border: 'border-l-cyan-500', text: 'text-cyan-400', badge: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
+                                'MG.673-PZ1': { border: 'border-l-emerald-500', text: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+                                'MG.674-PZ1': { border: 'border-l-rose-500', text: 'text-rose-400', badge: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
+                              };
 
-                            return machineData.map((d, idx) => {
-                              const hhmm = `${Math.floor(d.duration / 60).toString().padStart(2, '0')}:${Math.floor(d.duration % 60).toString().padStart(2, '0')}`;
-                              return (
-                                <div key={idx} className="flex items-center justify-between group">
-                                  <div className="flex items-center gap-4 lg:gap-6">
-                                    <div className="w-6 lg:w-8">
-                                      <SplitFlapText text={(idx + 1).toString()} length={1} />
+                              const colors = machineColors[targetMachine] || machineColors['MG.672-PZ1'];
+
+                              if (machineData.length === 0) {
+                                return (
+                                  <motion.div 
+                                    variants={{
+                                      initial: { x: 50, opacity: 0 },
+                                      animate: { x: 0, opacity: 1 },
+                                      exit: { x: -50, opacity: 0 }
+                                    }}
+                                    className="py-12 lg:py-20 text-center text-slate-500 italic text-lg lg:text-xl"
+                                  >
+                                    Sin paros internos registrados para {targetMachine}
+                                  </motion.div>
+                                );
+                              }
+
+                              return machineData.map((d, idx) => {
+                                const hhmm = `${Math.floor(d.duration / 60).toString().padStart(2, '0')}:${Math.floor(d.duration % 60).toString().padStart(2, '0')}`;
+                                return (
+                                  <motion.div 
+                                    key={idx}
+                                    variants={{
+                                      initial: { x: 100, opacity: 0 },
+                                      animate: { x: 0, opacity: 1 },
+                                      exit: { x: -100, opacity: 0 }
+                                    }}
+                                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                                    className={`flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-white/[0.05] to-transparent border-l-4 ${colors.border} rounded-r-xl backdrop-blur-sm group hover:from-white/[0.08] transition-all duration-300`}
+                                  >
+                                    <div className="flex items-center gap-4 lg:gap-6">
+                                      <div className={`px-2 py-0.5 rounded border text-[10px] lg:text-xs font-black tracking-tighter ${colors.badge}`}>
+                                        {targetMachine.replace('MG.', '')}
+                                      </div>
+                                      <p className="text-white font-bold text-sm lg:text-base xl:text-lg truncate max-w-[200px] lg:max-w-[300px]">
+                                        {d.reason}
+                                      </p>
                                     </div>
-                                    <div className="flex flex-col">
-                                      <SplitFlapText text={d.reason.substring(0, 20)} length={20} />
+                                    <div className="flex items-center gap-3">
+                                      <span className={`font-mono text-lg lg:text-xl xl:text-2xl font-black ${idx === 0 ? 'text-yellow-400' : 'text-cyan-400'}`}>
+                                        {hhmm}
+                                      </span>
+                                      <span className="text-[8px] lg:text-[10px] text-slate-500 font-bold uppercase tracking-tighter">HH:MM</span>
                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <SplitFlapText text={hhmm} length={5} />
-                                    <span className="text-[8px] lg:text-[10px] text-slate-500 font-bold uppercase tracking-tighter">HH:MM</span>
-                                  </div>
-                                </div>
-                              );
-                            });
-                          })()}
-                        </div>
+                                  </motion.div>
+                                );
+                              });
+                            })()}
+                          </motion.div>
+                        </AnimatePresence>
                       </div>
                     </div>
 
