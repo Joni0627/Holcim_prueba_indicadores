@@ -262,20 +262,20 @@ const MonitorTooltip = ({ active, payload, label }: any) => {
 };
 
 const NewsTicker: React.FC<{ news: ShiftNews[] }> = ({ news }) => {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const contentRef = React.useRef<HTMLDivElement>(null);
-  const [shouldAnimate, setShouldAnimate] = React.useState(false);
-  const [contentHeight, setContentHeight] = React.useState(0);
+  const [currentIndex, setCurrentIndex] = React.useState(0);
 
   React.useEffect(() => {
-    if (containerRef.current && contentRef.current) {
-      const containerH = containerRef.current.offsetHeight;
-      const contentH = contentRef.current.scrollHeight;
-      setContentHeight(contentH);
-      // Only animate if content is taller than container
-      setShouldAnimate(contentH > containerH);
+    if (news.length <= 1) {
+      setCurrentIndex(0);
+      return;
     }
-  }, [news]);
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % news.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [news.length]);
 
   if (news.length === 0) {
     return (
@@ -285,57 +285,62 @@ const NewsTicker: React.FC<{ news: ShiftNews[] }> = ({ news }) => {
     );
   }
 
+  const currentNews = news[currentIndex] || news[0];
+  const detailUpper = currentNews.detail.toUpperCase();
+  const isError = ['PARADA', 'AVERÍA', 'ERROR', 'FUERA DE SERVICIO', 'BLOQUEADO'].some(k => detailUpper.includes(k));
+  const isSuccess = ['OK', 'INICIO', 'COMPLETO', 'EN MARCHA'].some(k => detailUpper.includes(k));
+
   return (
-    <div 
-      ref={containerRef}
-      className="flex-1 relative overflow-hidden"
-      style={{
-        maskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)',
-        WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 15%, black 85%, transparent)'
-      }}
-    >
-      <motion.div
-        ref={contentRef}
-        className="flex flex-col gap-4 lg:gap-5 py-12"
-        animate={shouldAnimate ? {
-          y: [0, -(contentHeight + 20)]
-        } : { y: 0 }}
-        transition={shouldAnimate ? {
-          duration: Math.max(15, news.length * 4),
-          ease: "linear",
-          repeat: Infinity,
-        } : {}}
-      >
-        {/* Render news twice for seamless loop if animating */}
-        {(shouldAnimate ? [...news, ...news] : news).map((n, i) => {
-          const detailUpper = n.detail.toUpperCase();
-          const isError = ['PARADA', 'AVERÍA', 'ERROR', 'FUERA DE SERVICIO', 'BLOQUEADO'].some(k => detailUpper.includes(k));
-          const isSuccess = ['OK', 'INICIO', 'COMPLETO', 'EN MARCHA'].some(k => detailUpper.includes(k));
-          
-          return (
-            <div 
-              key={`${n.id}-${i}`} 
-              className={`p-4 lg:p-6 bg-blue-600/10 rounded-2xl border-l-[6px] transition-all duration-300 flex gap-4 lg:gap-5 shadow-[0_0_20px_rgba(37,99,235,0.05)]
-                ${isError ? 'border-red-500 shadow-[inset_6px_0_15px_-5px_rgba(239,68,68,0.4)]' : 
-                  isSuccess ? 'border-emerald-500 shadow-[inset_6px_0_15px_-5px_rgba(16,185,129,0.4)]' : 
-                  'border-blue-500/50'}`}
-            >
-              <div className="mt-1.5 shrink-0">
-                {isError ? (
-                  <AlertCircle className="w-5 h-5 lg:w-6 lg:h-6 text-red-400" />
-                ) : (
-                  <div className="bg-blue-500/20 p-2 rounded-full">
-                    <User className="w-4 h-4 lg:w-5 lg:h-5 text-blue-400" />
-                  </div>
-                )}
+    <div className="flex-1 relative flex items-center justify-center overflow-hidden min-h-0">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`${currentNews.id}-${currentIndex}`}
+          initial={{ y: 40, opacity: 0, scale: 0.98 }}
+          animate={{ 
+            y: 0, 
+            opacity: 1, 
+            scale: 1,
+            filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"]
+          }}
+          exit={{ y: -40, opacity: 0, scale: 0.98 }}
+          transition={{ 
+            y: { type: 'spring', stiffness: 100, damping: 15 },
+            opacity: { duration: 0.3 },
+            scale: { duration: 0.3 },
+            filter: { duration: 0.5 }
+          }}
+          className={`w-full p-6 lg:p-10 bg-blue-600/10 rounded-3xl border-l-[8px] flex gap-6 lg:gap-8 shadow-2xl relative overflow-hidden
+            ${isError ? 'border-red-500 shadow-[inset_8px_0_20px_-5px_rgba(239,68,68,0.4)]' : 
+              isSuccess ? 'border-emerald-500 shadow-[inset_8px_0_20px_-5px_rgba(16,185,129,0.4)]' : 
+              'border-blue-500/50'}`}
+        >
+          <div className="mt-1.5 shrink-0">
+            {isError ? (
+              <AlertCircle className="w-8 h-8 lg:w-12 lg:h-12 text-red-400" />
+            ) : (
+              <div className="bg-blue-500/20 p-3 lg:p-4 rounded-full">
+                <User className="w-6 h-6 lg:w-8 lg:h-8 text-blue-400" />
               </div>
-              <p className="text-base lg:text-lg xl:text-xl text-white leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
-                {n.detail}
-              </p>
-            </div>
-          );
-        })}
-      </motion.div>
+            )}
+          </div>
+          <div className="flex-1 flex flex-col justify-center min-w-0">
+            <p className="text-xl lg:text-2xl xl:text-4xl text-white leading-tight whitespace-pre-wrap font-bold tracking-tight">
+              {currentNews.detail}
+            </p>
+          </div>
+          
+          {/* Progress bar for the 5s timer */}
+          {news.length > 1 && (
+            <motion.div 
+              className="absolute bottom-0 left-0 h-1.5 bg-blue-500/40"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              key={`progress-${currentIndex}`}
+              transition={{ duration: 5, ease: "linear" }}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
