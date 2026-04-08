@@ -545,16 +545,14 @@ export const MonitorView: React.FC<{
     machines.forEach(m => {
       const machineDowntimes = downtimeResult.filter(d => isMachineMatch(d.machineId, m));
       
-      // Group by reason (observaciones)
-      const grouped: Record<string, number> = {};
-      machineDowntimes.forEach(d => {
-        const reason = d.reason || 'S/MOTIVO';
-        grouped[reason] = (grouped[reason] || 0) + d.durationMinutes;
-      });
-
-      // Convert to array and sort
-      result[m] = Object.entries(grouped)
-        .map(([reason, duration]) => ({ reason, duration }))
+      // We want the top 5 longest individual events for this paletizer
+      result[m] = machineDowntimes
+        .map(d => ({
+          hac: d.hac || 'S/HAC',
+          reason: d.reason || 'S/MOTIVO',
+          duration: d.durationMinutes,
+          id: d.id
+        }))
         .sort((a, b) => b.duration - a.duration)
         .slice(0, 5);
     });
@@ -1093,20 +1091,20 @@ export const MonitorView: React.FC<{
                             exit="exit"
                             variants={{
                               initial: { opacity: 0 },
-                              animate: { opacity: 1, transition: { staggerChildren: 0.1 } },
-                              exit: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: -1 } }
+                              animate: { opacity: 1, transition: { staggerChildren: 0.12 } },
+                              exit: { opacity: 0, transition: { staggerChildren: 0.06, staggerDirection: -1 } }
                             }}
-                            className="space-y-3 lg:space-y-4"
+                            className="flex flex-col h-full"
                           >
                             {(() => {
                               const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
                               const targetMachine = machines[currentDowntimePage];
                               const machineData = topDowntimesByMachine[targetMachine] || [];
                               
-                              const machineColors: Record<string, { border: string, text: string, badge: string }> = {
-                                'MG.672-PZ1': { border: 'border-l-cyan-500', text: 'text-cyan-400', badge: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
-                                'MG.673-PZ1': { border: 'border-l-emerald-500', text: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-                                'MG.674-PZ1': { border: 'border-l-rose-500', text: 'text-rose-400', badge: 'bg-rose-500/20 text-rose-400 border-rose-500/30' },
+                              const machineColors: Record<string, { border: string, text: string, badge: string, glow: string }> = {
+                                'MG.672-PZ1': { border: 'border-l-cyan-500', text: 'text-cyan-400', badge: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.3)]', glow: 'shadow-[0_0_15px_rgba(6,182,212,0.2)]' },
+                                'MG.673-PZ1': { border: 'border-l-emerald-500', text: 'text-emerald-400', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.3)]', glow: 'shadow-[0_0_15px_rgba(16,185,129,0.2)]' },
+                                'MG.674-PZ1': { border: 'border-l-rose-500', text: 'text-rose-400', badge: 'bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.3)]', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.2)]' },
                               };
 
                               const colors = machineColors[targetMachine] || machineColors['MG.672-PZ1'];
@@ -1115,9 +1113,9 @@ export const MonitorView: React.FC<{
                                 return (
                                   <motion.div 
                                     variants={{
-                                      initial: { x: 50, opacity: 0 },
+                                      initial: { x: '120%', opacity: 0 },
                                       animate: { x: 0, opacity: 1 },
-                                      exit: { x: -50, opacity: 0 }
+                                      exit: { x: '-120%', opacity: 0 }
                                     }}
                                     className="py-12 lg:py-20 text-center text-slate-500 italic text-lg lg:text-xl"
                                   >
@@ -1132,26 +1130,39 @@ export const MonitorView: React.FC<{
                                   <motion.div 
                                     key={idx}
                                     variants={{
-                                      initial: { x: 100, opacity: 0 },
+                                      initial: { x: '120%', opacity: 0 },
                                       animate: { x: 0, opacity: 1 },
-                                      exit: { x: -100, opacity: 0 }
+                                      exit: { x: '-120%', opacity: 0 }
                                     }}
-                                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                                    className={`flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-white/[0.05] to-transparent border-l-4 ${colors.border} rounded-r-xl backdrop-blur-sm group hover:from-white/[0.08] transition-all duration-300`}
+                                    transition={{ 
+                                      type: "spring", 
+                                      stiffness: 70, 
+                                      damping: 18,
+                                      mass: 0.8
+                                    }}
+                                    className={`flex items-center gap-4 lg:gap-8 p-4 lg:p-6 bg-gradient-to-r from-white/[0.04] to-transparent border-l-4 ${colors.border} border-b border-white/5 last:border-b-0 backdrop-blur-sm group hover:from-white/[0.07] transition-all duration-300 ${colors.glow}`}
                                   >
-                                    <div className="flex items-center gap-4 lg:gap-6">
-                                      <div className={`px-2 py-0.5 rounded border text-[10px] lg:text-xs font-black tracking-tighter ${colors.badge}`}>
-                                        {targetMachine.replace('MG.', '')}
-                                      </div>
-                                      <p className="text-white font-bold text-sm lg:text-base xl:text-lg truncate max-w-[200px] lg:max-w-[300px]">
+                                    {/* HAC Badge */}
+                                    <div className={`shrink-0 px-3 py-1.5 rounded-lg border font-mono text-xs lg:text-sm font-black tracking-widest shadow-lg ${colors.badge}`}>
+                                      {d.hac}
+                                    </div>
+                                    
+                                    {/* Motivo - Full Width */}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-white font-bold text-sm lg:text-base xl:text-xl leading-snug break-words">
                                         {d.reason}
                                       </p>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                      <span className={`font-mono text-lg lg:text-xl xl:text-2xl font-black ${idx === 0 ? 'text-yellow-400' : 'text-cyan-400'}`}>
-                                        {hhmm}
-                                      </span>
-                                      <span className="text-[8px] lg:text-[10px] text-slate-500 font-bold uppercase tracking-tighter">HH:MM</span>
+                                    
+                                    {/* Duration */}
+                                    <div className="shrink-0 flex items-center gap-4 bg-black/40 px-4 py-2.5 rounded-2xl border border-white/10 shadow-inner">
+                                      <Clock className={`w-5 h-5 lg:w-6 lg:h-6 ${idx === 0 ? 'text-yellow-400' : 'text-cyan-400'}`} />
+                                      <div className="flex flex-col items-end">
+                                        <span className={`font-mono text-xl lg:text-2xl xl:text-3xl font-black leading-none tracking-tighter ${idx === 0 ? 'text-yellow-400' : 'text-cyan-400'}`}>
+                                          {hhmm}
+                                        </span>
+                                        <span className="text-[9px] lg:text-[11px] text-slate-500 font-black uppercase tracking-widest mt-0.5">HH:MM</span>
+                                      </div>
                                     </div>
                                   </motion.div>
                                 );
