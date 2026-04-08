@@ -291,7 +291,7 @@ const NewsTicker: React.FC<{ news: ShiftNews[] }> = ({ news }) => {
   const isSuccess = ['OK', 'INICIO', 'COMPLETO', 'EN MARCHA'].some(k => detailUpper.includes(k));
 
   return (
-    <div className="flex-1 relative flex items-center justify-center overflow-hidden min-h-0">
+    <div className="flex-1 relative flex items-center justify-center overflow-hidden min-h-[200px]">
       <AnimatePresence mode="wait">
         <motion.div
           key={`${currentNews.id}-${currentIndex}`}
@@ -300,7 +300,7 @@ const NewsTicker: React.FC<{ news: ShiftNews[] }> = ({ news }) => {
             y: 0, 
             opacity: 1, 
             scale: 1,
-            filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"]
+            filter: ["brightness(1)", "brightness(1.1)", "brightness(1)"]
           }}
           exit={{ y: -40, opacity: 0, scale: 0.98 }}
           transition={{ 
@@ -309,22 +309,22 @@ const NewsTicker: React.FC<{ news: ShiftNews[] }> = ({ news }) => {
             scale: { duration: 0.3 },
             filter: { duration: 0.5 }
           }}
-          className={`w-full p-6 lg:p-10 bg-blue-600/10 rounded-3xl border-l-[8px] flex gap-6 lg:gap-8 shadow-2xl relative overflow-hidden
-            ${isError ? 'border-red-500 shadow-[inset_8px_0_20px_-5px_rgba(239,68,68,0.4)]' : 
-              isSuccess ? 'border-emerald-500 shadow-[inset_8px_0_20px_-5px_rgba(16,185,129,0.4)]' : 
+          className={`w-full p-5 lg:p-6 bg-blue-600/10 rounded-2xl border-l-[6px] flex gap-4 lg:gap-6 shadow-2xl relative overflow-hidden min-h-[160px]
+            ${isError ? 'border-red-500 shadow-[inset_6px_0_15px_-5px_rgba(239,68,68,0.4)]' : 
+              isSuccess ? 'border-emerald-500 shadow-[inset_6px_0_15px_-5px_rgba(16,185,129,0.4)]' : 
               'border-blue-500/50'}`}
         >
-          <div className="mt-1.5 shrink-0">
+          <div className="mt-1 shrink-0">
             {isError ? (
-              <AlertCircle className="w-8 h-8 lg:w-12 lg:h-12 text-red-400" />
+              <AlertCircle className="w-6 h-6 lg:w-8 lg:h-8 text-red-400" />
             ) : (
-              <div className="bg-blue-500/20 p-3 lg:p-4 rounded-full">
-                <User className="w-6 h-6 lg:w-8 lg:h-8 text-blue-400" />
+              <div className="bg-blue-500/20 p-2 lg:p-3 rounded-full">
+                <User className="w-4 h-4 lg:w-5 lg:h-5 text-blue-400" />
               </div>
             )}
           </div>
           <div className="flex-1 flex flex-col justify-center min-w-0">
-            <p className="text-xl lg:text-2xl xl:text-4xl text-white leading-tight whitespace-pre-wrap font-bold tracking-tight">
+            <p className="text-lg lg:text-xl xl:text-2xl text-slate-100 leading-relaxed whitespace-pre-wrap font-medium tracking-tight">
               {currentNews.detail}
             </p>
           </div>
@@ -1242,15 +1242,15 @@ export const MonitorView: React.FC<{
                         ].map(shift => {
                           const news = shiftNews.filter(n => n.shift === shift.key);
                           return (
-                            <div key={shift.key} className="bg-black/40 p-4 lg:p-5 rounded-3xl border border-white/5 flex flex-col gap-4 lg:gap-6 min-h-[450px] max-h-[700px]">
-                              <div className="flex items-center justify-between border-b border-white/10 pb-4 lg:pb-5">
+                            <div key={shift.key} className="bg-black/40 p-4 lg:p-5 rounded-3xl border border-white/5 flex flex-col gap-4 lg:gap-6 min-h-[350px] max-h-[600px]">
+                              <div className="flex items-center justify-between border-b border-white/10 pb-3 lg:pb-4">
                                 <div className="flex items-baseline gap-3">
-                                  <span className={`text-2xl lg:text-3xl font-black uppercase tracking-tighter drop-shadow-[0_0_10px_rgba(16,185,129,0.3)] text-${shift.color}-400`}>
+                                  <span className={`text-sm lg:text-base font-black uppercase tracking-[0.2em] text-${shift.color}-400/80`}>
                                     {shift.label}
                                   </span>
-                                  <span className="text-sm lg:text-base font-black text-white/40">[{news.length}]</span>
+                                  <span className="text-xs font-bold text-white/20">[{news.length}]</span>
                                 </div>
-                                <div className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-${shift.color}-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.5)]`} />
+                                <div className={`w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-${shift.color}-500/50 animate-pulse`} />
                               </div>
                               <div className="flex-1 flex flex-col min-h-0">
                                 <NewsTicker news={news} />
