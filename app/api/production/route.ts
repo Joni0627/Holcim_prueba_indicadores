@@ -21,8 +21,19 @@ function getVal(row: any, key: string) {
     return undefined;
 }
 
-function parseSheetDate(dateStr: string): Date | null {
-  if (!dateStr || typeof dateStr !== "string") return null;
+function parseSheetDate(dateStr: any): Date | null {
+  if (!dateStr) return null;
+  
+  // Handle Date objects
+  if (dateStr instanceof Date) return dateStr;
+  
+  // Handle Excel serial dates (numbers)
+  if (typeof dateStr === 'number') {
+    return new Date((dateStr - 25569) * 86400 * 1000);
+  }
+
+  if (typeof dateStr !== "string") return null;
+  
   const cleaned = dateStr.trim();
   let parts: string[] = [];
   if (cleaned.includes("/")) parts = cleaned.split("/");
@@ -120,22 +131,30 @@ export async function GET(req: Request) {
         const topCount = parseInt(topParam);
         
         // 1. Calculate daily production per machine (Sum of all shifts in a day)
-        // Key: machineId|date
+        // Key: machineName|date
         const dailySums: Record<string, { tn: number, machineId: string, machineName: string, date: string }> = {};
         
         rowsCabecera.forEach(row => {
             const maquinaId = getVal(row, "paletizadora") || "Desconocida";
             const maquinaDesc = getVal(row, "descripcion_paletizadora") || maquinaId;
-            const date = getVal(row, "fecha") || "Sin Fecha";
+            
+            // Normalize date for consistent grouping
+            const rawDate = getVal(row, "fecha");
+            const d = parseSheetDate(rawDate);
+            if (!d) return;
+            
+            // Use YYYY-MM-DD for grouping
+            const dateStr = d.toISOString().split('T')[0];
             const valueTn = parseNumber(getVal(row, "tn_totales_turno"));
             
-            const key = `${maquinaId}|${date}`;
+            // Group by full description as requested
+            const key = `${maquinaDesc}|${dateStr}`;
             if (!dailySums[key]) {
                 dailySums[key] = {
                     tn: 0,
-                    machineId: maquinaId,
+                    machineId: maquinaDesc,
                     machineName: maquinaDesc,
-                    date: date
+                    date: dateStr
                 };
             }
             dailySums[key].tn += valueTn;
@@ -144,10 +163,10 @@ export async function GET(req: Request) {
         // 2. Find the absolute maximum daily production for each machine
         const machineMax: Record<string, any> = {};
         Object.values(dailySums).forEach(d => {
-            if (!machineMax[d.machineId] || d.tn > machineMax[d.machineId].valueTn) {
-                machineMax[d.machineId] = {
+            if (!machineMax[d.machineName] || d.tn > machineMax[d.machineName].valueTn) {
+                machineMax[d.machineName] = {
                     date: d.date,
-                    machineId: d.machineId,
+                    machineId: d.machineName,
                     machineName: d.machineName,
                     valueTn: d.tn,
                 };
@@ -158,7 +177,7 @@ export async function GET(req: Request) {
         const topOverall = Object.values(dailySums)
             .map(d => ({
                 date: d.date,
-                machineId: d.machineId,
+                machineId: d.machineName,
                 machineName: d.machineName,
                 valueTn: d.tn,
             }))
@@ -169,7 +188,7 @@ export async function GET(req: Request) {
         const combined = [...topOverall];
         Object.values(machineMax).forEach((mMax: any) => {
             const alreadyIn = combined.some(r => 
-                r.machineId === mMax.machineId && 
+                r.machineName === mMax.machineName && 
                 Math.abs(r.valueTn - mMax.valueTn) < 0.01 && 
                 r.date === mMax.date
             );

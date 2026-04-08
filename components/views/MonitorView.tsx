@@ -25,9 +25,17 @@ const timeToMinutes = (timeStr: string) => {
 
 const isMachineMatch = (id1: string, id2: string) => {
   if (!id1 || !id2) return false;
+  
+  // User requested normalization (removes spaces)
   const s1 = String(id1).replace(/\s/g, '').toUpperCase();
   const s2 = String(id2).replace(/\s/g, '').toUpperCase();
-  return s1.includes(s2) || s2.includes(s1);
+  if (s1.includes(s2) || s2.includes(s1)) return true;
+  
+  // Fallback: aggressive normalization (removes all non-alphanumeric)
+  const a1 = s1.replace(/[^A-Z0-9]/g, '');
+  const a2 = s2.replace(/[^A-Z0-9]/g, '');
+  if (!a1 || !a2) return false;
+  return a1.includes(a2) || a2.includes(a1);
 };
 
 const getVisualShift = (startTime: string) => {
