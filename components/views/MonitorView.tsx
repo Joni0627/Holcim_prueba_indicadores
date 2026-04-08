@@ -703,7 +703,7 @@ export const MonitorView: React.FC<{
                 <span className="text-[10px] font-black text-blue-200 uppercase tracking-[0.15em] mb-1">{item.product.replace('CEMENTO ', '')}</span>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-3xl font-black text-white tracking-tighter leading-none">
-                    {Math.floor(item.tonnage).toLocaleString()}
+                    {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </span>
                   <span className="text-[10px] text-blue-300 font-black uppercase">Tn</span>
                 </div>
@@ -731,7 +731,7 @@ export const MonitorView: React.FC<{
                     <span className="text-[clamp(8px,0.8vw,10px)] font-black text-emerald-500/70 uppercase tracking-tighter hidden sm:block">Total Hoy</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl 2xl:text-5xl font-black text-emerald-400 tracking-tighter leading-none">
-                        {Math.floor(m.totalTn).toLocaleString()}
+                        {Math.floor(m.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </span>
                       <span className="text-[clamp(10px,1vw,12px)] font-black text-slate-500 uppercase">Tn</span>
                     </div>
@@ -834,7 +834,7 @@ export const MonitorView: React.FC<{
                               <div className="flex flex-col items-center">
                                 <span className="text-sm lg:text-lg font-black text-slate-300 uppercase">{second.id.split('-')[0]}</span>
                                 <div className="flex items-baseline gap-1">
-                                  <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(second.totalTn).toLocaleString()}</span>
+                                  <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(second.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                                   <span className="text-[8px] lg:text-[10px] font-bold text-slate-500 uppercase">Tn</span>
                                 </div>
                               </div>
@@ -854,10 +854,9 @@ export const MonitorView: React.FC<{
                           return (
                             <div className="flex flex-col items-center gap-2 lg:gap-4 w-1/3">
                               <div className="flex flex-col items-center">
-                                <Trophy className="text-amber-500 mb-1 lg:mb-2 w-6 h-6 lg:w-8 lg:h-8" />
                                 <span className="text-base lg:text-xl font-black text-amber-500 uppercase">{first.id.split('-')[0]}</span>
                                 <div className="flex items-baseline gap-1">
-                                  <span className="text-3xl lg:text-4xl font-black text-white">{Math.floor(first.totalTn).toLocaleString()}</span>
+                                  <span className="text-3xl lg:text-4xl font-black text-white">{Math.floor(first.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                                   <span className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase">Tn</span>
                                 </div>
                               </div>
@@ -879,7 +878,7 @@ export const MonitorView: React.FC<{
                               <div className="flex flex-col items-center">
                                 <span className="text-sm lg:text-lg font-black text-amber-700 uppercase">{third.id.split('-')[0]}</span>
                                 <div className="flex items-baseline gap-1">
-                                  <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(third.totalTn).toLocaleString()}</span>
+                                  <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(third.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                                   <span className="text-[8px] lg:text-[10px] font-bold text-slate-500 uppercase">Tn</span>
                                 </div>
                               </div>
@@ -900,63 +899,33 @@ export const MonitorView: React.FC<{
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0">
                         {['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'].map(machineId => {
-                          const record = topRecords.find(r => isMachineMatch(r.machineId, machineId)) || topRecords[0];
-                          const current = machineKPIs.find(m => isMachineMatch(m.id, machineId));
-                          const progress = current ? (current.totalTn / (record?.valueTn || 1)) * 100 : 0;
+                          // Find the BEST record for this specific machine
+                          const machineRecords = topRecords.filter(r => isMachineMatch(r.machineId, machineId));
+                          const record = machineRecords.length > 0 
+                            ? machineRecords.sort((a, b) => b.valueTn - a.valueTn)[0]
+                            : null;
+                          
+                          if (!record) return null;
 
                           return (
-                            <div key={machineId} className="bg-black/40 p-4 lg:p-6 rounded-3xl border border-white/5 flex flex-col justify-between group hover:bg-indigo-500/10 transition-all relative overflow-hidden min-h-0">
+                            <div key={machineId} className="bg-black/40 p-5 lg:p-7 rounded-3xl border border-white/5 flex flex-col justify-center group hover:bg-indigo-500/10 transition-all relative overflow-hidden min-h-0">
                               <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                                 <Trophy className="w-[80px] h-[80px] lg:w-[100px] h-[100px]" />
                               </div>
                               
-                              <div className="flex justify-between items-start relative z-10">
-                                <div className="flex flex-col">
-                                  <span className="text-[8px] lg:text-[10px] font-black text-slate-500 uppercase tracking-widest">Paletizadora</span>
-                                  <span className="text-xl lg:text-2xl font-black text-white uppercase">{machineId.split('-')[0]}</span>
-                                </div>
-                                <div className="p-1.5 lg:p-2 bg-indigo-500/20 rounded-lg">
-                                  <Trophy className="text-indigo-400 w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                                </div>
-                              </div>
-                              
-                              <div className="my-3 lg:my-6 relative z-10">
-                                <p className="text-[8px] lg:text-[10px] font-black text-indigo-400/70 uppercase tracking-widest mb-1">Récord Histórico</p>
-                                <div className="flex items-baseline gap-1.5 lg:gap-2">
-                                  <span className="text-3xl lg:text-4xl xl:text-5xl font-black text-indigo-400 tracking-tighter leading-none">{Math.floor(record?.valueTn || 0).toLocaleString()}</span>
-                                  <span className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase">Tn</span>
-                                </div>
-                                <p className="text-[8px] lg:text-[9px] font-bold text-slate-600 uppercase mt-1 flex items-center gap-1.5 lg:gap-2">
-                                  <Calendar size={10} /> {record?.date || '---'}
-                                </p>
-                              </div>
-
-                              <div className="space-y-2 lg:space-y-3 relative z-10">
-                                <div className="flex justify-between items-end">
-                                  <div className="flex flex-col">
-                                    <span className="text-[8px] lg:text-[10px] font-black text-emerald-400 uppercase tracking-widest">Producción Hoy</span>
-                                    <span className="text-base lg:text-lg font-black text-white">{Math.floor(current?.totalTn || 0).toLocaleString()} Tn</span>
+                              <div className="relative z-10">
+                                <span className="text-[10px] lg:text-xs font-black text-slate-500 uppercase tracking-widest">Récord {machineId.split('-')[0]}</span>
+                                <div className="mt-2 lg:mt-4">
+                                  <div className="flex items-baseline gap-1.5 lg:gap-2">
+                                    <span className="text-4xl lg:text-5xl xl:text-6xl font-black text-amber-400 tracking-tighter leading-none">
+                                      {Math.floor(record.valueTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                                    </span>
+                                    <span className="text-xs lg:text-sm font-bold text-slate-500 uppercase">Tn</span>
                                   </div>
-                                  <span className="text-lg lg:text-xl font-black text-emerald-400">{Math.round(progress)}%</span>
+                                  <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase mt-2 flex items-center gap-2">
+                                    <Calendar size={12} className="text-indigo-400" /> {record.date || '---'}
+                                  </p>
                                 </div>
-                                <div className="h-2 lg:h-3 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                  <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${Math.min(progress, 100)}%` }}
-                                    className={`h-full relative ${progress >= 100 ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : 'bg-indigo-500'}`}
-                                  >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
-                                  </motion.div>
-                                </div>
-                                {progress >= 100 && (
-                                  <motion.p 
-                                    animate={{ scale: [1, 1.1, 1] }}
-                                    transition={{ repeat: Infinity, duration: 1 }}
-                                    className="text-[10px] font-black text-emerald-400 uppercase text-center tracking-widest"
-                                  >
-                                    ¡NUEVO RÉCORD ALCANZADO!
-                                  </motion.p>
-                                )}
                               </div>
                             </div>
                           );
@@ -981,7 +950,7 @@ export const MonitorView: React.FC<{
                                 <div className={`w-2 h-2 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500`} />
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
                               </div>
-                              <span className="text-lg lg:text-xl font-black text-white">{Math.floor(shiftTotals[s] || 0).toLocaleString()} <span className="text-[10px] text-slate-500 uppercase">Tn</span></span>
+                              <span className="text-lg lg:text-xl font-black text-white">{Math.floor(shiftTotals[s] || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-500 uppercase">Tn</span></span>
                             </div>
                           ))}
                         </div>
@@ -995,7 +964,7 @@ export const MonitorView: React.FC<{
                                 <span className="text-lg lg:text-xl font-black text-white uppercase tracking-tighter">{machine.id.split('-')[0]}</span>
                                 <div className="flex flex-col items-end">
                                   <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Total Diario</span>
-                                  <span className="text-base lg:text-lg font-black text-emerald-400">{Math.floor(machine.totalTn).toLocaleString()} Tn</span>
+                                  <span className="text-base lg:text-lg font-black text-emerald-400">{Math.floor(machine.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })} Tn</span>
                                 </div>
                               </div>
                               
@@ -1207,7 +1176,7 @@ export const MonitorView: React.FC<{
                             
                             <div className="mt-6 lg:mt-12">
                               <div className="flex items-baseline gap-2 lg:gap-3">
-                                <span className="text-4xl lg:text-6xl xl:text-7xl font-black text-white tracking-tighter">{Math.floor(item.tonnage).toLocaleString()}</span>
+                                <span className="text-4xl lg:text-6xl xl:text-7xl font-black text-white tracking-tighter">{Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
                                 <span className="text-lg lg:text-xl xl:text-2xl font-bold text-slate-500 uppercase">Tn</span>
                               </div>
                               <div className="h-1 lg:h-1.5 w-full bg-white/5 rounded-full mt-4 lg:mt-6 overflow-hidden">

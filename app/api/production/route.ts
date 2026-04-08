@@ -118,20 +118,54 @@ export async function GET(req: Request) {
 
     if (topParam) {
         const topCount = parseInt(topParam);
-        const allRecords = rowsCabecera.map(row => {
+        
+        // Group by machine to find the absolute max for each machine
+        const machineMax: Record<string, any> = {};
+        
+        rowsCabecera.forEach(row => {
             const maquinaId = getVal(row, "paletizadora") || "Desconocida";
             const maquinaDesc = getVal(row, "descripcion_paletizadora") || maquinaId;
-            return {
-                date: getVal(row, "fecha"),
-                shift: getVal(row, "turno"),
-                machineId: maquinaId,
-                machineName: maquinaDesc,
-                valueTn: parseNumber(getVal(row, "tn_totales_turno")),
-            };
-        }).sort((a, b) => b.valueTn - a.valueTn).slice(0, topCount);
+            const valueTn = parseNumber(getVal(row, "tn_totales_turno"));
+            const date = getVal(row, "fecha");
+            const shift = getVal(row, "turno");
 
-        cache.set(cacheKey, { data: allRecords, timestamp: now });
-        return NextResponse.json(allRecords);
+            if (!machineMax[maquinaId] || valueTn > machineMax[maquinaId].valueTn) {
+                machineMax[maquinaId] = {
+                    date,
+                    shift,
+                    machineId: maquinaId,
+                    machineName: maquinaDesc,
+                    valueTn,
+                };
+            }
+        });
+
+        // Also get the top overall records (could be multiple for the same machine)
+        const topOverall = rowsCabecera.map(row => ({
+            date: getVal(row, "fecha"),
+            shift: getVal(row, "turno"),
+            machineId: getVal(row, "paletizadora") || "Desconocida",
+            machineName: getVal(row, "descripcion_paletizadora") || getVal(row, "paletizadora"),
+            valueTn: parseNumber(getVal(row, "tn_totales_turno")),
+        })).sort((a, b) => b.valueTn - a.valueTn).slice(0, topCount);
+
+        // Combine them: ensure the absolute best for each machine is included
+        const combined = [...topOverall];
+        Object.values(machineMax).forEach((mMax: any) => {
+            const alreadyIn = combined.some(r => 
+                r.machineId === mMax.machineId && 
+                r.valueTn === mMax.valueTn && 
+                r.date === mMax.date
+            );
+            if (!alreadyIn) {
+                combined.push(mMax);
+            }
+        });
+
+        const finalRecords = combined.sort((a, b) => b.valueTn - a.valueTn);
+
+        cache.set(cacheKey, { data: finalRecords, timestamp: now });
+        return NextResponse.json(finalRecords);
     }
 
     // 1. Filtrar Cabeceras por Fecha
