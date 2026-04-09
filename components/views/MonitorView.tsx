@@ -497,7 +497,7 @@ export const MonitorView: React.FC<{
     const order = ["CPF 40", "CPC 30", "MAESTRO", "RAPIDO"];
     return stockResult.items
       .filter(i => {
-        const name = i.product.toUpperCase();
+        const name = i.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return order.some(o => name.includes(o));
       })
       .sort((a, b) => {
