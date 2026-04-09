@@ -1280,25 +1280,16 @@ export const MonitorView: React.FC<{
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 xl:gap-8 flex-1 min-h-0 overflow-y-auto no-scrollbar">
                         {producedStock.map(item => (
-                          <div key={item.id} className="bg-black/40 p-6 lg:p-8 xl:p-10 rounded-3xl border border-white/5 flex flex-col justify-between group hover:bg-blue-500/10 transition-all shadow-xl min-h-[200px]">
-                            <div className="flex flex-col gap-1.5 lg:gap-2">
-                              <span className="text-[10px] lg:text-xs font-black text-blue-400/70 uppercase tracking-widest">Producto</span>
-                              <span className="text-xl lg:text-2xl xl:text-3xl font-black text-white uppercase tracking-tight leading-tight">{item.product}</span>
+                          <div key={item.id} className="bg-black/40 p-8 lg:p-10 xl:p-12 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-blue-500/10 transition-all shadow-xl min-h-[250px] lg:min-h-[300px]">
+                            <div className="mb-6 lg:mb-8">
+                              <span className="text-xl lg:text-2xl xl:text-3xl font-black text-white uppercase tracking-tight leading-tight block">{item.product}</span>
                             </div>
                             
-                            <div className="mt-6 lg:mt-12">
-                              <div className="flex items-baseline gap-2 lg:gap-3">
-                                <span className="text-4xl lg:text-6xl xl:text-7xl font-black text-white tracking-tighter">{Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                                <span className="text-lg lg:text-xl xl:text-2xl font-bold text-slate-500 uppercase">Tn</span>
-                              </div>
-                              <div className="h-1 lg:h-1.5 w-full bg-white/5 rounded-full mt-4 lg:mt-6 overflow-hidden">
-                                <div className="h-full bg-blue-500 w-3/4" />
-                              </div>
-                            </div>
-
-                            <div className="mt-6 lg:mt-8 flex justify-between items-center text-[8px] lg:text-[10px] font-black uppercase tracking-widest text-slate-500">
-                              <span className="hidden sm:inline">Actualizado Hoy</span>
-                              <span className="text-blue-400">En Stock</span>
+                            <div className="flex items-baseline gap-2 lg:gap-4">
+                              <span className="text-5xl lg:text-7xl xl:text-8xl font-black text-white tracking-tighter">
+                                {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                              </span>
+                              <span className="text-xl lg:text-2xl xl:text-3xl font-bold text-slate-500 uppercase">Tn</span>
                             </div>
                           </div>
                         ))}
