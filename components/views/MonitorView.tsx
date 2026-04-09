@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare, User, Archive } from 'lucide-react';
+import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, LabelList } from 'recharts';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchTopRecords, fetchShiftNews } from '../../services/sheetService';
@@ -741,20 +741,17 @@ export const MonitorView: React.FC<{
         </div>
 
         {/* Right: Stock Totalizers */}
-        <div className="flex items-center justify-end gap-4 lg:gap-6 overflow-hidden">
+        <div className="flex items-center justify-end gap-8 lg:gap-12 overflow-hidden">
           {producedStock.map(item => (
-            <div key={item.id} className="flex items-center gap-4 bg-slate-900/50 px-5 lg:px-7 py-3 rounded-lg border border-white/10 backdrop-blur-sm shadow-2xl min-w-[160px] lg:min-w-[180px] group hover:bg-slate-800/60 transition-all">
-              <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
-                <Archive size={18} className="text-blue-400" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5 whitespace-nowrap">{item.product.replace('CEMENTO ', '')}</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl lg:text-4xl font-black text-white tracking-tighter leading-none group-hover:text-emerald-400 transition-colors">
-                    {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </span>
-                  <span className="text-[10px] lg:text-xs text-slate-500 font-black uppercase">Tn</span>
-                </div>
+            <div key={item.id} className="flex flex-col items-end">
+              <span className="text-[10px] lg:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1 whitespace-nowrap">
+                {item.product.replace('CEMENTO ', '')}
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-3xl lg:text-4xl font-black text-white tracking-tighter leading-none">
+                  {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                </span>
+                <span className="text-[10px] lg:text-xs text-slate-500 font-black uppercase">Tn</span>
               </div>
             </div>
           ))}
