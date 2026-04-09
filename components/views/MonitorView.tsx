@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare, User } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, LabelList } from 'recharts';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchTopRecords, fetchShiftNews } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats, ShiftNews } from '../../types';
 
@@ -267,6 +267,23 @@ const MonitorTooltip = ({ active, payload, label }: any) => {
     );
   }
   return null;
+};
+
+const CustomDataLabel = (props: any) => {
+  const { x, y, value } = props;
+  return (
+    <text 
+      x={x} 
+      y={y - 12} 
+      fill="#10b981" 
+      fontSize={10} 
+      fontWeight="900" 
+      textAnchor="middle"
+      className="font-mono drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+    >
+      {Math.floor(value)} TN
+    </text>
+  );
 };
 
 const NewsTicker: React.FC<{ news: ShiftNews[] }> = ({ news }) => {
@@ -1020,7 +1037,7 @@ export const MonitorView: React.FC<{
                                         name: SHIFT_MAP[s as keyof typeof SHIFT_MAP].label,
                                         value: machine.shiftBreakdown[s] || 0
                                       }))}
-                                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                                      margin={{ top: 30, right: 20, left: -20, bottom: 0 }}
                                     >
                                       <defs>
                                         <linearGradient id={`colorValue-${machine.id.replace(/[^a-zA-Z0-9]/g, '')}`} x1="0" y1="0" x2="0" y2="1">
@@ -1049,7 +1066,9 @@ export const MonitorView: React.FC<{
                                         fillOpacity={1} 
                                         fill={`url(#colorValue-${machine.id.replace(/[^a-zA-Z0-9]/g, '')})`}
                                         activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }}
-                                      />
+                                      >
+                                        <LabelList dataKey="value" content={<CustomDataLabel />} />
+                                      </Area>
                                     </AreaChart>
                                   </ResponsiveContainer>
                                 </div>
