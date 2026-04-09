@@ -710,66 +710,60 @@ export const MonitorView: React.FC<{
       <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
       
       {/* Top Bar: Title, Date, Time, and Stocks */}
-      <div className="bg-[#0a1b33] border-b border-white/10 px-8 py-4 flex items-center justify-between shadow-2xl relative z-10">
-        <div className="flex items-center gap-10">
+      <div className="bg-[#0a1b33] border-b border-white/10 px-8 py-4 grid grid-cols-3 items-center shadow-2xl relative z-10">
+        {/* Left: Title */}
+        <div className="flex items-center gap-6">
           {onBack && (
             <button 
               onClick={onBack}
-              className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 group flex items-center gap-2"
+              className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 group flex items-center gap-2"
             >
-              <ArrowLeft size={20} className="text-white/70 group-hover:text-white" />
+              <ArrowLeft size={18} className="text-white/70 group-hover:text-white" />
               <span className="text-[10px] font-black uppercase tracking-widest text-white/70 group-hover:text-white">Volver</span>
             </button>
           )}
           <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg">
-              <Layout size={24} className="text-white" />
+            <div className="p-2 bg-blue-600 rounded-xl shadow-lg">
+              <Layout size={20} className="text-white" />
             </div>
-            <div className="flex flex-col">
-              <h1 className="text-2xl lg:text-3xl font-black tracking-tighter uppercase leading-none text-white">MONITOR DE PRODUCTIVIDAD</h1>
-            </div>
+            <h1 className="text-xl lg:text-2xl font-black tracking-tighter uppercase leading-none text-white whitespace-nowrap">MONITOR DE PRODUCTIVIDAD</h1>
           </div>
         </div>
 
-        {/* Central Clock & Date */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-          <div className="flex items-center gap-4">
-            <p className="text-4xl lg:text-5xl font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
-              {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        {/* Center: Clock & Date */}
+        <div className="flex flex-col items-center justify-center px-4 border-x border-white/5">
+          <p className="text-4xl lg:text-5xl font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+            {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <p className="text-blue-300/80 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs font-mono whitespace-nowrap">
+              {currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })}
             </p>
-          </div>
-          <div className="flex items-center gap-3 mt-2">
-            <p className="text-blue-300/80 font-black uppercase tracking-[0.3em] text-xs lg:text-sm font-mono">
-              {currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-            </p>
-            <div className="relative">
-              <input 
-                type="date" 
-                value={toLocalISO(selectedDate)}
-                onChange={(e) => {
-                  const newDate = new Date(e.target.value + 'T12:00:00');
-                  setDateRange({ start: newDate, end: newDate });
-                }}
-                className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-blue-400 focus:outline-none focus:border-blue-500/50 cursor-pointer hover:bg-white/10 transition-colors"
-              />
-            </div>
+            <input 
+              type="date" 
+              value={toLocalISO(selectedDate)}
+              onChange={(e) => {
+                const newDate = new Date(e.target.value + 'T12:00:00');
+                setDateRange({ start: newDate, end: newDate });
+              }}
+              className="bg-white/5 border border-white/10 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-blue-400 focus:outline-none focus:border-blue-500/50 cursor-pointer hover:bg-white/10 transition-colors"
+            />
           </div>
         </div>
 
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-6">
-            {producedStock.map(item => (
-              <div key={item.id} className="flex flex-col items-center bg-black/20 px-6 py-2.5 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg">
-                <span className="text-[10px] font-black text-blue-200/60 uppercase tracking-[0.2em] mb-1">{item.product.replace('CEMENTO ', '')}</span>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl lg:text-4xl font-black text-white tracking-tighter leading-none">
-                    {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                  </span>
-                  <span className="text-[10px] lg:text-xs text-blue-400 font-black uppercase">Tn</span>
-                </div>
+        {/* Right: Stock Totalizers */}
+        <div className="flex items-center justify-end gap-4 lg:gap-6 overflow-hidden">
+          {producedStock.map(item => (
+            <div key={item.id} className="flex flex-col items-center bg-black/20 px-4 lg:px-6 py-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg min-w-[120px] lg:min-w-[140px]">
+              <span className="text-[9px] font-black text-blue-200/60 uppercase tracking-[0.15em] mb-1 whitespace-nowrap">{item.product.replace('CEMENTO ', '')}</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl lg:text-3xl font-black text-white tracking-tighter leading-none">
+                  {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                </span>
+                <span className="text-[9px] lg:text-[10px] text-blue-400 font-black uppercase">Tn</span>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
 
