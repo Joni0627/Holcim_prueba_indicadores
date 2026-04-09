@@ -970,21 +970,39 @@ export const MonitorView: React.FC<{
 
                           return (
                             <div key={machineId} className="bg-black/40 p-5 lg:p-7 rounded-3xl border border-white/5 flex flex-col justify-center group hover:bg-indigo-500/10 transition-all relative overflow-hidden min-h-0">
+                              {/* Trophy Watermark */}
                               <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                                 <Trophy className="w-[80px] h-[80px] lg:w-[100px] h-[100px]" />
                               </div>
+
+                              {/* Machine Badge (Top Right) */}
+                              <div className="absolute top-4 right-4 z-20">
+                                <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                  {machineId.split('-')[0]}
+                                </span>
+                              </div>
                               
-                              <div className="relative z-10">
-                                <span className="text-[10px] lg:text-xs font-black text-slate-500 uppercase tracking-widest">Récord {machineId.split('-')[0]}</span>
-                                <div className="mt-2 lg:mt-4">
+                              <div className="relative z-10 flex flex-col gap-4 lg:gap-6">
+                                {/* Date Header */}
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-[9px] lg:text-[10px] font-black text-cyan-400/70 uppercase tracking-[0.2em]">
+                                    Marca registrada
+                                  </span>
+                                  <p className="text-xs lg:text-sm font-bold text-slate-200 font-mono flex items-center gap-2">
+                                    <Calendar size={14} className="text-cyan-400" /> {record.date ? record.date.split('-').reverse().join(' / ') : '---'}
+                                  </p>
+                                </div>
+
+                                {/* Main Record Value */}
+                                <div className="flex flex-col">
                                   <div className="flex items-baseline gap-1.5 lg:gap-2">
                                     <span className="text-4xl lg:text-5xl xl:text-6xl font-black text-amber-400 tracking-tighter leading-none">
                                       {Math.floor(record.valueTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                                     </span>
                                     <span className="text-xs lg:text-sm font-bold text-slate-500 uppercase">Tn</span>
                                   </div>
-                                  <p className="text-sm lg:text-base font-bold text-slate-200 font-mono mt-4 lg:mt-6 flex items-center gap-2.5">
-                                    <Calendar size={16} className="text-cyan-400" /> {record.date ? record.date.split('-').reverse().join(' / ') : '---'}
+                                  <p className="text-[9px] lg:text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 lg:mt-2">
+                                    Máxima producción histórica
                                   </p>
                                 </div>
                               </div>
