@@ -1345,9 +1345,6 @@ export const MonitorView: React.FC<{
                               <div className="flex-1 flex flex-col min-h-0">
                                 <NewsTicker news={news} />
                               </div>
-                              <div className="flex items-center gap-2 text-[10px] lg:text-xs font-black text-slate-500 uppercase tracking-widest pt-3 border-t border-white/5">
-                                <Clock className="w-3 h-3 lg:w-4 lg:h-4" /> <span className="hidden sm:inline">Sincronizado:</span> {currentTime.toLocaleTimeString()}
-                              </div>
                             </div>
                           );
                         })}
