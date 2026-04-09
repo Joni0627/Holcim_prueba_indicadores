@@ -496,7 +496,10 @@ export const MonitorView: React.FC<{
     if (!stockResult?.items) return [];
     const order = ["CPF 40", "CPC 30", "MAESTRO", "RAPIDO"];
     return stockResult.items
-      .filter(i => i.isProduced)
+      .filter(i => {
+        const name = i.product.toUpperCase();
+        return order.some(o => name.includes(o));
+      })
       .sort((a, b) => {
         const nameA = a.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const nameB = b.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -732,26 +735,26 @@ export const MonitorView: React.FC<{
 
         {/* Center: Clock & Date */}
         <div className="flex flex-col items-center justify-center px-4 border-x border-white/5">
-          <p className="text-5xl lg:text-6xl font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+          <p className="text-4xl lg:text-5xl font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
             {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
           </p>
-          <p className="text-blue-300/80 font-black uppercase tracking-[0.3em] text-[10px] lg:text-xs font-mono whitespace-nowrap mt-2">
+          <p className="text-blue-300/80 font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px] font-mono whitespace-nowrap mt-1">
             {currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
           </p>
         </div>
 
         {/* Right: Stock Totalizers */}
-        <div className="flex items-center justify-end gap-8 lg:gap-12 overflow-hidden">
+        <div className="flex items-center justify-end gap-4 lg:gap-8 overflow-hidden">
           {producedStock.map(item => (
             <div key={item.id} className="flex flex-col items-end">
-              <span className="text-[10px] lg:text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1 whitespace-nowrap">
+              <span className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5 whitespace-nowrap">
                 {item.product.replace('CEMENTO ', '')}
               </span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl lg:text-4xl font-black text-white tracking-tighter leading-none">
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl lg:text-3xl font-black text-white tracking-tighter leading-none">
                   {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </span>
-                <span className="text-[10px] lg:text-xs text-slate-500 font-black uppercase">Tn</span>
+                <span className="text-[8px] lg:text-[9px] text-slate-500 font-black uppercase">Tn</span>
               </div>
             </div>
           ))}
