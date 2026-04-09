@@ -966,8 +966,8 @@ export const MonitorView: React.FC<{
                                     </span>
                                     <span className="text-xs lg:text-sm font-bold text-slate-500 uppercase">Tn</span>
                                   </div>
-                                  <p className="text-[10px] lg:text-xs font-bold text-slate-400 uppercase mt-2 flex items-center gap-2">
-                                    <Calendar size={12} className="text-indigo-400" /> {record.date || '---'}
+                                  <p className="text-sm lg:text-base font-bold text-slate-200 font-mono mt-4 lg:mt-6 flex items-center gap-2.5">
+                                    <Calendar size={16} className="text-cyan-400" /> {record.date ? record.date.split('-').reverse().join(' / ') : '---'}
                                   </p>
                                 </div>
                               </div>
