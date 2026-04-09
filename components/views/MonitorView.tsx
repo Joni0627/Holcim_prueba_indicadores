@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare, User } from 'lucide-react';
+import { Clock, Loader2, Activity, Package, Trophy, Box, AlertCircle, Layout, ArrowLeft, Calendar, MessageSquare, User, Archive } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, LabelList } from 'recharts';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchTopRecords, fetchShiftNews } from '../../services/sheetService';
@@ -732,35 +732,29 @@ export const MonitorView: React.FC<{
 
         {/* Center: Clock & Date */}
         <div className="flex flex-col items-center justify-center px-4 border-x border-white/5">
-          <p className="text-4xl lg:text-5xl font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+          <p className="text-5xl lg:text-6xl font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
             {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
           </p>
-          <div className="flex items-center gap-2 mt-2">
-            <p className="text-blue-300/80 font-black uppercase tracking-[0.2em] text-[10px] lg:text-xs font-mono whitespace-nowrap">
-              {currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })}
-            </p>
-            <input 
-              type="date" 
-              value={toLocalISO(selectedDate)}
-              onChange={(e) => {
-                const newDate = new Date(e.target.value + 'T12:00:00');
-                setDateRange({ start: newDate, end: newDate });
-              }}
-              className="bg-white/5 border border-white/10 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-blue-400 focus:outline-none focus:border-blue-500/50 cursor-pointer hover:bg-white/10 transition-colors"
-            />
-          </div>
+          <p className="text-blue-300/80 font-black uppercase tracking-[0.3em] text-[10px] lg:text-xs font-mono whitespace-nowrap mt-2">
+            {currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+          </p>
         </div>
 
         {/* Right: Stock Totalizers */}
         <div className="flex items-center justify-end gap-4 lg:gap-6 overflow-hidden">
           {producedStock.map(item => (
-            <div key={item.id} className="flex flex-col items-center bg-black/20 px-4 lg:px-6 py-2 rounded-2xl border border-white/5 backdrop-blur-xl shadow-lg min-w-[120px] lg:min-w-[140px]">
-              <span className="text-[9px] font-black text-blue-200/60 uppercase tracking-[0.15em] mb-1 whitespace-nowrap">{item.product.replace('CEMENTO ', '')}</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl lg:text-3xl font-black text-white tracking-tighter leading-none">
-                  {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                </span>
-                <span className="text-[9px] lg:text-[10px] text-blue-400 font-black uppercase">Tn</span>
+            <div key={item.id} className="flex items-center gap-4 bg-slate-900/50 px-5 lg:px-7 py-3 rounded-lg border border-white/10 backdrop-blur-sm shadow-2xl min-w-[160px] lg:min-w-[180px] group hover:bg-slate-800/60 transition-all">
+              <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover:bg-blue-500/20 transition-colors">
+                <Archive size={18} className="text-blue-400" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5 whitespace-nowrap">{item.product.replace('CEMENTO ', '')}</span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-3xl lg:text-4xl font-black text-white tracking-tighter leading-none group-hover:text-emerald-400 transition-colors">
+                    {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </span>
+                  <span className="text-[10px] lg:text-xs text-slate-500 font-black uppercase">Tn</span>
+                </div>
               </div>
             </div>
           ))}
