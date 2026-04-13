@@ -11,7 +11,7 @@ import { BreakageView } from '../components/views/BreakageView';
 import { DailyTimelineView } from '../components/views/DailyTimelineView';
 import { MonitorView } from '../components/views/MonitorView';
 import { AdminPanel } from '../components/AdminPanel';
-import { useUser, UserButton } from '@clerk/nextjs';
+import { useUser, UserButton, SignOutButton } from '@clerk/nextjs';
 
 type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline' | 'admin' | 'monitor';
 
@@ -101,9 +101,13 @@ function App() {
               Por favor, solicita una invitación al administrador del sistema.
             </p>
           </div>
-          <div className="pt-4">
+          <div className="pt-4 flex flex-col items-center gap-4">
             <UserButton afterSignOutUrl="/sign-in" />
-            <p className="mt-4 text-xs text-slate-500 uppercase tracking-widest">Cerrar Sesión para reintentar</p>
+            <SignOutButton redirectUrl="/sign-in">
+              <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                Cerrar Sesión e Intentar con otra cuenta
+              </button>
+            </SignOutButton>
           </div>
         </div>
       </div>
