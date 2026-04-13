@@ -12,7 +12,7 @@ Esta ruta permite a un administrador enviar una invitación por correo electrón
 - **Método:** `POST`
 - **Seguridad:** 
     - Verifica que el usuario esté autenticado.
-    - Valida que el usuario tenga el rol `admin` en sus metadatos públicos o que sea el propietario (`joni0627@gmail.com`).
+    - Valida que el usuario tenga el rol `admin` en sus metadatos públicos.
 - **Lógica:**
     - Recibe el `email` del cuerpo de la petición.
     - Detecta automáticamente el `origin` (URL base) para configurar el enlace de redirección tras el registro.

@@ -13,10 +13,8 @@ export async function GET() {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const role = (user.publicMetadata as { role?: string })?.role;
-    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
-    const isOwner = primaryEmail === "joni0627@gmail.com";
 
-    if (role !== "admin" && !isOwner) {
+    if (role !== "admin") {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
@@ -53,10 +51,8 @@ export async function PATCH(req: Request) {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const role = (user.publicMetadata as { role?: string })?.role;
-    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
-    const isOwner = primaryEmail === "joni0627@gmail.com";
 
-    if (role !== "admin" && !isOwner) {
+    if (role !== "admin") {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
@@ -91,10 +87,8 @@ export async function DELETE(req: Request) {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const role = (user.publicMetadata as { role?: string })?.role;
-    const primaryEmail = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
-    const isOwner = primaryEmail === "joni0627@gmail.com";
 
-    if (role !== "admin" && !isOwner) {
+    if (role !== "admin") {
       return new NextResponse("Forbidden", { status: 403 });
     }
 

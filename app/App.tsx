@@ -36,9 +36,8 @@ function App() {
   const { user, isLoaded } = useUser();
   const role = (user?.publicMetadata as { role?: string })?.role;
   const isAdmin = role === 'admin';
-  const isOwner = user?.primaryEmailAddress?.emailAddress === "joni0627@gmail.com";
-  const canAccessAdmin = isAdmin || isOwner;
-  const hasAccess = !!role || isOwner;
+  const canAccessAdmin = isAdmin;
+  const hasAccess = !!role;
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },

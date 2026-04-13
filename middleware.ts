@@ -21,11 +21,9 @@ export default clerkMiddleware(async (auth, request) => {
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     const role = (user.publicMetadata as { role?: string })?.role;
-    const email = user.emailAddresses.find(e => e.id === user.primaryEmailAddressId)?.emailAddress;
-    const isOwner = email === "joni0627@gmail.com";
 
-    // If no role and not owner, they are not invited/authorized
-    if (!role && !isOwner) {
+    // If no role, they are not invited/authorized
+    if (!role) {
       const url = new URL('/unauthorized', request.url);
       return NextResponse.redirect(url);
     }
