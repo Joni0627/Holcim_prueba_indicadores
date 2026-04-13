@@ -105,7 +105,7 @@ function App() {
             <UserButton afterSignOutUrl="/sign-in" />
             <SignOutButton redirectUrl="/sign-in">
               <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                Cerrar Sesión e Intentar con otra cuenta
+                Volver al Inicio
               </button>
             </SignOutButton>
           </div>

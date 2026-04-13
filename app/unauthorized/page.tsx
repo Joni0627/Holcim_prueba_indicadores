@@ -23,20 +23,13 @@ export default function UnauthorizedPage() {
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Cuenta Actual</p>
           </div>
           
-          <div className="w-full space-y-3">
+          <div className="w-full">
             <SignOutButton redirectUrl="/sign-in">
               <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
                 <LogOut size={18} />
-                <span>Cerrar Sesión e Intentar con otra cuenta</span>
+                <span>Volver al Inicio</span>
               </button>
             </SignOutButton>
-            
-            <a 
-              href="/sign-in" 
-              className="block text-slate-500 hover:text-white text-xs font-medium transition-colors uppercase tracking-widest"
-            >
-              Volver al Inicio
-            </a>
           </div>
         </div>
       </div>
