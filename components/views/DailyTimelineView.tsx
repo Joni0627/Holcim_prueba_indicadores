@@ -118,7 +118,7 @@ const TimelineBar: React.FC<{
               style={{ width: `${(block.duration / totalMins) * 100}%` }}
             >
               {block.type === 'downtime' && block.event && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 bg-slate-900 border border-white/10 text-white p-3 rounded-xl shadow-2xl opacity-0 group-hover/block:opacity-100 transition-all z-[100] pointer-events-none transform translate-y-1 group-hover/block:translate-y-0">
+                <div className="fixed md:absolute bottom-6 md:bottom-full left-4 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:mb-3 md:w-64 bg-slate-900 border border-white/10 text-white p-4 md:p-3 rounded-2xl md:rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] opacity-0 group-hover/block:opacity-100 transition-all z-[110] pointer-events-none transform translate-y-2 md:translate-y-1 group-hover/block:translate-y-0">
                   <div className="text-[10px] font-black border-b border-white/10 pb-1 mb-2 flex justify-between uppercase">
                     <span className="text-blue-300">{block.event.startTime}</span>
                     <span className="text-white/60">{block.event.downtimeType}</span>
@@ -126,7 +126,7 @@ const TimelineBar: React.FC<{
                   </div>
                   <p className="text-[11px] font-bold text-white mb-1 uppercase tracking-tight">{block.event.hac}</p>
                   <p className="text-[10px] leading-tight text-slate-300 italic">&quot;{block.event.reason}&quot;</p>
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-white/10 rotate-45"></div>
+                  <div className="hidden md:block absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-r border-b border-white/10 rotate-45"></div>
                 </div>
               )}
             </div>

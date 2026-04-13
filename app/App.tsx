@@ -130,7 +130,7 @@ function App() {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 bg-slate-900 text-white transform transition-all duration-300 ease-in-out shadow-2xl
+        fixed inset-y-0 left-0 z-[100] bg-slate-900 text-white transform transition-all duration-300 ease-in-out shadow-2xl
         ${isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full'}
         md:translate-x-0 md:static md:h-screen md:sticky md:top-0 flex-shrink-0 flex flex-col border-r border-slate-800
         ${isCollapsed ? 'md:w-20' : 'md:w-72'}
@@ -230,7 +230,7 @@ function App() {
 
       {isMobileMenuOpen && (
         <div 
-            className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 md:hidden"
+            className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[90] md:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
