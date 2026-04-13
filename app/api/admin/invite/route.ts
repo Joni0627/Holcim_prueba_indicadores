@@ -30,16 +30,30 @@ export async function POST(req: Request) {
     const protocol = host?.includes('localhost') ? 'http' : 'https';
     const origin = req.headers.get('origin') || `${protocol}://${host}`;
 
+    console.log(`[INVITE] Creating invitation for ${email} from origin ${origin}`);
+
+    // Check for existing pending invitations for this email and revoke them
+    const existingInvitations = await client.invitations.getInvitationList({
+      status: "pending",
+    });
+    
+    const pendingInv = existingInvitations.data.find(inv => inv.emailAddress === email);
+    if (pendingInv) {
+      console.log(`[INVITE] Revoking existing pending invitation ${pendingInv.id} for ${email}`);
+      await client.invitations.revokeInvitation(pendingInv.id);
+    }
+
     // Create the invitation using Clerk Backend SDK
     const invitation = await client.invitations.createInvitation({
       emailAddress: email,
-      redirectUrl: origin, // Redirect to home after sign up
+      redirectUrl: `${origin}/sign-up`, 
       publicMetadata: {
-        role: "user", // Default role for invited users
+        role: "user", 
       },
-      ignoreExisting: true, // If user already exists, don't fail
+      ignoreExisting: true, 
     });
 
+    console.log(`[INVITE] Invitation created: ${invitation.id}`);
     return NextResponse.json(invitation);
   } catch (error: any) {
     console.error("[INVITATION_ERROR]", error);
