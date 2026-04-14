@@ -23,8 +23,8 @@ export async function POST(req: Request) {
     }
 
     // List invitations to see if there's a pending one for this email
-    const invitations = await client.invitations.getInvitationList();
-    const pendingInvitation = invitations.find(
+    const invitationsResponse = await client.invitations.getInvitationList();
+    const pendingInvitation = invitationsResponse.data.find(
       (inv) => inv.emailAddress.toLowerCase() === userEmail.toLowerCase() && inv.status === "pending"
     );
 
