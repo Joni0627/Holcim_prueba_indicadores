@@ -34,10 +34,33 @@ function App() {
   }, []);
 
   const { user, isLoaded } = useUser();
+  const [isSyncing, setIsSyncing] = useState(false);
   const role = (user?.publicMetadata as { role?: string })?.role;
   const isAdmin = role === 'admin';
   const canAccessAdmin = isAdmin;
   const hasAccess = !!role;
+
+  useEffect(() => {
+    const syncAuth = async () => {
+      if (isLoaded && user && !role && !isSyncing) {
+        setIsSyncing(true);
+        try {
+          const response = await fetch('/api/auth/sync', { method: 'POST' });
+          const data = await response.json();
+          if (data.success && data.updated) {
+            // Reload user to get new metadata
+            await user.reload();
+          }
+        } catch (error) {
+          console.error('Error syncing auth:', error);
+        } finally {
+          setIsSyncing(false);
+        }
+      }
+    };
+
+    syncAuth();
+  }, [isLoaded, user, role, isSyncing]);
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
@@ -91,24 +114,29 @@ function App() {
     return (
       <div className="min-h-screen bg-[#0a0f1e] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6 shadow-2xl">
-          <div className="inline-flex p-4 bg-red-500/10 rounded-2xl border border-red-500/20 text-red-400">
-            <ShieldCheck size={48} />
+          <div className={`inline-flex p-4 ${isSyncing ? 'bg-emerald-500/10 text-emerald-400 animate-spin' : 'bg-red-500/10 text-red-400'} rounded-2xl border ${isSyncing ? 'border-emerald-500/20' : 'border-red-500/20'}`}>
+            {isSyncing ? <Activity size={48} /> : <ShieldCheck size={48} />}
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-black text-white tracking-tight">Acceso Restringido</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              {isSyncing ? 'Verificando Invitación...' : 'Acceso Restringido'}
+            </h1>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Tu cuenta no tiene permisos para acceder a esta aplicación. 
-              Por favor, solicita una invitación al administrador del sistema.
+              {isSyncing 
+                ? 'Estamos comprobando si tienes una invitación pendiente para acceder al sistema.'
+                : 'Tu cuenta no tiene permisos para acceder a esta aplicación. Por favor, solicita una invitación al administrador del sistema.'}
             </p>
           </div>
-          <div className="pt-4 flex flex-col items-center gap-4">
-            <UserButton afterSignOutUrl="/sign-in" />
-            <SignOutButton redirectUrl="/sign-in">
-              <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-                Volver al Inicio
-              </button>
-            </SignOutButton>
-          </div>
+          {!isSyncing && (
+            <div className="pt-4 flex flex-col items-center gap-4">
+              <UserButton afterSignOutUrl="/sign-in" />
+              <SignOutButton redirectUrl="/sign-in">
+                <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                  Volver al Inicio
+                </button>
+              </SignOutButton>
+            </div>
+          )}
         </div>
       </div>
     );

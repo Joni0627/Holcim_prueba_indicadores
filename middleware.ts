@@ -16,17 +16,6 @@ export default clerkMiddleware(async (auth, request) => {
       auth().protect();
       return;
     }
-
-    // Fetch user to check metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const role = (user.publicMetadata as { role?: string })?.role;
-
-    // If no role, they are not invited/authorized
-    if (!role) {
-      const url = new URL('/unauthorized', request.url);
-      return NextResponse.redirect(url);
-    }
   }
 });
 
