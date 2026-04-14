@@ -51,7 +51,7 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === 'user.created') {
-    const { email_addresses, id: userId } = evt.data;
+    const { email_addresses, id: userId, public_metadata } = evt.data;
     const primaryEmail = email_addresses[0]?.email_address;
 
     if (!primaryEmail) {
@@ -62,17 +62,13 @@ export async function POST(req: Request) {
     // WHITELIST LOGIC
     const client = await clerkClient();
     
-    // 1. Check if it's the super admin (joni0627@gmail.com)
-    const superAdminEmail = "joni0627@gmail.com";
-    if (primaryEmail.toLowerCase() === superAdminEmail.toLowerCase()) {
-      console.log(`[WEBHOOK] Super Admin ${primaryEmail} joined. Assigning admin role.`);
-      await client.users.updateUser(userId, {
-        publicMetadata: { role: 'admin' }
-      });
-      return new Response('Super Admin authorized', { status: 200 });
+    // 1. Check if the user ALREADY has a role (e.g., joined via invitation link)
+    if ((public_metadata as { role?: string })?.role) {
+      console.log(`[WEBHOOK] User ${primaryEmail} joined with pre-assigned role: ${(public_metadata as any).role}`);
+      return new Response('User authorized via metadata', { status: 200 });
     }
 
-    // 2. Check for pending invitations
+    // 2. Check for pending invitations (joined via direct URL but invited)
     const invitationsResponse = await client.invitations.getInvitationList({
       status: 'pending'
     });
@@ -82,15 +78,13 @@ export async function POST(req: Request) {
     );
 
     if (pendingInvitation) {
-      console.log(`[WEBHOOK] Authorized user ${primaryEmail} joined via invitation.`);
-      // Assign role from invitation metadata or default to 'user'
+      console.log(`[WEBHOOK] Authorized user ${primaryEmail} joined via pending invitation.`);
       const role = (pendingInvitation.publicMetadata as { role?: string })?.role || 'user';
       
       await client.users.updateUser(userId, {
         publicMetadata: { role }
       });
 
-      // Revoke the invitation as it's now "accepted"
       try {
         await client.invitations.revokeInvitation(pendingInvitation.id);
       } catch (e) {
@@ -100,9 +94,15 @@ export async function POST(req: Request) {
       return new Response('User authorized and promoted', { status: 200 });
     }
 
-    // 3. If not in whitelist, DELETE the user immediately
-    console.warn(`[WEBHOOK] Unauthorized user ${primaryEmail} tried to sign up. Deleting...`);
-    await client.users.deleteUser(userId);
+    // 3. ABSOLUTE REJECTION: If not in whitelist, DELETE the user immediately
+    console.warn(`[WEBHOOK] SECURITY ALERT: Unauthorized user ${primaryEmail} tried to sign up. Executing immediate deletion.`);
+    try {
+      await client.users.deleteUser(userId);
+      console.log(`[WEBHOOK] Unauthorized user ${userId} (${primaryEmail}) successfully deleted.`);
+    } catch (deleteError) {
+      console.error(`[WEBHOOK] CRITICAL ERROR: Failed to delete unauthorized user ${userId}:`, deleteError);
+      return new Response('Failed to delete unauthorized user', { status: 500 });
+    }
     
     return new Response('Unauthorized user deleted', { status: 200 });
   }
