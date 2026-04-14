@@ -35,6 +35,7 @@ function App() {
 
   const { user, isLoaded } = useUser();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [hasTriedSync, setHasTriedSync] = useState(false);
   const role = (user?.publicMetadata as { role?: string })?.role;
   const isAdmin = role === 'admin';
   const canAccessAdmin = isAdmin;
@@ -42,7 +43,7 @@ function App() {
 
   useEffect(() => {
     const syncAuth = async () => {
-      if (isLoaded && user && !role && !isSyncing) {
+      if (isLoaded && user && !role && !isSyncing && !hasTriedSync) {
         setIsSyncing(true);
         try {
           const response = await fetch('/api/auth/sync', { method: 'POST' });
@@ -55,12 +56,13 @@ function App() {
           console.error('Error syncing auth:', error);
         } finally {
           setIsSyncing(false);
+          setHasTriedSync(true);
         }
       }
     };
 
     syncAuth();
-  }, [isLoaded, user, role, isSyncing]);
+  }, [isLoaded, user, role, isSyncing, hasTriedSync]);
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
