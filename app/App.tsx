@@ -48,8 +48,8 @@ function App() {
         try {
           const response = await fetch('/api/auth/sync', { method: 'POST' });
           const data = await response.json();
-          if (data.success && data.updated) {
-            // Reload user to get new metadata
+          if (data.success && (data.updated || data.alreadyHasRole)) {
+            // Reload user to get new metadata (either updated now or by webhook)
             await user.reload();
           }
         } catch (error) {

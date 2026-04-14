@@ -70,10 +70,10 @@ export async function POST(req: Request) {
     }
 
     // 2. Check for invitations (joined via direct URL or link)
-    // We fetch pending invitations to see if this email is authorized
+    // We fetch invitations to see if this email is authorized. 
+    // We check both pending and accepted to be safe, as Clerk might change status during sign-up.
     const invitationsResponse = await client.invitations.getInvitationList({
-      status: 'pending',
-      limit: 500 // Increase limit to ensure we find the invitation
+      limit: 500 
     });
     
     const invitation = invitationsResponse.data.find(
@@ -81,19 +81,21 @@ export async function POST(req: Request) {
     );
 
     if (invitation) {
-      console.log(`[WEBHOOK] Authorized user ${normalizedEmail} found in invitations list.`);
+      console.log(`[WEBHOOK] Authorized user ${normalizedEmail} found in invitations list (Status: ${invitation.status}).`);
       const role = (invitation.publicMetadata as { role?: string })?.role || 'user';
       
       await client.users.updateUser(userId, {
         publicMetadata: { role }
       });
 
-      // Revoke the invitation to mark it as "used" in our logic
-      try {
-        await client.invitations.revokeInvitation(invitation.id);
-        console.log(`[WEBHOOK] Invitation ${invitation.id} revoked for ${normalizedEmail}`);
-      } catch (e) {
-        console.error('Failed to revoke invitation in webhook:', e);
+      // Revoke if still pending, otherwise it's already accepted
+      if (invitation.status === 'pending') {
+        try {
+          await client.invitations.revokeInvitation(invitation.id);
+          console.log(`[WEBHOOK] Invitation ${invitation.id} revoked for ${normalizedEmail}`);
+        } catch (e) {
+          console.error('Failed to revoke invitation in webhook:', e);
+        }
       }
 
       return new Response('User authorized and promoted', { status: 200 });

@@ -24,9 +24,8 @@ export async function POST(req: Request) {
 
     const normalizedEmail = userEmail.trim().toLowerCase();
 
-    // List invitations to see if there's a pending one for this email
+    // List invitations to see if there's one for this email
     const invitationsResponse = await client.invitations.getInvitationList({
-      status: 'pending',
       limit: 500
     });
     
@@ -45,12 +44,14 @@ export async function POST(req: Request) {
         },
       });
 
-      // Revoke the invitation since it's now "accepted" manually
-      try {
-        await client.invitations.revokeInvitation(invitation.id);
-        console.log(`[SYNC] Invitation ${invitation.id} revoked for ${normalizedEmail}`);
-      } catch (e) {
-        console.error("Failed to revoke invitation:", e);
+      // Revoke the invitation if it's still pending
+      if (invitation.status === 'pending') {
+        try {
+          await client.invitations.revokeInvitation(invitation.id);
+          console.log(`[SYNC] Invitation ${invitation.id} revoked for ${normalizedEmail}`);
+        } catch (e) {
+          console.error("Failed to revoke invitation:", e);
+        }
       }
 
       return NextResponse.json({ success: true, updated: true, role });
