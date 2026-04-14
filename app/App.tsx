@@ -126,7 +126,7 @@ function App() {
             <p className="text-slate-400 text-sm leading-relaxed">
               {isSyncing 
                 ? 'Estamos comprobando si tienes una invitación pendiente para acceder al sistema.'
-                : 'Tu cuenta no tiene permisos para acceder a esta aplicación. Por favor, solicita una invitación al administrador del sistema.'}
+                : 'Este sistema opera bajo una lista blanca estricta. Si no tienes una invitación previa, tu acceso ha sido denegado y la cuenta no autorizada será eliminada.'}
             </p>
           </div>
           {!isSyncing && (

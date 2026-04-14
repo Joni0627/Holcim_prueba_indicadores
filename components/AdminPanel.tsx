@@ -241,10 +241,11 @@ export const AdminPanel = () => {
             </h3>
             <ul className="space-y-4">
               {[
-                'Registro cerrado solo por invitación.',
-                'Validación de dominio y correo electrónico.',
-                'Asignación automática de roles básicos.',
-                'Auditoría de accesos en tiempo real.'
+                'Whitelist estricta: Solo emails invitados pueden registrarse.',
+                'Eliminación automática de usuarios no autorizados.',
+                'Sincronización en tiempo real vía Webhooks.',
+                'Asignación automática de roles al primer ingreso.',
+                'Auditoría de accesos y gestión de permisos.'
               ].map((item, i) => (
                 <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
