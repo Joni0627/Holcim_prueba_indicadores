@@ -103,17 +103,9 @@ const MonitorTimelineBar: React.FC<{
       {blocks.map((block, idx) => (
         <div 
           key={idx}
-          className={`h-[80%] rounded-sm border-r border-white/5 last:border-0 transition-all ${getBlockStyle(block)} relative group`}
+          className={`h-[80%] rounded-sm border-r border-white/5 last:border-0 transition-all ${getBlockStyle(block)}`}
           style={{ width: `${(block.duration / totalMins) * 100}%` }}
-        >
-          {block === longestDowntime && block.duration > 15 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-              <span className="text-[9px] font-black text-white whitespace-nowrap px-1.5 py-0.5 bg-black/40 rounded backdrop-blur-sm border border-white/10 shadow-lg uppercase tracking-tighter">
-                {block.event?.reason} ({block.duration} MIN)
-              </span>
-            </div>
-          )}
-        </div>
+        />
       ))}
     </div>
   );
@@ -144,7 +136,7 @@ const SemiCircleProgress: React.FC<{
   const dashOffset = circumference - (Math.min(Math.max(progressValue, 0), 1) * circumference);
 
   return (
-    <div className="flex flex-col items-center justify-center relative w-full aspect-[2/1.1] overflow-hidden">
+    <div className="flex flex-col items-center justify-center relative w-full aspect-[2/1.1]">
       <svg viewBox="0 0 100 55" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
         <path
           d="M 10,50 A 40,40 0 0 1 90,50"
@@ -172,13 +164,13 @@ const SemiCircleProgress: React.FC<{
           className={color}
         />
       </svg>
-      <div className="absolute bottom-0 inset-x-0 flex flex-col items-center justify-center">
+      <div className="absolute bottom-[-2px] inset-x-0 flex flex-col items-center justify-center">
         {showValue && (
-          <span className="text-[clamp(10px,1.2vw,16px)] font-black leading-none text-white">
+          <span className="text-[clamp(9px,1vw,14px)] font-black leading-none text-white">
             {displayValue.toFixed(isRawValue ? 1 : 0)}{suffix}
           </span>
         )}
-        <span className="text-[clamp(10px,1vw,14px)] font-black text-slate-500 uppercase tracking-tighter mt-0.5">{label}</span>
+        <span className="text-[clamp(6px,0.6vw,8px)] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{label}</span>
       </div>
     </div>
   );
@@ -1265,11 +1257,20 @@ export const MonitorView: React.FC<{
                                   ) || [];
                                   const machineProdTn = machineProdEntries.reduce((acc, curr) => acc + (curr.valueTn || 0), 0);
                                   
+                                  const longestEvent = data.events.length > 0 
+                                    ? [...data.events].sort((a, b) => b.durationMinutes - a.durationMinutes)[0]
+                                    : null;
+
                                   return (
                                     <div key={machine} className="w-full">
                                       <div className="flex justify-between items-end mb-0.5 px-1">
-                                        <div className="flex flex-col">
+                                        <div className="flex items-baseline gap-3">
                                           <span className="text-[clamp(8px,0.7vw,10px)] font-black text-white uppercase tracking-widest">{machine.split('-')[0]}</span>
+                                          {longestEvent && longestEvent.durationMinutes > 15 && (
+                                            <span className="text-[clamp(7px,0.6vw,9px)] font-bold text-red-500 uppercase tracking-tighter animate-pulse">
+                                              {longestEvent.reason} ({longestEvent.durationMinutes}&apos;)
+                                            </span>
+                                          )}
                                         </div>
                                         <span className={`text-[clamp(8px,0.7vw,10px)] font-black uppercase tracking-widest ${getTnColor(machine, machineProdTn)}`}>
                                           {Math.floor(machineProdTn).toLocaleString()} Tn
