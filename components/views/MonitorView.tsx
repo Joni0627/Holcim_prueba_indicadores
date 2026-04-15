@@ -82,6 +82,12 @@ const MonitorTimelineBar: React.FC<{
     return segments;
   }, [events, config, shiftStartMin, totalMins]);
 
+  const longestDowntime = useMemo(() => {
+    const downtimeBlocks = blocks.filter(b => b.type === 'downtime' && b.event);
+    if (downtimeBlocks.length === 0) return null;
+    return downtimeBlocks.reduce((prev, curr) => (prev.duration > curr.duration ? prev : curr));
+  }, [blocks]);
+
   if (!config) return null;
 
   const getBlockStyle = (block: any) => {
@@ -97,9 +103,17 @@ const MonitorTimelineBar: React.FC<{
       {blocks.map((block, idx) => (
         <div 
           key={idx}
-          className={`h-[80%] rounded-sm border-r border-white/5 last:border-0 transition-all ${getBlockStyle(block)}`}
+          className={`h-[80%] rounded-sm border-r border-white/5 last:border-0 transition-all ${getBlockStyle(block)} relative group`}
           style={{ width: `${(block.duration / totalMins) * 100}%` }}
-        />
+        >
+          {block === longestDowntime && block.duration > 15 && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+              <span className="text-[9px] font-black text-white whitespace-nowrap px-1.5 py-0.5 bg-black/40 rounded backdrop-blur-sm border border-white/10 shadow-lg uppercase tracking-tighter">
+                {block.event?.reason} ({block.duration} MIN)
+              </span>
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
@@ -160,11 +174,11 @@ const SemiCircleProgress: React.FC<{
       </svg>
       <div className="absolute bottom-0 inset-x-0 flex flex-col items-center justify-center">
         {showValue && (
-          <span className="text-[clamp(12px,1.4vw,20px)] font-black leading-none text-white">
+          <span className="text-[clamp(10px,1.2vw,16px)] font-black leading-none text-white">
             {displayValue.toFixed(isRawValue ? 1 : 0)}{suffix}
           </span>
         )}
-        <span className="text-[clamp(7px,0.7vw,9px)] font-black text-slate-500 uppercase tracking-tighter mt-0.5">{label}</span>
+        <span className="text-[clamp(10px,1vw,14px)] font-black text-slate-500 uppercase tracking-tighter mt-0.5">{label}</span>
       </div>
     </div>
   );
@@ -786,22 +800,22 @@ export const MonitorView: React.FC<{
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-1.5 flex-1 min-h-0 items-end">
-                  <div className="bg-black/40 p-1 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1 h-full">
+                <div className="flex flex-row gap-1 flex-1 min-h-0 items-end">
+                  <div className="bg-black/40 p-0.5 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1 h-full overflow-hidden">
                     <SemiCircleProgress 
                       value={m.availability} 
                       label="Disp." 
                       color="text-blue-400" 
                     />
                   </div>
-                  <div className="bg-black/40 p-1 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/20 transition-all flex-1 h-full">
+                  <div className="bg-black/40 p-0.5 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/20 transition-all flex-1 h-full overflow-hidden">
                     <SemiCircleProgress 
                       value={m.performance} 
                       label="Rend." 
                       color="text-emerald-400" 
                     />
                   </div>
-                  <div className="bg-black/40 p-1 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all flex-1 h-full">
+                  <div className="bg-black/40 p-0.5 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all flex-1 h-full overflow-hidden">
                     <SemiCircleProgress 
                       value={m.hsMarcha} 
                       label="HS Marcha" 
@@ -1286,7 +1300,7 @@ export const MonitorView: React.FC<{
                       </p>
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 xl:gap-6 flex-1 min-h-0 overflow-hidden">
                         {producedStock.map(item => (
-                          <div key={item.id} className="bg-black/40 p-4 lg:p-6 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-blue-500/10 transition-all shadow-xl h-full min-h-0">
+                          <div key={item.id} className="bg-black/40 p-3 lg:p-4 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-blue-500/10 transition-all shadow-xl h-full min-h-0">
                             <div className="mb-2 lg:mb-4">
                               <span className="text-[clamp(12px,1.2vw,20px)] font-black text-white uppercase tracking-tight leading-tight block">{item.product}</span>
                             </div>
