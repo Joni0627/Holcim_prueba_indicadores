@@ -40,6 +40,7 @@ function App() {
   const isAdmin = role === 'admin';
   const canAccessAdmin = isAdmin;
   const hasAccess = !!role;
+  const isMonitor = currentView === 'monitor';
 
   useEffect(() => {
     const syncAuth = async () => {
@@ -148,117 +149,121 @@ function App() {
     <div className="min-h-screen flex flex-col md:flex-row bg-[#0a0f1e] text-slate-900 font-sans overflow-x-hidden">
       
       {/* Mobile Header */}
-      <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">
-         <div className="flex items-center gap-2">
-             <Activity className="text-emerald-400" size={20} />
-             <h1 className="font-bold text-lg">PSC QUBE</h1>
-         </div>
-         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 hover:bg-slate-800 rounded-lg transition-colors">
-             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-         </button>
-      </div>
+      {!isMonitor && (
+        <div className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">
+           <div className="flex items-center gap-2">
+               <Activity className="text-emerald-400" size={20} />
+               <h1 className="font-bold text-lg">PSC QUBE</h1>
+           </div>
+           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 hover:bg-slate-800 rounded-lg transition-colors">
+               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+           </button>
+        </div>
+      )}
 
       {/* Sidebar */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-[100] bg-slate-900 text-white transform transition-all duration-300 ease-in-out shadow-2xl
-        ${isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full'}
-        md:translate-x-0 md:static md:h-screen md:sticky md:top-0 flex-shrink-0 flex flex-col border-r border-slate-800
-        ${isCollapsed ? 'md:w-20' : 'md:w-72'}
-      `}>
-        
-        <button 
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden md:flex absolute -right-3 top-9 bg-slate-800 text-slate-400 hover:text-white border border-slate-700 rounded-full p-1 shadow-lg z-50 items-center justify-center transition-colors"
-        >
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-
-        <div className={`p-6 border-b border-slate-800 flex ${isCollapsed ? 'justify-center' : 'justify-between'} items-center transition-all`}>
-          <div className="overflow-hidden whitespace-nowrap">
-             <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : ''}`}>
-                <Box className="text-emerald-400 shrink-0" size={isCollapsed ? 28 : 24} />
-                <h1 className={`font-bold text-xl tracking-tight text-white transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
-                    PSC QUBE
-                </h1>
-             </div>
-             <p className={`text-xs text-emerald-400/80 mt-1 font-medium uppercase tracking-wider pl-8 transition-opacity duration-200 ${isCollapsed ? 'opacity-0 hidden' : 'opacity-100'}`}>
-                Expedición Malagueño
-             </p>
-          </div>
-          <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white">
-            <X size={20} />
-          </button>
-        </div>
-        
-        <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden no-scrollbar">
-          {navItems.map((item) => (
-             <button
-               key={item.id}
-               onClick={() => {
-                 setCurrentView(item.id as ViewState);
-                 setIsMobileMenuOpen(false);
-               }}
-               title={isCollapsed ? item.label : ''}
-               className={`w-full flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 group
-                 ${isCollapsed ? 'justify-center px-2' : 'px-4'}
-                 ${currentView === item.id 
-                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20 border border-emerald-500/50' 
-                 : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'}
-               `}
-             >
-               <item.icon size={20} className={`shrink-0 ${currentView === item.id ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
-               <span className={`whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
-                 {item.label}
-               </span>
-             </button>
-          ))}
+      {!isMonitor && (
+        <aside className={`
+          fixed inset-y-0 left-0 z-[100] bg-slate-900 text-white transform transition-all duration-300 ease-in-out shadow-2xl
+          ${isMobileMenuOpen ? 'translate-x-0 w-72' : '-translate-x-full'}
+          md:translate-x-0 md:static md:h-screen md:sticky md:top-0 flex-shrink-0 flex flex-col border-r border-slate-800
+          ${isCollapsed ? 'md:w-20' : 'md:w-72'}
+        `}>
           
-          <div className={`pt-6 mt-6 border-t border-slate-800 ${isCollapsed ? 'border-t-0 pt-2 mt-2' : ''}`}>
-            {!isCollapsed && <p className="px-4 text-xs font-semibold text-slate-500 uppercase mb-2 tracking-wider animate-in fade-in">Sistema</p>}
-            
-            {canAccessAdmin && (
-              <button
-                onClick={() => {
-                  setCurrentView('admin');
-                  setIsMobileMenuOpen(false);
-                }}
-                title={isCollapsed ? 'Administración' : ''}
-                className={`w-full flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 group mb-2
-                  ${isCollapsed ? 'justify-center px-2' : 'px-4'}
-                  ${currentView === 'admin' 
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20 border border-emerald-500/50' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'}
-                `}
-              >
-                <ShieldCheck size={20} className={`shrink-0 ${currentView === 'admin' ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
-                <span className={`whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
-                  Administración
-                </span>
-              </button>
-            )}
+          <button 
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden md:flex absolute -right-3 top-9 bg-slate-800 text-slate-400 hover:text-white border border-slate-700 rounded-full p-1 shadow-lg z-50 items-center justify-center transition-colors"
+          >
+              {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
 
-            <button title="Reportes" className={`w-full flex items-center gap-3 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-lg text-sm font-medium transition-all ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
-                <BarChart3 size={20} className="shrink-0" />
-                <span className={`whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Reportes Históricos</span>
+          <div className={`p-6 border-b border-slate-800 flex ${isCollapsed ? 'justify-center' : 'justify-between'} items-center transition-all`}>
+            <div className="overflow-hidden whitespace-nowrap">
+               <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : ''}`}>
+                  <Box className="text-emerald-400 shrink-0" size={isCollapsed ? 28 : 24} />
+                  <h1 className={`font-bold text-xl tracking-tight text-white transition-opacity duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
+                      PSC QUBE
+                  </h1>
+               </div>
+               <p className={`text-xs text-emerald-400/80 mt-1 font-medium uppercase tracking-wider pl-8 transition-opacity duration-200 ${isCollapsed ? 'opacity-0 hidden' : 'opacity-100'}`}>
+                  Expedición Malagueño
+               </p>
+            </div>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white">
+              <X size={20} />
             </button>
           </div>
-        </nav>
+          
+          <nav className="flex-1 p-3 space-y-2 overflow-y-auto overflow-x-hidden no-scrollbar">
+            {navItems.map((item) => (
+               <button
+                 key={item.id}
+                 onClick={() => {
+                   setCurrentView(item.id as ViewState);
+                   setIsMobileMenuOpen(false);
+                 }}
+                 title={isCollapsed ? item.label : ''}
+                 className={`w-full flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 group
+                   ${isCollapsed ? 'justify-center px-2' : 'px-4'}
+                   ${currentView === item.id 
+                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20 border border-emerald-500/50' 
+                   : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'}
+                 `}
+               >
+                 <item.icon size={20} className={`shrink-0 ${currentView === item.id ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
+                 <span className={`whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
+                   {item.label}
+                 </span>
+               </button>
+            ))}
+            
+            <div className={`pt-6 mt-6 border-t border-slate-800 ${isCollapsed ? 'border-t-0 pt-2 mt-2' : ''}`}>
+              {!isCollapsed && <p className="px-4 text-xs font-semibold text-slate-500 uppercase mb-2 tracking-wider animate-in fade-in">Sistema</p>}
+              
+              {canAccessAdmin && (
+                <button
+                  onClick={() => {
+                    setCurrentView('admin');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  title={isCollapsed ? 'Administración' : ''}
+                  className={`w-full flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 group mb-2
+                    ${isCollapsed ? 'justify-center px-2' : 'px-4'}
+                    ${currentView === 'admin' 
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20 border border-emerald-500/50' 
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white border border-transparent'}
+                  `}
+                >
+                  <ShieldCheck size={20} className={`shrink-0 ${currentView === 'admin' ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
+                  <span className={`whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'opacity-0 w-0 hidden' : 'opacity-100'}`}>
+                    Administración
+                  </span>
+                </button>
+              )}
 
-        <div className="p-4 bg-slate-950 border-t border-slate-800">
-          <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
-            <UserButton afterSignOutUrl="/sign-in" />
-            <div className={`transition-all duration-200 overflow-hidden ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
-              <p className="text-sm font-medium text-white whitespace-nowrap">{user?.fullName || 'Usuario'}</p>
-              <p className="text-xs text-emerald-500/60 flex items-center gap-1 whitespace-nowrap">
-                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                 {canAccessAdmin ? 'Administrador' : 'Operador'}
-              </p>
+              <button title="Reportes" className={`w-full flex items-center gap-3 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-lg text-sm font-medium transition-all ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
+                  <BarChart3 size={20} className="shrink-0" />
+                  <span className={`whitespace-nowrap ${isCollapsed ? 'hidden' : 'block'}`}>Reportes Históricos</span>
+              </button>
+            </div>
+          </nav>
+
+          <div className="p-4 bg-slate-950 border-t border-slate-800">
+            <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : ''}`}>
+              <UserButton afterSignOutUrl="/sign-in" />
+              <div className={`transition-all duration-200 overflow-hidden ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
+                <p className="text-sm font-medium text-white whitespace-nowrap">{user?.fullName || 'Usuario'}</p>
+                <p className="text-xs text-emerald-500/60 flex items-center gap-1 whitespace-nowrap">
+                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                   {canAccessAdmin ? 'Administrador' : 'Operador'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
-      {isMobileMenuOpen && (
+      {isMobileMenuOpen && !isMonitor && (
         <div 
             className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[90] md:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
@@ -266,7 +271,7 @@ function App() {
       )}
 
       <main className="flex-1 p-0 overflow-y-auto overflow-x-hidden h-screen scroll-smooth bg-[#0a0f1e]">
-        <div className="p-2 md:p-8">
+        <div className={isMonitor ? "w-full h-full" : "p-2 md:p-8"}>
           {renderView()}
         </div>
       </main>
