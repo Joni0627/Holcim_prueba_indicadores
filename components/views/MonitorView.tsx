@@ -713,95 +713,95 @@ export const MonitorView: React.FC<{
       <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
       
       {/* Top Bar: Title, Date, Time, and Stocks */}
-      <div className="bg-[#0a1b33] border-b border-white/10 px-8 py-4 grid grid-cols-3 items-center shadow-2xl relative z-10">
+      <div className="bg-[#0a1b33] border-b border-white/10 px-4 py-2 grid grid-cols-[1fr_auto_1fr] items-center shadow-2xl relative z-10 h-[8vh] min-h-[60px]">
         {/* Left: Title */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 lg:gap-6 overflow-hidden">
           {onBack && (
             <button 
               onClick={onBack}
-              className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 group flex items-center gap-2"
+              className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 group flex items-center gap-2 shrink-0"
             >
-              <ArrowLeft size={18} className="text-white/70 group-hover:text-white" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/70 group-hover:text-white">Volver</span>
+              <ArrowLeft size={16} className="text-white/70 group-hover:text-white" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/70 group-hover:text-white hidden sm:inline">Volver</span>
             </button>
           )}
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-blue-600 rounded-xl shadow-lg">
-              <Layout size={20} className="text-white" />
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="p-1.5 bg-blue-600 rounded-lg shadow-lg">
+              <Layout size={18} className="text-white" />
             </div>
-            <h1 className="text-xl lg:text-2xl font-black tracking-tighter uppercase leading-none text-white whitespace-nowrap">MONITOR DE PRODUCTIVIDAD</h1>
+            <h1 className="text-[clamp(14px,1.2vw,20px)] font-black tracking-tighter uppercase leading-none text-white whitespace-nowrap">MONITOR DE PRODUCTIVIDAD</h1>
           </div>
         </div>
 
         {/* Center: Clock & Date */}
-        <div className="flex flex-col items-center justify-center px-4 border-x border-white/5">
-          <p className="text-4xl lg:text-5xl font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+        <div className="flex flex-col items-center justify-center px-6 border-x border-white/5 shrink-0">
+          <p className="text-[clamp(24px,3vw,42px)] font-black tracking-tighter font-mono leading-none text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
             {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
           </p>
-          <p className="text-blue-300/80 font-black uppercase tracking-[0.3em] text-[8px] lg:text-[10px] font-mono whitespace-nowrap mt-1">
+          <p className="text-blue-300/80 font-black uppercase tracking-[0.2em] text-[clamp(7px,0.6vw,9px)] font-mono whitespace-nowrap mt-0.5">
             {currentTime.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
           </p>
         </div>
 
         {/* Right: Stock Totalizers */}
-        <div className="flex items-center justify-end gap-4 lg:gap-8 overflow-hidden">
+        <div className="flex items-center justify-end gap-3 lg:gap-6 overflow-hidden">
           {producedStock.map(item => (
-            <div key={item.id} className="flex flex-col items-end">
-              <span className="text-[9px] lg:text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5 whitespace-nowrap">
+            <div key={item.id} className="flex flex-col items-end shrink">
+              <span className="text-[clamp(7px,0.6vw,9px)] font-black text-slate-400 uppercase tracking-[0.1em] mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] lg:max-w-none">
                 {item.product.replace('CEMENTO ', '')}
               </span>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl lg:text-3xl font-black text-white tracking-tighter leading-none">
+                <span className="text-[clamp(16px,1.8vw,28px)] font-black text-white tracking-tighter leading-none">
                   {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                 </span>
-                <span className="text-[8px] lg:text-[9px] text-slate-500 font-black uppercase">Tn</span>
+                <span className="text-[clamp(7px,0.6vw,9px)] text-slate-500 font-black uppercase">Tn</span>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 p-2 lg:p-3 xl:p-4 flex flex-col gap-2 lg:gap-3 xl:gap-4 overflow-hidden min-h-0">
+      <div className="flex-1 p-2 lg:p-3 flex flex-col gap-2 lg:gap-3 overflow-hidden min-h-0">
         {/* KPI Header Section - Always Visible */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-2 lg:pb-3 xl:pb-4 flex-shrink-0">
-          <div className="flex-1 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-2 lg:gap-3 xl:gap-4">
+        <div className="flex items-center justify-between border-b border-white/5 pb-2 flex-shrink-0 h-[18vh] min-h-[120px]">
+          <div className="flex-1 grid grid-cols-3 gap-2 lg:gap-4 h-full">
             {/* Machine KPIs & Totalizers */}
             {machineKPIs.map(m => (
-              <div key={m.id} className="bg-white/[0.03] backdrop-blur-sm p-3 lg:p-4 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-1 lg:gap-2 min-h-0 relative overflow-hidden group hover:bg-white/[0.05] transition-all">
+              <div key={m.id} className="bg-white/[0.03] backdrop-blur-sm p-2 lg:p-3 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-1 min-h-0 relative overflow-hidden group hover:bg-white/[0.05] transition-all h-full">
                 <div className="flex justify-between items-start w-full">
                   <div className="flex flex-col">
-                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase tracking-[0.2em]">Paletizadora</span>
-                    <span className="text-[clamp(14px,1.2vw,18px)] font-black text-white uppercase tracking-tight mt-0.5">
+                    <span className="text-[clamp(7px,0.6vw,9px)] font-black text-slate-500 uppercase tracking-[0.15em]">Paletizadora</span>
+                    <span className="text-[clamp(12px,1vw,16px)] font-black text-white uppercase tracking-tight">
                       {m.id.split('-')[0]}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-[clamp(8px,0.8vw,10px)] font-black text-emerald-500/70 uppercase tracking-tighter hidden sm:block">Total Hoy</span>
+                    <span className="text-[clamp(7px,0.6vw,9px)] font-black text-emerald-500/70 uppercase tracking-tighter hidden sm:block">Total Hoy</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl 2xl:text-5xl font-black text-emerald-400 tracking-tighter leading-none">
+                      <span className="text-[clamp(20px,2.5vw,40px)] font-black text-emerald-400 tracking-tighter leading-none">
                         {Math.floor(m.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                       </span>
-                      <span className="text-[clamp(10px,1vw,12px)] font-black text-slate-500 uppercase">Tn</span>
+                      <span className="text-[clamp(8px,0.8vw,10px)] font-black text-slate-500 uppercase">Tn</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 flex-1 min-h-0 items-end -mt-2">
-                  <div className="bg-black/40 p-2 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1">
+                <div className="grid grid-cols-3 gap-1.5 flex-1 min-h-0 items-end">
+                  <div className="bg-black/40 p-1 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all flex-1 h-full">
                     <SemiCircleProgress 
                       value={m.availability} 
                       label="Disp." 
                       color="text-blue-400" 
                     />
                   </div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/20 transition-all flex-1">
+                  <div className="bg-black/40 p-1 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/20 transition-all flex-1 h-full">
                     <SemiCircleProgress 
                       value={m.performance} 
                       label="Rend." 
                       color="text-emerald-400" 
                     />
                   </div>
-                  <div className="bg-black/40 p-2 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all flex-1">
+                  <div className="bg-black/40 p-1 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all flex-1 h-full">
                     <SemiCircleProgress 
                       value={m.hsMarcha} 
                       label="HS Marcha" 
@@ -817,14 +817,14 @@ export const MonitorView: React.FC<{
         </div>
 
         {/* Carousel Section */}
-        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+        <div className="flex-1 flex flex-col gap-2 overflow-hidden min-h-0">
           {/* Carousel Tabs */}
-          <div className="w-full flex items-stretch border-b border-white/10 mb-4 bg-white/[0.02]">
+          <div className="w-full flex items-stretch border-b border-white/10 bg-white/[0.02] flex-shrink-0 h-[6vh] min-h-[40px]">
             {carouselPages.map((page, idx) => (
               <button
                 key={page.id}
                 onClick={() => setCurrentCarouselPage(idx)}
-                className={`flex-1 relative py-5 text-[11px] font-black uppercase tracking-[0.2em] transition-all group rounded-t-2xl ${
+                className={`flex-1 relative py-2 text-[clamp(8px,0.7vw,10px)] font-black uppercase tracking-[0.15em] transition-all group rounded-t-xl ${
                   currentCarouselPage === idx 
                     ? 'text-emerald-400 bg-white/[0.05]' 
                     : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]'
@@ -835,19 +835,16 @@ export const MonitorView: React.FC<{
                 {currentCarouselPage === idx && (
                   <motion.div
                     layoutId="activeTabIndicator"
-                    className="absolute bottom-0 left-0 right-0 h-[3px] bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
                     initial={false}
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
-                
-                {/* Subtle hover indicator */}
-                <div className="absolute inset-0 bg-emerald-500/0 group-hover:bg-emerald-500/[0.03] transition-colors" />
               </button>
             ))}
           </div>
 
-          <div className="flex-1 relative overflow-hidden">
+          <div className="flex-1 relative overflow-hidden mt-2">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentCarouselPage}
@@ -858,37 +855,37 @@ export const MonitorView: React.FC<{
                 className="absolute inset-0 flex flex-col"
               >
                 {currentCarouselPage === 0 && (
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6 overflow-hidden min-h-0">
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 lg:gap-4 overflow-hidden h-full min-h-0">
                     {/* Podium of the Day */}
-                    <div className="col-span-1 md:col-span-12 xl:col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 xl:p-8 border border-white/10 shadow-2xl flex flex-col relative overflow-hidden min-h-0">
-                      <div className="absolute top-0 right-0 p-4 lg:p-8 opacity-5 lg:opacity-10 pointer-events-none">
-                        <Trophy className="w-[120px] h-[120px] lg:w-[160px] lg:h-[160px]" />
+                    <div className="col-span-1 md:col-span-12 xl:col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-3 lg:p-4 border border-white/10 shadow-2xl flex flex-col relative overflow-hidden min-h-0 h-full">
+                      <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                        <Trophy className="w-[80px] h-[80px] lg:w-[120px] lg:h-[120px]" />
                       </div>
                       
-                      <div className="flex items-center justify-between mb-4 lg:mb-8">
-                        <p className="text-amber-500 font-black uppercase tracking-[0.2em] text-lg lg:text-xl flex items-center gap-3 lg:gap-4">
-                          <Trophy className="animate-bounce w-6 h-6 lg:w-7 lg:h-7 text-amber-500" /> Líderes de Producción (Hoy)
+                      <div className="flex items-center justify-between mb-2 lg:mb-4 flex-shrink-0">
+                        <p className="text-amber-500 font-black uppercase tracking-[0.15em] text-[clamp(12px,1.2vw,18px)] flex items-center gap-2 lg:gap-3">
+                          <Trophy className="animate-bounce w-5 h-5 lg:w-6 lg:h-6 text-amber-500" /> Líderes de Producción
                         </p>
                       </div>
 
-                      <div className="flex-1 flex items-end justify-center gap-2 lg:gap-4 pb-2 lg:pb-4 min-h-0">
+                      <div className="flex-1 flex items-end justify-center gap-2 lg:gap-4 pb-2 min-h-0">
                         {/* 2nd Place */}
                         {(() => {
                           const sorted = [...machineKPIs].sort((a,b) => b.totalTn - a.totalTn);
                           const second = sorted[1];
                           if (!second) return null;
                           return (
-                            <div className="flex flex-col items-center gap-2 lg:gap-4 w-1/3">
+                            <div className="flex flex-col items-center gap-1 lg:gap-2 w-1/3">
                               <div className="flex flex-col items-center">
-                                <span className="text-sm lg:text-lg font-black text-slate-300 uppercase">{second.id.split('-')[0]}</span>
+                                <span className="text-[clamp(10px,0.8vw,14px)] font-black text-slate-300 uppercase">{second.id.split('-')[0]}</span>
                                 <div className="flex items-baseline gap-1">
-                                  <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(second.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                                  <span className="text-[8px] lg:text-[10px] font-bold text-slate-500 uppercase">Tn</span>
+                                  <span className="text-[clamp(14px,1.2vw,20px)] font-black text-white">{Math.floor(second.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                  <span className="text-[8px] font-bold text-slate-500 uppercase">Tn</span>
                                 </div>
                               </div>
-                              <div className="w-full bg-slate-700/50 border border-white/10 rounded-t-2xl flex flex-col items-center justify-center py-4 lg:py-8 relative">
-                                <div className="absolute -top-3 lg:-top-4 w-6 lg:h-8 h-6 lg:w-8 bg-slate-400 rounded-full flex items-center justify-center text-slate-900 font-black text-xs border-2 border-slate-700">2</div>
-                                <div className="h-16 lg:h-24 w-full" />
+                              <div className="w-full bg-slate-700/50 border border-white/10 rounded-t-2xl flex flex-col items-center justify-center py-2 lg:py-4 relative">
+                                <div className="absolute -top-2 w-5 h-5 bg-slate-400 rounded-full flex items-center justify-center text-slate-900 font-black text-[10px] border-2 border-slate-700">2</div>
+                                <div className="h-12 lg:h-20 w-full" />
                               </div>
                             </div>
                           );
@@ -900,17 +897,17 @@ export const MonitorView: React.FC<{
                           const first = sorted[0];
                           if (!first) return null;
                           return (
-                            <div className="flex flex-col items-center gap-2 lg:gap-4 w-1/3">
+                            <div className="flex flex-col items-center gap-1 lg:gap-2 w-1/3">
                               <div className="flex flex-col items-center">
-                                <span className="text-base lg:text-xl font-black text-amber-500 uppercase">{first.id.split('-')[0]}</span>
+                                <span className="text-[clamp(12px,1.4vw,22px)] font-black text-amber-500 uppercase">{first.id.split('-')[0]}</span>
                                 <div className="flex items-baseline gap-1">
-                                  <span className="text-3xl lg:text-4xl font-black text-white">{Math.floor(first.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                                  <span className="text-[10px] lg:text-xs font-bold text-slate-500 uppercase">Tn</span>
+                                  <span className="text-[clamp(20px,2vw,32px)] font-black text-white">{Math.floor(first.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Tn</span>
                                 </div>
                               </div>
-                              <div className="w-full bg-amber-500/20 border-x border-t border-amber-500/40 rounded-t-3xl flex flex-col items-center justify-center py-8 lg:py-12 relative shadow-[0_-20px_50px_-12px_rgba(245,158,11,0.3)]">
-                                <div className="absolute -top-4 lg:-top-6 w-8 lg:h-12 h-8 lg:w-12 bg-amber-500 rounded-full flex items-center justify-center text-slate-900 font-black text-sm lg:text-xl border-2 lg:border-4 border-amber-600 shadow-lg">1</div>
-                                <div className="h-24 lg:h-40 w-full" />
+                              <div className="w-full bg-amber-500/20 border-x border-t border-amber-500/40 rounded-t-3xl flex flex-col items-center justify-center py-4 lg:py-8 relative shadow-[0_-20px_50px_-12px_rgba(245,158,11,0.3)]">
+                                <div className="absolute -top-3 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center text-slate-900 font-black text-sm border-2 border-amber-600 shadow-lg">1</div>
+                                <div className="h-20 lg:h-32 w-full" />
                               </div>
                             </div>
                           );
@@ -922,17 +919,17 @@ export const MonitorView: React.FC<{
                           const third = sorted[2];
                           if (!third) return null;
                           return (
-                            <div className="flex flex-col items-center gap-2 lg:gap-4 w-1/3">
+                            <div className="flex flex-col items-center gap-1 lg:gap-2 w-1/3">
                               <div className="flex flex-col items-center">
-                                <span className="text-sm lg:text-lg font-black text-amber-700 uppercase">{third.id.split('-')[0]}</span>
+                                <span className="text-[clamp(10px,0.8vw,14px)] font-black text-amber-700 uppercase">{third.id.split('-')[0]}</span>
                                 <div className="flex items-baseline gap-1">
-                                  <span className="text-xl lg:text-2xl font-black text-white">{Math.floor(third.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                                  <span className="text-[8px] lg:text-[10px] font-bold text-slate-500 uppercase">Tn</span>
+                                  <span className="text-[clamp(14px,1.2vw,20px)] font-black text-white">{Math.floor(third.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                                  <span className="text-[8px] font-bold text-slate-500 uppercase">Tn</span>
                                 </div>
                               </div>
-                              <div className="w-full bg-amber-900/30 border border-white/10 rounded-t-2xl flex flex-col items-center justify-center py-3 lg:py-6 relative">
-                                <div className="absolute -top-3 lg:-top-4 w-6 lg:h-8 h-6 lg:w-8 bg-amber-700 rounded-full flex items-center justify-center text-white font-black text-xs border-2 border-amber-900">3</div>
-                                <div className="h-12 lg:h-16 w-full" />
+                              <div className="w-full bg-amber-900/30 border border-white/10 rounded-t-2xl flex flex-col items-center justify-center py-2 lg:py-4 relative">
+                                <div className="absolute -top-2 w-5 h-5 bg-amber-700 rounded-full flex items-center justify-center text-white font-black text-[10px] border-2 border-amber-900">3</div>
+                                <div className="h-8 lg:h-12 w-full" />
                               </div>
                             </div>
                           );
@@ -941,50 +938,47 @@ export const MonitorView: React.FC<{
                     </div>
 
                     {/* Historical Records per Machine */}
-                    <div className="col-span-1 md:col-span-12 xl:col-span-7 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 xl:p-8 border border-white/10 shadow-2xl flex flex-col min-h-0">
-                      <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-lg lg:text-xl mb-4 lg:mb-8 flex items-center gap-3 lg:gap-4">
-                        <Trophy className="w-5 h-5 lg:w-6 lg:h-6" /> Récords Históricos: Hitos a Superar
+                    <div className="col-span-1 md:col-span-12 xl:col-span-7 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-3 lg:p-4 border border-white/10 shadow-2xl flex flex-col min-h-0 h-full">
+                      <p className="text-indigo-400 font-black uppercase tracking-[0.15em] text-[clamp(12px,1.2vw,18px)] mb-2 lg:mb-4 flex items-center gap-2 lg:gap-3 flex-shrink-0">
+                        <Trophy className="w-5 h-5 lg:w-6 lg:h-6" /> Récords Históricos
                       </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 flex-1 min-h-0">
+                      <div className="grid grid-cols-3 gap-3 lg:gap-4 flex-1 min-h-0">
                         {historicalRecords.map(({ machineId, record }) => {
                           if (!record) return null;
 
                           return (
-                            <div key={machineId} className="bg-black/40 p-5 lg:p-7 rounded-3xl border border-white/5 flex flex-col justify-center group hover:bg-indigo-500/10 transition-all relative overflow-hidden min-h-0">
+                            <div key={machineId} className="bg-black/40 p-3 lg:p-4 rounded-3xl border border-white/5 flex flex-col justify-center group hover:bg-indigo-500/10 transition-all relative overflow-hidden min-h-0 h-full">
                               {/* Trophy Watermark */}
-                              <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
-                                <Trophy className="w-[80px] h-[80px] lg:w-[100px] h-[100px]" />
+                              <div className="absolute -right-2 -top-2 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                                <Trophy className="w-[60px] h-[60px] lg:w-[80px] h-[80px]" />
                               </div>
 
                               {/* Machine Badge (Top Right) */}
-                              <div className="absolute top-4 right-4 z-20">
-                                <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[8px] lg:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                              <div className="absolute top-2 right-2 z-20">
+                                <span className="px-1.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[clamp(7px,0.6vw,9px)] font-black text-slate-400 uppercase tracking-widest">
                                   {machineId.split('-')[0]}
                                 </span>
                               </div>
                               
-                              <div className="relative z-10 flex flex-col gap-4 lg:gap-6">
+                              <div className="relative z-10 flex flex-col gap-2 lg:gap-4">
                                 {/* Date Header */}
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-[9px] lg:text-[10px] font-black text-cyan-400/70 uppercase tracking-[0.2em]">
-                                    Marca registrada
+                                <div className="flex flex-col">
+                                  <span className="text-[clamp(7px,0.6vw,9px)] font-black text-cyan-400/70 uppercase tracking-[0.15em]">
+                                    Récord
                                   </span>
-                                  <p className="text-xs lg:text-sm font-bold text-slate-200 font-mono flex items-center gap-2">
-                                    <Calendar size={14} className="text-cyan-400" /> {record.date ? record.date.split('-').reverse().join(' / ') : '---'}
+                                  <p className="text-[clamp(9px,0.8vw,12px)] font-bold text-slate-200 font-mono flex items-center gap-1.5">
+                                    <Calendar size={12} className="text-cyan-400" /> {record.date ? record.date.split('-').reverse().join('/') : '---'}
                                   </p>
                                 </div>
 
                                 {/* Main Record Value */}
                                 <div className="flex flex-col">
-                                  <div className="flex items-baseline gap-1.5 lg:gap-2">
-                                    <span className="text-4xl lg:text-5xl xl:text-6xl font-black text-amber-400 tracking-tighter leading-none">
+                                  <div className="flex items-baseline gap-1">
+                                    <span className="text-[clamp(20px,2.5vw,42px)] font-black text-amber-400 tracking-tighter leading-none">
                                       {Math.floor(record.valueTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                                     </span>
-                                    <span className="text-xs lg:text-sm font-bold text-slate-500 uppercase">Tn</span>
+                                    <span className="text-[clamp(8px,0.8vw,10px)] font-bold text-slate-500 uppercase">Tn</span>
                                   </div>
-                                  <p className="text-[9px] lg:text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 lg:mt-2">
-                                    Máxima producción histórica
-                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -996,47 +990,47 @@ export const MonitorView: React.FC<{
                 )}
 
                 {currentCarouselPage === 1 && (
-                  <div className="flex-1 flex flex-col gap-4 overflow-hidden min-h-0">
+                  <div className="flex-1 flex flex-col gap-3 overflow-hidden h-full min-h-0">
                     {/* Production per Shift and Paletizer */}
-                    <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 border border-white/10 shadow-2xl flex flex-col min-h-0 overflow-hidden">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 flex-shrink-0">
-                        <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl flex items-center gap-3">
-                          <Activity className="w-6 h-6 lg:w-8 lg:h-8" /> Producción por Turno (Totales)
+                    <div className="flex-1 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-3 lg:p-4 border border-white/10 shadow-2xl flex flex-col min-h-0 h-full overflow-hidden">
+                      <div className="flex justify-between items-center mb-2 lg:mb-4 gap-4 flex-shrink-0">
+                        <p className="text-blue-400 font-black uppercase tracking-[0.15em] text-[clamp(12px,1.2vw,18px)] flex items-center gap-2 lg:gap-3">
+                          <Activity className="w-5 h-5 lg:w-6 lg:h-6" /> Producción por Turno
                         </p>
-                        <div className="flex flex-wrap gap-4 bg-white/5 p-3 rounded-2xl border border-white/10 shadow-inner">
+                        <div className="flex gap-3 bg-white/5 p-2 rounded-xl border border-white/10 shadow-inner">
                           {shiftsOrdered.map(s => (
-                            <div key={s} className="flex flex-col items-center gap-0.5 min-w-[80px]">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500`} />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
+                            <div key={s} className="flex flex-col items-center gap-0 min-w-[60px]">
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-1.5 h-1.5 rounded-full bg-${SHIFT_MAP[s as keyof typeof SHIFT_MAP].color}-500`} />
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{SHIFT_MAP[s as keyof typeof SHIFT_MAP].label}</span>
                               </div>
-                              <span className="text-lg lg:text-xl font-black text-white">{Math.floor(shiftTotals[s] || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-500 uppercase">Tn</span></span>
+                              <span className="text-[clamp(12px,1vw,16px)] font-black text-white">{Math.floor(shiftTotals[s] || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })} <span className="text-[8px] text-slate-500 uppercase">Tn</span></span>
                             </div>
                           ))}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 flex-1 min-h-0 overflow-y-auto no-scrollbar pb-4">
+                      <div className="grid grid-cols-3 gap-2 lg:gap-4 flex-1 min-h-0 overflow-hidden">
                         {machineKPIs.map(machine => {
                           return (
-                            <div key={machine.id} className="bg-black/40 rounded-2xl border border-white/5 flex flex-col overflow-hidden min-h-0">
-                              <div className="bg-white/5 p-3 lg:p-4 border-b border-white/5 flex justify-between items-center flex-shrink-0">
-                                <span className="text-lg lg:text-xl font-black text-white uppercase tracking-tighter">{machine.id.split('-')[0]}</span>
+                            <div key={machine.id} className="bg-black/40 rounded-2xl border border-white/5 flex flex-col overflow-hidden min-h-0 h-full">
+                              <div className="bg-white/5 p-2 lg:p-3 border-b border-white/5 flex justify-between items-center flex-shrink-0">
+                                <span className="text-[clamp(12px,1vw,16px)] font-black text-white uppercase tracking-tighter">{machine.id.split('-')[0]}</span>
                                 <div className="flex flex-col items-end">
-                                  <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Total Diario</span>
-                                  <span className="text-base lg:text-lg font-black text-emerald-400">{Math.floor(machine.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })} Tn</span>
+                                  <span className="text-[7px] font-black text-slate-500 uppercase tracking-widest">Total</span>
+                                  <span className="text-[clamp(12px,1vw,16px)] font-black text-emerald-400">{Math.floor(machine.totalTn).toLocaleString('es-AR', { maximumFractionDigits: 0 })} Tn</span>
                                 </div>
                               </div>
                               
-                              <div className="p-3 lg:p-4 flex-1 min-h-0">
-                                <div className="h-48 lg:h-56 w-full">
+                              <div className="p-2 lg:p-3 flex-1 min-h-0">
+                                <div className="h-full w-full">
                                   <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart
                                       data={shiftsOrdered.map(s => ({
                                         name: SHIFT_MAP[s as keyof typeof SHIFT_MAP].label,
                                         value: machine.shiftBreakdown[s] || 0
                                       }))}
-                                      margin={{ top: 30, right: 20, left: -20, bottom: 0 }}
+                                      margin={{ top: 20, right: 10, left: -25, bottom: 0 }}
                                     >
                                       <defs>
                                         <linearGradient id={`colorValue-${machine.id.replace(/[^a-zA-Z0-9]/g, '')}`} x1="0" y1="0" x2="0" y2="1">
@@ -1049,22 +1043,22 @@ export const MonitorView: React.FC<{
                                         dataKey="name" 
                                         axisLine={false} 
                                         tickLine={false} 
-                                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 'bold' }}
+                                        tick={{ fill: '#94a3b8', fontSize: 8, fontWeight: 'bold' }}
                                       />
                                       <YAxis 
                                         axisLine={false} 
                                         tickLine={false} 
-                                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 'bold' }}
+                                        tick={{ fill: '#94a3b8', fontSize: 8, fontWeight: 'bold' }}
                                       />
                                       <Tooltip content={<MonitorTooltip />} />
                                       <Area 
                                         type="monotone" 
                                         dataKey="value" 
                                         stroke="#10b981" 
-                                        strokeWidth={3}
+                                        strokeWidth={2}
                                         fillOpacity={1} 
                                         fill={`url(#colorValue-${machine.id.replace(/[^a-zA-Z0-9]/g, '')})`}
-                                        activeDot={{ r: 6, strokeWidth: 0, fill: '#10b981' }}
+                                        activeDot={{ r: 4, strokeWidth: 0, fill: '#10b981' }}
                                       >
                                         <LabelList dataKey="value" content={<CustomDataLabel />} />
                                       </Area>
@@ -1081,26 +1075,26 @@ export const MonitorView: React.FC<{
                 )}
 
                 {currentCarouselPage === 2 && (
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6 overflow-hidden min-h-0">
+                  <div className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-3 lg:gap-4 overflow-hidden h-full min-h-0">
                     {/* Top 5 Paros - Larger */}
-                    <div className="col-span-1 md:col-span-12 xl:col-span-7 bg-white/[0.03] backdrop-blur-sm p-4 lg:p-6 xl:p-8 rounded-3xl border border-white/10 shadow-2xl border-l-8 border-l-red-500/50 flex flex-col min-h-0">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 lg:mb-8 gap-4">
-                        <p className="text-red-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl flex items-center gap-3 lg:gap-4">
-                          <AlertCircle className="w-6 h-6 lg:w-8 lg:h-8" /> Ranking de Paros (Top 5 Motivos)
+                    <div className="col-span-1 xl:col-span-7 bg-white/[0.03] backdrop-blur-sm p-3 lg:p-4 rounded-3xl border border-white/10 shadow-2xl border-l-8 border-l-red-500/50 flex flex-col min-h-0 h-full">
+                      <div className="flex justify-between items-center mb-2 lg:mb-4 gap-4 flex-shrink-0">
+                        <p className="text-red-400 font-black uppercase tracking-[0.15em] text-[clamp(12px,1.2vw,18px)] flex items-center gap-2 lg:gap-3">
+                          <AlertCircle className="w-5 h-5 lg:w-6 lg:h-6" /> Ranking de Paros (Top 5)
                         </p>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                           {['672', '673', '674'].map((m, idx) => (
                             <button 
                               key={m}
                               onClick={() => setCurrentDowntimePage(idx)}
-                              className={`px-3 lg:px-4 py-1 lg:py-1.5 rounded-full text-[9px] lg:text-[10px] font-black transition-all ${currentDowntimePage === idx ? 'bg-red-500 text-white' : 'bg-white/5 text-slate-500'}`}
+                              className={`px-2 lg:px-3 py-1 rounded-full text-[clamp(8px,0.6vw,10px)] font-black transition-all ${currentDowntimePage === idx ? 'bg-red-500 text-white' : 'bg-white/5 text-slate-500'}`}
                             >
                               PZ{m}
                             </button>
                           ))}
                         </div>
                       </div>
-                      <div className="flex-1 flex flex-col justify-center overflow-hidden">
+                      <div className="flex-1 flex flex-col justify-start overflow-hidden min-h-0">
                         <AnimatePresence mode="wait">
                           <motion.div
                             key={currentDowntimePage}
@@ -1109,10 +1103,10 @@ export const MonitorView: React.FC<{
                             exit="exit"
                             variants={{
                               initial: { opacity: 0 },
-                              animate: { opacity: 1, transition: { staggerChildren: 0.12 } },
-                              exit: { opacity: 0, transition: { staggerChildren: 0.06, staggerDirection: -1 } }
+                              animate: { opacity: 1, transition: { staggerChildren: 0.1 } },
+                              exit: { opacity: 0, transition: { staggerChildren: 0.05, staggerDirection: -1 } }
                             }}
-                            className="flex flex-col h-full"
+                            className="flex flex-col h-full gap-1.5 lg:gap-2"
                           >
                             {(() => {
                               const machines = ['MG.672-PZ1', 'MG.673-PZ1', 'MG.674-PZ1'];
@@ -1153,9 +1147,9 @@ export const MonitorView: React.FC<{
                                       animate: { x: 0, opacity: 1 },
                                       exit: { x: '-120%', opacity: 0 }
                                     }}
-                                    className="py-12 lg:py-20 text-center text-slate-500 italic text-lg lg:text-xl"
+                                    className="py-12 text-center text-slate-500 italic text-sm lg:text-base"
                                   >
-                                    Sin paros internos registrados para {targetMachine}
+                                    Sin paros internos registrados
                                   </motion.div>
                                 );
                               }
@@ -1176,29 +1170,28 @@ export const MonitorView: React.FC<{
                                       damping: 18,
                                       mass: 0.8
                                     }}
-                                    className={`flex items-center gap-3 lg:gap-4 p-2.5 lg:p-3 bg-gradient-to-r from-white/[0.04] to-transparent border-l-4 ${colors.border} border-b border-white/5 last:border-b-0 backdrop-blur-sm group hover:from-white/[0.07] transition-all duration-300 ${colors.glow}`}
+                                    className={`flex items-center gap-2 lg:gap-3 p-1.5 lg:p-2 bg-gradient-to-r from-white/[0.04] to-transparent border-l-4 ${colors.border} border-b border-white/5 last:border-b-0 backdrop-blur-sm group hover:from-white/[0.07] transition-all duration-300 ${colors.glow} min-h-0`}
                                   >
                                     {/* HAC Badge */}
-                                    <div className={`shrink-0 px-2.5 py-1 rounded border font-mono text-[10px] lg:text-xs font-bold tracking-wider flex items-center gap-2 ${colors.badge}`}>
-                                      <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${colors.dot}`} />
+                                    <div className={`shrink-0 px-2 py-0.5 rounded border font-mono text-[clamp(8px,0.6vw,10px)] font-bold tracking-wider flex items-center gap-1.5 ${colors.badge}`}>
+                                      <div className={`w-1 h-1 rounded-full animate-pulse ${colors.dot}`} />
                                       {d.hac}
                                     </div>
                                     
                                     {/* Motivo - Full Width */}
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-white font-bold text-xs lg:text-sm xl:text-base leading-tight break-words">
+                                      <p className="text-white font-bold text-[clamp(10px,0.8vw,13px)] leading-tight truncate">
                                         {d.reason}
                                       </p>
                                     </div>
                                     
                                     {/* Duration */}
-                                    <div className="shrink-0 flex items-center gap-3 bg-black/40 px-3 py-1.5 rounded-xl border border-white/10 shadow-inner">
-                                      <Clock className={`w-4 h-4 lg:w-5 lg:h-5 ${idx === 0 ? 'text-yellow-400' : colors.text}`} />
+                                    <div className="shrink-0 flex items-center gap-2 bg-black/40 px-2 py-1 rounded-xl border border-white/10 shadow-inner">
+                                      <Clock className={`w-3.5 h-3.5 lg:w-4 lg:h-4 ${idx === 0 ? 'text-yellow-400' : colors.text}`} />
                                       <div className="flex flex-col items-end">
-                                        <span className={`font-mono text-lg lg:text-xl xl:text-2xl font-black leading-none tracking-tighter ${idx === 0 ? 'text-yellow-400' : colors.text}`}>
+                                        <span className={`font-mono text-[clamp(14px,1.2vw,20px)] font-black leading-none tracking-tighter ${idx === 0 ? 'text-yellow-400' : colors.text}`}>
                                           {hhmm}
                                         </span>
-                                        <span className="text-[8px] lg:text-[9px] text-slate-500 font-black uppercase tracking-widest">HH:MM</span>
                                       </div>
                                     </div>
                                   </motion.div>
@@ -1211,19 +1204,19 @@ export const MonitorView: React.FC<{
                     </div>
 
                     {/* Timeline */}
-                    <div className="col-span-1 md:col-span-12 xl:col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 xl:p-8 border border-white/10 shadow-2xl flex flex-col overflow-hidden min-h-0">
-                      <div className="flex items-center justify-between mb-4 lg:mb-8">
-                        <div className="flex items-center gap-3 lg:gap-4">
-                          <Clock className="text-indigo-400 w-6 h-6 lg:w-8 lg:h-8" />
-                          <p className="text-indigo-400 font-black uppercase tracking-[0.2em] text-lg lg:text-xl">Cronograma Diario</p>
+                    <div className="col-span-1 xl:col-span-5 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-3 lg:p-4 rounded-3xl border border-white/10 shadow-2xl flex flex-col overflow-hidden min-h-0 h-full">
+                      <div className="flex items-center justify-between mb-2 lg:mb-4 flex-shrink-0">
+                        <div className="flex items-center gap-2 lg:gap-3">
+                          <Clock className="text-indigo-400 w-5 h-5 lg:w-6 lg:h-6" />
+                          <p className="text-indigo-400 font-black uppercase tracking-[0.15em] text-[clamp(12px,1.2vw,18px)]">Cronograma</p>
                         </div>
-                        <div className="flex gap-2 lg:gap-4 text-[8px] lg:text-[10px] font-bold uppercase tracking-widest">
-                          <div className="flex items-center gap-1.5 lg:gap-2"><div className="w-2 h-2 lg:w-3 lg:h-3 bg-emerald-500/60 rounded-sm"></div> <span className="hidden sm:inline">Operativo</span></div>
-                          <div className="flex items-center gap-1.5 lg:gap-2"><div className="w-2 h-2 lg:w-3 lg:h-3 bg-red-500 rounded-sm"></div> <span className="hidden sm:inline">Paro</span></div>
+                        <div className="flex gap-2 text-[clamp(7px,0.6vw,9px)] font-bold uppercase tracking-widest">
+                          <div className="flex items-center gap-1"><div className="w-2 h-2 bg-emerald-500/60 rounded-sm"></div> <span className="hidden sm:inline">OK</span></div>
+                          <div className="flex items-center gap-1"><div className="w-2 h-2 bg-red-500 rounded-sm"></div> <span className="hidden sm:inline">Paro</span></div>
                         </div>
                       </div>
 
-                      <div className="flex-1 relative overflow-hidden">
+                      <div className="flex-1 relative overflow-hidden min-h-0">
                         <AnimatePresence mode="wait">
                           <motion.div 
                             key={shiftsOrdered[currentShiftIndex]}
@@ -1233,24 +1226,24 @@ export const MonitorView: React.FC<{
                             transition={{ duration: 0.5 }}
                             className="h-full flex flex-col"
                           >
-                            <div className="flex-1 flex flex-col gap-4 lg:gap-8">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4 lg:gap-6">
-                                  <span className="text-2xl lg:text-4xl font-black text-white uppercase tracking-[0.3em] whitespace-nowrap">
+                            <div className="flex-1 flex flex-col gap-2 lg:gap-4 min-h-0">
+                              <div className="flex items-center justify-between flex-shrink-0">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-[clamp(16px,1.5vw,24px)] font-black text-white uppercase tracking-[0.2em] whitespace-nowrap">
                                     {SHIFT_MAP[shiftsOrdered[currentShiftIndex] as keyof typeof SHIFT_MAP].label}
                                   </span>
-                                  <div className="h-px w-16 lg:w-32 bg-slate-800 hidden sm:block"></div>
+                                  <div className="h-px w-10 lg:w-20 bg-slate-800 hidden sm:block"></div>
                                 </div>
-                                <div className="flex gap-2 lg:gap-3">
+                                <div className="flex gap-1.5">
                                   {shiftsOrdered.map((_, idx) => (
                                     <div 
                                       key={idx} 
-                                      className={`h-1.5 lg:h-2 rounded-full transition-all duration-500 ${idx === currentShiftIndex ? 'w-8 lg:w-12 bg-indigo-500' : 'w-2 lg:w-3 bg-slate-800'}`}
+                                      className={`h-1 rounded-full transition-all duration-500 ${idx === currentShiftIndex ? 'w-6 lg:w-10 bg-indigo-500' : 'w-1.5 lg:w-2 bg-slate-800'}`}
                                     />
                                   ))}
                                 </div>
                               </div>
-                              <div className="flex-1 flex flex-col justify-around min-h-0 gap-2 lg:gap-4 overflow-y-auto no-scrollbar">
+                              <div className="flex-1 flex flex-col justify-around min-h-0 gap-2 overflow-hidden">
                                 {Object.entries(groupedTimeline[shiftsOrdered[currentShiftIndex]] || {}).map(([machine, data]) => {
                                   const machineProdEntries = unifiedProd?.details?.filter(d => 
                                     (isMachineMatch(d.machineId, machine) || isMachineMatch(d.machineName, machine)) && 
@@ -1260,16 +1253,11 @@ export const MonitorView: React.FC<{
                                   
                                   return (
                                     <div key={machine} className="w-full">
-                                      <div className="flex justify-between items-end mb-1 px-1 lg:px-2">
+                                      <div className="flex justify-between items-end mb-0.5 px-1">
                                         <div className="flex flex-col">
-                                          <span className="text-[10px] lg:text-xs font-black text-white uppercase tracking-widest">{machine.split('-')[0]}</span>
-                                          {data.longestEvent && (
-                                            <span className="text-[8px] font-bold text-red-400 uppercase tracking-tighter">
-                                              Paro Mayor: {data.longestEvent.reason} ({data.longestEvent.durationMinutes} min)
-                                            </span>
-                                          )}
+                                          <span className="text-[clamp(8px,0.7vw,10px)] font-black text-white uppercase tracking-widest">{machine.split('-')[0]}</span>
                                         </div>
-                                        <span className={`text-[10px] lg:text-xs font-black uppercase tracking-widest ${getTnColor(machine, machineProdTn)}`}>
+                                        <span className={`text-[clamp(8px,0.7vw,10px)] font-black uppercase tracking-widest ${getTnColor(machine, machineProdTn)}`}>
                                           {Math.floor(machineProdTn).toLocaleString()} Tn
                                         </span>
                                       </div>
@@ -1290,24 +1278,24 @@ export const MonitorView: React.FC<{
                 )}
 
                 {currentCarouselPage === 3 && (
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6 overflow-hidden min-h-0">
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6 overflow-hidden h-full min-h-0">
                     {/* Stock Detailed View */}
-                    <div className="col-span-1 md:col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 xl:p-8 border border-white/10 shadow-2xl flex flex-col min-h-0">
-                      <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl mb-6 lg:mb-12 flex items-center gap-3 lg:gap-4">
+                    <div className="col-span-1 md:col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col min-h-0 h-full">
+                      <p className="text-blue-400 font-black uppercase tracking-[0.2em] text-[clamp(14px,1.5vw,24px)] mb-4 lg:mb-8 flex items-center gap-3 flex-shrink-0">
                         <Package className="w-6 h-6 lg:w-8 lg:h-8" /> Inventario de Stock
                       </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 xl:gap-8 flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 xl:gap-6 flex-1 min-h-0 overflow-hidden">
                         {producedStock.map(item => (
-                          <div key={item.id} className="bg-black/40 p-8 lg:p-10 xl:p-12 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-blue-500/10 transition-all shadow-xl min-h-[250px] lg:min-h-[300px]">
-                            <div className="mb-6 lg:mb-8">
-                              <span className="text-xl lg:text-2xl xl:text-3xl font-black text-white uppercase tracking-tight leading-tight block">{item.product}</span>
+                          <div key={item.id} className="bg-black/40 p-4 lg:p-6 rounded-3xl border border-white/5 flex flex-col items-center justify-center text-center group hover:bg-blue-500/10 transition-all shadow-xl h-full min-h-0">
+                            <div className="mb-2 lg:mb-4">
+                              <span className="text-[clamp(12px,1.2vw,20px)] font-black text-white uppercase tracking-tight leading-tight block">{item.product}</span>
                             </div>
                             
-                            <div className="flex items-baseline gap-2 lg:gap-4">
-                              <span className="text-5xl lg:text-7xl xl:text-8xl font-black text-white tracking-tighter">
+                            <div className="flex items-baseline gap-1.5 lg:gap-3">
+                              <span className="text-[clamp(28px,4vw,64px)] font-black text-white tracking-tighter leading-none">
                                 {Math.floor(item.tonnage).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                               </span>
-                              <span className="text-xl lg:text-2xl xl:text-3xl font-bold text-slate-500 uppercase">Tn</span>
+                              <span className="text-[clamp(10px,1vw,18px)] font-bold text-slate-500 uppercase">Tn</span>
                             </div>
                           </div>
                         ))}
@@ -1317,13 +1305,13 @@ export const MonitorView: React.FC<{
                 )}
 
                 {currentCarouselPage === 4 && (
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6 overflow-hidden min-h-0">
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-6 overflow-hidden h-full min-h-0">
                     {/* Novedades / News Section */}
-                    <div className="col-span-1 md:col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 xl:p-8 border border-white/10 shadow-2xl flex flex-col min-h-0">
-                      <p className="text-emerald-400 font-black uppercase tracking-[0.2em] text-lg lg:text-2xl mb-6 lg:mb-12 flex items-center gap-3 lg:gap-4">
+                    <div className="col-span-1 md:col-span-12 bg-white/[0.03] backdrop-blur-sm rounded-3xl p-4 lg:p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col min-h-0 h-full">
+                      <p className="text-emerald-400 font-black uppercase tracking-[0.2em] text-[clamp(14px,1.5vw,24px)] mb-4 lg:mb-8 flex items-center gap-3 flex-shrink-0">
                         <Activity className="w-6 h-6 lg:w-8 lg:h-8" /> Novedades y Observaciones
                       </p>
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 xl:gap-8 overflow-y-auto no-scrollbar">
+                      <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 flex-1 min-h-0 overflow-hidden">
                         {[
                           { key: '1.MAÑANA', label: 'MAÑANA', color: 'emerald' },
                           { key: '2.TARDE', label: 'TARDE', color: 'blue' },
@@ -1332,17 +1320,17 @@ export const MonitorView: React.FC<{
                         ].map(shift => {
                           const news = shiftNews.filter(n => n.shift === shift.key);
                           return (
-                            <div key={shift.key} className="bg-black/40 p-4 lg:p-5 rounded-3xl border border-white/5 flex flex-col gap-4 lg:gap-6 min-h-[350px] max-h-[600px]">
-                              <div className="flex items-center justify-between border-b border-white/10 pb-3 lg:pb-4">
-                                <div className="flex items-baseline gap-3">
-                                  <span className={`text-sm lg:text-base font-black uppercase tracking-[0.2em] text-${shift.color}-400/80`}>
+                            <div key={shift.key} className="bg-black/40 p-3 lg:p-4 rounded-3xl border border-white/5 flex flex-col gap-3 lg:gap-4 min-h-0 h-full overflow-hidden">
+                              <div className="flex items-center justify-between border-b border-white/10 pb-2 lg:pb-3 flex-shrink-0">
+                                <div className="flex items-baseline gap-2">
+                                  <span className={`text-[clamp(10px,0.8vw,14px)] font-black uppercase tracking-[0.15em] text-${shift.color}-400/80`}>
                                     {shift.label}
                                   </span>
-                                  <span className="text-xs font-bold text-white/20">[{news.length}]</span>
+                                  <span className="text-[10px] font-bold text-white/20">[{news.length}]</span>
                                 </div>
-                                <div className={`w-2 h-2 lg:w-2.5 lg:h-2.5 rounded-full bg-${shift.color}-500/50 animate-pulse`} />
+                                <div className={`w-2 h-2 rounded-full bg-${shift.color}-500/50 animate-pulse`} />
                               </div>
-                              <div className="flex-1 flex flex-col min-h-0">
+                              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                                 <NewsTicker news={news} />
                               </div>
                             </div>
