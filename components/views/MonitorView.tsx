@@ -170,7 +170,7 @@ const SemiCircleProgress: React.FC<{
             {displayValue.toFixed(isRawValue ? 1 : 0)}{suffix}
           </span>
         )}
-        <span className="text-[clamp(8px,1vw,12px)] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{label}</span>
+        <span className="text-[10px] lg:text-[0.7vw] font-black text-slate-400 uppercase tracking-tighter mt-0.5">{label}</span>
       </div>
     </div>
   );
@@ -792,22 +792,22 @@ export const MonitorView: React.FC<{
                   </div>
                 </div>
                 
-                <div className="flex flex-row w-full justify-between items-center gap-1 flex-1 min-h-0">
-                  <div className="bg-black/40 p-0.5 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-blue-500/10 group-hover:border-blue-500/20 transition-all max-w-[30%] flex-1 h-full">
+                <div className="flex flex-row w-full justify-around items-center gap-2 flex-1 min-h-0">
+                  <div className="flex flex-col items-center justify-center max-w-[30%] flex-1 h-full">
                     <SemiCircleProgress 
                       value={m.availability} 
                       label="Disp." 
                       color="text-blue-400" 
                     />
                   </div>
-                  <div className="bg-black/40 p-0.5 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-emerald-500/10 group-hover:border-emerald-500/20 transition-all max-w-[30%] flex-1 h-full">
+                  <div className="flex flex-col items-center justify-center max-w-[30%] flex-1 h-full">
                     <SemiCircleProgress 
                       value={m.performance} 
                       label="Rend." 
                       color="text-emerald-400" 
                     />
                   </div>
-                  <div className="bg-black/40 p-0.5 rounded-xl border border-white/5 flex flex-col items-center justify-center group-hover:bg-amber-500/10 group-hover:border-amber-500/20 transition-all max-w-[30%] flex-1 h-full">
+                  <div className="flex flex-col items-center justify-center max-w-[30%] flex-1 h-full">
                     <SemiCircleProgress 
                       value={m.hsMarcha} 
                       label="HS Marcha" 
