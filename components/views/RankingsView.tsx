@@ -334,7 +334,7 @@ export function RankingsView() {
             >
               {/* Production Consolidated Executive Header */}
               <div className="bg-slate-800/40 border border-slate-700/50 rounded-[2.5rem] p-8 backdrop-blur-md shadow-xl overflow-hidden">
-                  <div className="flex flex-col md:flex-row gap-12 mb-8 items-start md:items-center">
+                  <div className="flex flex-col xl:flex-row gap-12 items-start xl:items-center">
                     <div className="flex items-baseline gap-3">
                         <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
                             {Math.round(data.summary.production.totalTN).toLocaleString()}
@@ -344,25 +344,19 @@ export function RankingsView() {
                           <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Carga Total</span>
                         </div>
                     </div>
-                    <div className="w-px h-12 bg-slate-700/30 hidden md:block" />
-                    <div className="flex items-baseline gap-3">
-                        <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
-                            {Math.round(data.summary.production.avgTN).toLocaleString()}
-                        </span>
-                        <div className="flex flex-col">
-                          <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] leading-none">Toneladas</span>
-                          <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Promedio TN</span>
+                    
+                    <div className="w-px h-12 bg-slate-700/30 hidden xl:block" />
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4 flex-1">
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Maquinista Estrella</span>
+                            <span className="text-xl font-black text-slate-200 truncate" title={data.summary.production.topOperator}>{data.summary.production.topOperator}</span>
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Línea Líder</span>
+                            <span className="text-xl font-black text-slate-200 truncate" title={data.summary.production.topPalletizer}>{data.summary.production.topPalletizer}</span>
                         </div>
                     </div>
-                  </div>
-                  
-                  <div className="h-px bg-slate-700/30 mb-6" />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <ContextItem label="Maquinista estrella" value={data.summary.production.topOperator} />
-                    <ContextItem label="Línea líder" value={data.summary.production.topPalletizer} />
-                    <ContextItem label="Período" value={getPeriodText(dateRange.start, dateRange.end)} />
-                    <ContextItem label="Registros" value={String((data.summary.production as any).recordCount || 0)} />
                   </div>
               </div>
 

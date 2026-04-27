@@ -151,8 +151,6 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
           Mes
         </button>
         
-        <div className="w-px h-5 bg-white/10 mx-1"></div>
-        
         <button 
           onClick={() => setShowCustomRange(!showCustomRange)}
           className={`flex items-center gap-2 px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
@@ -161,8 +159,8 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
             : 'text-slate-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          <Calendar size={14} />
-          <span>{formatDateDisplay()}</span>
+          {activeFilter === 'custom' && <Check size={14} className="text-emerald-400" />}
+          <span>{activeFilter === 'custom' ? formatDateDisplay() : 'Rango'}</span>
           <ChevronDown size={12} className={`transition-transform duration-200 ${showCustomRange ? 'rotate-180' : ''}`} />
         </button>
       </div>
