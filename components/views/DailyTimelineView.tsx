@@ -4,6 +4,7 @@ import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRigh
 import { useQuery } from '@tanstack/react-query';
 import { fetchDowntimes, fetchProductionStats } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric } from '../../types';
+import { DateFilter } from '../DateFilter';
 
 // CONFIGURACIÓN DE TURNOS EXACTA SEGÚN USUARIO
 const SHIFT_MAP = {
@@ -143,7 +144,12 @@ const TimelineBar: React.FC<{
 };
 
 export const DailyTimelineView: React.FC = () => {
-  const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
+    start: new Date(),
+    end: new Date()
+  });
+
+  const selectedDay = useMemo(() => dateRange.start.toISOString().split('T')[0], [dateRange.start]);
 
   const { data: downtimes = [], isLoading: loadingDowntimes } = useQuery({
     queryKey: ['downtimes', selectedDay],
@@ -165,10 +171,8 @@ export const DailyTimelineView: React.FC = () => {
 
   const loading = loadingDowntimes || loadingProd;
 
-  const handleDayChange = (offset: number) => {
-    const d = new Date(selectedDay + "T12:00:00");
-    d.setDate(d.getDate() + offset);
-    setSelectedDay(d.toISOString().split('T')[0]);
+  const handleFilterChange = (range: { start: Date, end: Date }) => {
+    setDateRange(range);
   };
 
   // Agrupamiento por Turno -> Máquina
@@ -217,22 +221,8 @@ export const DailyTimelineView: React.FC = () => {
             </div>
         </div>
 
-        <div className="flex items-center bg-white/[0.03] p-1 rounded-xl border border-white/10 shadow-sm backdrop-blur-sm">
-            <button onClick={() => handleDayChange(-1)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
-                <ChevronLeft size={20} />
-            </button>
-            <div className="relative flex items-center">
-                <Calendar size={14} className="absolute left-3 text-blue-400 pointer-events-none" />
-                <input 
-                    type="date" 
-                    value={selectedDay}
-                    onChange={(e) => setSelectedDay(e.target.value)}
-                    className="bg-transparent border-none focus:ring-0 text-sm font-bold text-white pl-9 pr-4 py-1 [color-scheme:dark]"
-                />
-            </div>
-            <button onClick={() => handleDayChange(1)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
-                <ChevronRight size={20} />
-            </button>
+        <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
+          <DateFilter onFilterChange={handleFilterChange} />
         </div>
       </div>
 

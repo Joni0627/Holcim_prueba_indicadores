@@ -109,10 +109,10 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
 
   return (
     <div className="relative z-[60] w-full" ref={wrapperRef}>
-      <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-950/80 rounded-[1.25rem] border border-slate-800/80 shadow-inner overflow-hidden">
+      <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-900/50 rounded-2xl border border-slate-700/30 shadow-inner overflow-hidden backdrop-blur-md">
         <button
           onClick={() => handlePresetClick('today')}
-          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
+          className={`flex-1 min-w-[50px] px-2 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'today' 
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
               : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -122,7 +122,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
         </button>
         <button
           onClick={() => handlePresetClick('yesterday')}
-          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
+          className={`flex-1 min-w-[50px] px-2 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'yesterday' 
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
               : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -132,7 +132,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
         </button>
         <button
           onClick={() => handlePresetClick('week')}
-          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
+          className={`flex-1 min-w-[50px] px-2 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'week' 
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
               : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -142,7 +142,7 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
         </button>
         <button
           onClick={() => handlePresetClick('month')}
-          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
+          className={`flex-1 min-w-[50px] px-2 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'month' 
               ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
               : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -153,41 +153,44 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
         
         <button 
           onClick={() => setShowCustomRange(!showCustomRange)}
-          className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
+          className={`flex-1 min-w-[90px] flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'custom' || showCustomRange
             ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
             : 'text-slate-500 hover:text-white hover:bg-white/5'
           }`}
         >
-          <span className="truncate">{activeFilter === 'custom' ? formatDateDisplay() : 'Rango'}</span>
+          <span className="whitespace-nowrap">{activeFilter === 'custom' ? formatDateDisplay() : 'Rango'}</span>
           <ChevronDown size={10} className={`shrink-0 transition-transform duration-200 ${showCustomRange ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
       {showCustomRange && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 rounded-xl shadow-2xl border border-white/10 p-4 animate-in fade-in zoom-in-95 duration-200 z-[100] backdrop-blur-md">
-          <div className="flex justify-between items-center mb-4">
-             <h4 className="font-black text-white text-xs uppercase tracking-widest">Seleccionar Fecha</h4>
-             <button onClick={() => setShowCustomRange(false)} className="text-slate-500 hover:text-white transition-colors">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-5 animate-in fade-in zoom-in-95 duration-200 z-[100] backdrop-blur-xl">
+          <div className="flex justify-between items-center mb-5">
+             <h4 className="font-black text-white text-[10px] uppercase tracking-[0.2em] flex items-center gap-2">
+                <Calendar size={14} className="text-emerald-500" />
+                Seleccionar Período
+             </h4>
+             <button onClick={() => setShowCustomRange(false)} className="text-slate-500 hover:text-white transition-colors p-1 hover:bg-slate-800 rounded-lg">
                <X size={16} />
              </button>
           </div>
           
-          <div className="space-y-3">
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Desde</label>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha Inicial</label>
               <input 
                 type="date" 
-                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-white transition-all"
                 value={customRange.start}
                 onChange={(e) => setCustomRange({...customRange, start: e.target.value})}
               />
             </div>
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 mb-1 uppercase tracking-widest">Hasta</label>
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha Final</label>
               <input 
                 type="date" 
-                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-white"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 text-white transition-all"
                 value={customRange.end}
                 onChange={(e) => setCustomRange({...customRange, end: e.target.value})}
               />
@@ -196,10 +199,10 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
             <button 
               onClick={handleApplyRange}
               disabled={!customRange.start || !customRange.end}
-              className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest py-2 px-4 rounded-lg text-xs flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95"
+              className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white font-black uppercase tracking-[0.2em] py-3 px-4 rounded-xl text-[10px] flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.98]"
             >
-              <Check size={16} />
-              Aplicar
+              <Check size={14} strokeWidth={3} />
+              Aplicar Rango
             </button>
           </div>
         </div>

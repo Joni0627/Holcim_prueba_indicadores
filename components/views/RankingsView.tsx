@@ -245,11 +245,27 @@ export function RankingsView() {
   // Downtime specific filters
   const [selectedOperators, setSelectedOperators] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  
+  // Committed filters for calculation
+  const [appliedOperators, setAppliedOperators] = useState<string[]>([]);
+  const [appliedTypes, setAppliedTypes] = useState<string[]>([]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['rankings', dateRange.start, dateRange.end, selectedOperators, selectedTypes],
-    queryFn: () => fetchRankings(dateRange.start, dateRange.end, selectedOperators, selectedTypes),
+    queryKey: ['rankings', dateRange.start, dateRange.end, appliedOperators, appliedTypes],
+    queryFn: () => fetchRankings(dateRange.start, dateRange.end, appliedOperators, appliedTypes),
   });
+
+  const handleApplyFilters = () => {
+    setAppliedOperators(selectedOperators);
+    setAppliedTypes(selectedTypes);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedOperators([]);
+    setSelectedTypes([]);
+    setAppliedOperators([]);
+    setAppliedTypes([]);
+  };
 
   const { data: detailRecords, isLoading: isLoadingDetails } = useQuery({
     queryKey: ['downtime-details', dateRange.start, dateRange.end, drillDown],
@@ -603,7 +619,7 @@ export function RankingsView() {
                   </div>
                </div>
 
-               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-slate-950/40 px-8 py-4 rounded-[2.5rem] border border-slate-800/60 backdrop-blur-md shadow-lg">
+               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-slate-950/40 px-8 py-5 rounded-[2.5rem] border border-slate-800/60 backdrop-blur-md shadow-lg">
                   <div className="flex flex-wrap items-center gap-4">
                     <MultiSelectFilter 
                         label="Maquinistas" 
@@ -619,13 +635,24 @@ export function RankingsView() {
                         onChange={setSelectedTypes} 
                         icon={Hash} 
                     />
+                    
+                    <div className="h-8 w-px bg-slate-800 hidden md:block mx-2" />
+
+                    <button 
+                        onClick={handleApplyFilters}
+                        className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] flex items-center gap-2"
+                    >
+                        <Check size={14} strokeWidth={3} />
+                        Aplicar filtros
+                    </button>
+
                     {(selectedOperators.length > 0 || selectedTypes.length > 0) && (
                         <button 
-                            onClick={() => { setSelectedOperators([]); setSelectedTypes([]); }}
-                            className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors flex items-center gap-1.5 px-3 py-2 hover:bg-rose-500/10 rounded-xl"
+                            onClick={handleClearFilters}
+                            className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors flex items-center gap-1.5 px-4 py-2.5 hover:bg-rose-500/10 rounded-xl border border-transparent hover:border-rose-500/20"
                         >
                             <X size={14} />
-                            Limpiar Filtros
+                            Restablecer
                         </button>
                     )}
                   </div>
