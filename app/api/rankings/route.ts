@@ -112,11 +112,13 @@ export async function GET(req: Request) {
     const prodByOperator: Record<string, number> = {};
     const prodByPalletizer: Record<string, number> = {};
 
+    let prodRecordCount = 0;
     rowsCabecera.forEach(row => {
         const d = parseSheetDate(getVal(row, "FECHA"));
         if (!d || d < productionFilterDate) return;
         if (d < startDate || d > endDate) return;
 
+        prodRecordCount++;
         const tn = parseNumber(getVal(row, "tn_totales_turno"));
         const maquinistaId = String(getVal(row, "maquinista") || "").trim();
         const palletizer = String(getVal(row, "descripcion_paletizadora") || "Desconocida").trim();
@@ -207,7 +209,8 @@ export async function GET(req: Request) {
                 totalTN: totalProdTN,
                 topOperator: prodRankings.byOperator[0]?.name || "N/A",
                 topPalletizer: prodRankings.byPalletizer[0]?.name || "N/A",
-                avgTN: prodRankings.byOperator.length ? totalProdTN / prodRankings.byOperator.length : 0
+                avgTN: prodRankings.byOperator.length ? totalProdTN / prodRankings.byOperator.length : 0,
+                recordCount: prodRecordCount
             },
             downtime: {
                 totalDuration: totalDownDuration,

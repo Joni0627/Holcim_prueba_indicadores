@@ -93,9 +93,9 @@ function LeaderboardItem({ rank, name, value, max, unit, percentage, colorClass 
   );
 }
 
-function ContextItem({ label, value }: { label: string; value: string }) {
+function ContextItem({ label, value, className = "" }: { label: string; value: string, className?: string }) {
     return (
-        <div className="flex items-center gap-3 min-w-0 flex-1 sm:flex-none max-w-full sm:max-w-[400px]">
+        <div className={`flex items-center gap-3 min-w-0 ${className}`}>
             <span className="text-slate-500 font-black uppercase text-[10px] shrink-0 tracking-[0.1em] font-mono whitespace-nowrap">{label}:</span>
             <span className="text-slate-200 font-bold truncate cursor-help border-b border-dashed border-slate-700/50 pb-0.5 hover:text-white transition-colors" title={value}>
                 {value}
@@ -106,6 +106,16 @@ function ContextItem({ label, value }: { label: string; value: string }) {
 
 function Separator() {
     return <span className="hidden xl:block text-slate-700 font-thin select-none">|</span>;
+}
+
+function getPeriodText(start: Date, end: Date) {
+    const diff = Math.abs(end.getTime() - start.getTime());
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    
+    if (days <= 1) return "Hoy";
+    if (days <= 7) return "Últimos 7 días";
+    if (days <= 31) return "Mes actual";
+    return `${days} días filtrados`;
 }
 
 export function RankingsView() {
@@ -322,12 +332,38 @@ export function RankingsView() {
               exit={{ opacity: 0, x: 20 }}
               className="space-y-8"
             >
-              {/* Summary Production Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <KPICard title="Total Producido" value={`${Math.round(data.summary.production.totalTN).toLocaleString()} TN`} icon={BarChart3} />
-                 <KPICard title="Maquinista Estrella" value={data.summary.production.topOperator} subtext="Máximo volumen individual" icon={Users} />
-                 <KPICard title="Línea Líder" value={data.summary.production.topPalletizer} subtext="Paletizadora más eficiente" icon={Box} />
-                 <KPICard title="Promedio TN" value={`${Math.round(data.summary.production.avgTN).toLocaleString()} TN`} subtext="Por maquinista registrado" icon={TrendingUp} />
+              {/* Production Consolidated Executive Header */}
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-[2.5rem] p-8 backdrop-blur-md shadow-xl overflow-hidden">
+                  <div className="flex flex-col md:flex-row gap-12 mb-8 items-start md:items-center">
+                    <div className="flex items-baseline gap-3">
+                        <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
+                            {Math.round(data.summary.production.totalTN).toLocaleString()}
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] leading-none">Toneladas</span>
+                          <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Carga Total</span>
+                        </div>
+                    </div>
+                    <div className="w-px h-12 bg-slate-700/30 hidden md:block" />
+                    <div className="flex items-baseline gap-3">
+                        <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
+                            {Math.round(data.summary.production.avgTN).toLocaleString()}
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] leading-none">Toneladas</span>
+                          <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Promedio TN</span>
+                        </div>
+                    </div>
+                  </div>
+                  
+                  <div className="h-px bg-slate-700/30 mb-6" />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <ContextItem label="Maquinista estrella" value={data.summary.production.topOperator} />
+                    <ContextItem label="Línea líder" value={data.summary.production.topPalletizer} />
+                    <ContextItem label="Período" value={getPeriodText(dateRange.start, dateRange.end)} />
+                    <ContextItem label="Registros" value={String((data.summary.production as any).recordCount || 0)} />
+                  </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -434,14 +470,15 @@ export function RankingsView() {
                   
                   <div className="h-px bg-slate-700/30 mb-6" />
 
-                  <div className="flex flex-wrap items-center gap-y-4 gap-x-8">
-                    <ContextItem label="Causa principal" value={data.summary.downtime.mostFreqCause} />
-                    <Separator />
-                    <ContextItem label="HAC crítico" value={data.summary.downtime.mostFreqEquipment} />
-                    <Separator />
-                    <ContextItem label="Reporte máximo" value={data.summary.downtime.topOperator} />
-                    <Separator />
-                    <ContextItem label="Línea crítica" value={data.summary.downtime.topMachine} />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-y-6 gap-x-12">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <ContextItem label="Causa principal" value={data.summary.downtime.mostFreqCause} />
+                        <ContextItem label="HAC crítico" value={data.summary.downtime.mostFreqEquipment} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <ContextItem label="Reporte máximo" value={data.summary.downtime.topOperator} />
+                        <ContextItem label="Línea crítica" value={data.summary.downtime.topMachine} />
+                    </div>
                   </div>
                </div>
 
