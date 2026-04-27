@@ -446,7 +446,7 @@ export function RankingsView() {
             >
                {/* Downtime Consolidated Executive Header */}
                <div className="bg-slate-800/40 border border-slate-700/50 rounded-[2.5rem] p-8 backdrop-blur-md shadow-xl overflow-hidden">
-                  <div className="flex flex-col md:flex-row gap-12 mb-8 items-start md:items-center">
+                  <div className="flex flex-col xl:flex-row gap-12 mb-8 items-start xl:items-center">
                     <div className="flex items-baseline gap-3">
                         <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
                             {(data.summary.downtime.totalDuration / 60).toFixed(1)}h
@@ -456,7 +456,7 @@ export function RankingsView() {
                           <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">De Paro</span>
                         </div>
                     </div>
-                    <div className="w-px h-12 bg-slate-700/30 hidden md:block" />
+                    <div className="w-px h-12 bg-slate-700/30 hidden xl:block" />
                     <div className="flex items-baseline gap-3">
                         <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
                             {data.summary.downtime.totalCount}
@@ -466,19 +466,24 @@ export function RankingsView() {
                           <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Registradas</span>
                         </div>
                     </div>
+                    <div className="w-px h-12 bg-slate-700/30 hidden xl:block" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4 flex-1">
+                        <div className="flex flex-col">
+                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Reporte Máximo</span>
+                            <span className="text-xl font-black text-slate-200 truncate" title={data.summary.downtime.topOperator}>{data.summary.downtime.topOperator}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Línea Crítica</span>
+                            <span className="text-xl font-black text-slate-200 truncate" title={data.summary.downtime.topMachine}>{data.summary.downtime.topMachine}</span>
+                        </div>
+                    </div>
                   </div>
                   
                   <div className="h-px bg-slate-700/30 mb-6" />
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-y-6 gap-x-12">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <ContextItem label="Causa principal" value={data.summary.downtime.mostFreqCause} />
-                        <ContextItem label="HAC crítico" value={data.summary.downtime.mostFreqEquipment} />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <ContextItem label="Reporte máximo" value={data.summary.downtime.topOperator} />
-                        <ContextItem label="Línea crítica" value={data.summary.downtime.topMachine} />
-                    </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <ContextItem label="Causa principal" value={data.summary.downtime.mostFreqCause} className="!max-w-none" />
+                    <ContextItem label="HAC crítico" value={data.summary.downtime.mostFreqEquipment} className="!max-w-none" />
                   </div>
                </div>
 
