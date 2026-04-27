@@ -108,44 +108,44 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
   };
 
   return (
-    <div className="relative z-[60] max-w-full" ref={wrapperRef}>
-      <div className="flex items-center gap-1 sm:gap-2 bg-white/5 p-1 rounded-lg border border-white/10 shadow-xl overflow-x-auto no-scrollbar backdrop-blur-sm">
+    <div className="relative z-[60] w-full" ref={wrapperRef}>
+      <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-950/80 rounded-[1.25rem] border border-slate-800/80 shadow-inner overflow-hidden">
         <button
           onClick={() => handlePresetClick('today')}
-          className={`px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
+          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'today' 
-              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
           }`}
         >
           Hoy
         </button>
         <button
           onClick={() => handlePresetClick('yesterday')}
-          className={`px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
+          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'yesterday' 
-              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
           }`}
         >
           Ayer
         </button>
         <button
           onClick={() => handlePresetClick('week')}
-          className={`hidden sm:block px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
+          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'week' 
-              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
           }`}
         >
-          7 Días
+          7D
         </button>
         <button
           onClick={() => handlePresetClick('month')}
-          className={`px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
+          className={`flex-1 min-w-[45px] px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'month' 
-              ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)]' 
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
           }`}
         >
           Mes
@@ -153,15 +153,14 @@ export const DateFilter: React.FC<DateFilterProps> = ({ onFilterChange, defaultF
         
         <button 
           onClick={() => setShowCustomRange(!showCustomRange)}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm font-black uppercase tracking-widest rounded-md transition-all ${
+          className={`flex-1 min-w-[70px] flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${
             activeFilter === 'custom' || showCustomRange
-            ? 'bg-indigo-600 text-white shadow-[0_0_12px_rgba(79,70,229,0.4)] ring-1 ring-white/20' 
-            : 'text-slate-400 hover:text-white hover:bg-white/5'
+            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' 
+            : 'text-slate-500 hover:text-white hover:bg-white/5'
           }`}
         >
-          {activeFilter === 'custom' && <Check size={14} className="text-emerald-400" />}
-          <span>{activeFilter === 'custom' ? formatDateDisplay() : 'Rango'}</span>
-          <ChevronDown size={12} className={`transition-transform duration-200 ${showCustomRange ? 'rotate-180' : ''}`} />
+          <span className="truncate">{activeFilter === 'custom' ? formatDateDisplay() : 'Rango'}</span>
+          <ChevronDown size={10} className={`shrink-0 transition-transform duration-200 ${showCustomRange ? 'rotate-180' : ''}`} />
         </button>
       </div>
 

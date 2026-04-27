@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchRankings, fetchDowntimes } from '../../services/sheetService';
 import { DateFilter } from '../DateFilter';
-import { Trophy, Clock, AlertTriangle, Users, Box, Hammer, Settings2, BarChart3, TrendingUp, Hash, Percent, ChevronRight, X, Calendar, Search } from 'lucide-react';
+import { Trophy, Clock, AlertTriangle, Users, Box, Hammer, Settings2, BarChart3, TrendingUp, Hash, Percent, ChevronRight, ChevronDown, X, Check, Calendar, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type RankingType = 'production' | 'downtime';
@@ -125,24 +125,30 @@ function MultiSelectFilter({
     
     const toggleOption = (option: string) => {
         if (selected.includes(option)) {
-            onChange(selected.filter(o => o !== option));
+            const next = selected.filter(o => o !== option);
+            onChange(next);
         } else {
             onChange([...selected, option]);
         }
     };
 
+    const isAllSelected = selected.length === 0;
+
     return (
         <div className="relative">
             <button 
                 onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-sm min-w-[160px] justify-between ${
                     selected.length > 0 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                    : 'bg-slate-900/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' 
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
                 }`}
             >
-                <Icon size={14} />
-                <span>{selected.length === 0 ? `Todos (${label})` : `${selected.length} ${label}`}</span>
+                <div className="flex items-center gap-2">
+                    <Icon size={14} className={selected.length > 0 ? "text-emerald-400" : "text-slate-500"} />
+                    <span>{selected.length === 0 ? `Todos (${label})` : `${selected.length} Sel.`}</span>
+                </div>
+                <ChevronDown size={12} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             
             <AnimatePresence>
@@ -153,31 +159,61 @@ function MultiSelectFilter({
                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[70] p-4 max-h-80 overflow-y-auto"
+                            className="absolute left-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[70] p-4 flex flex-col max-h-[400px]"
                         >
-                            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800 shrink-0">
                                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
                                 {selected.length > 0 && (
-                                    <button onClick={() => onChange([])} className="text-[10px] font-black text-emerald-500 uppercase hover:text-emerald-400">Limpiar</button>
+                                    <button 
+                                        onClick={() => { onChange([]); setIsOpen(false); }} 
+                                        className="text-[10px] font-black text-emerald-500 uppercase hover:text-emerald-400 transition-colors"
+                                    >
+                                        Restablecer
+                                    </button>
                                 )}
                             </div>
-                            <div className="space-y-1">
+                            
+                            <div className="overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                                <div 
+                                    onClick={() => { onChange([]); setIsOpen(false); }}
+                                    className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between group ${
+                                        isAllSelected 
+                                        ? 'bg-white/5 text-white' 
+                                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                                    }`}
+                                >
+                                    <span>Ver Todos</span>
+                                    {isAllSelected && <Check size={14} className="text-emerald-500" />}
+                                </div>
+                                
+                                <div className="h-px bg-slate-800/50 my-2" />
+
                                 {options.length === 0 ? (
                                     <p className="text-slate-600 text-[10px] text-center py-4">No hay opciones disponibles</p>
-                                ) : options.map(opt => (
-                                    <div 
-                                        key={opt}
-                                        onClick={() => toggleOption(opt)}
-                                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
-                                            selected.includes(opt) 
-                                            ? 'bg-emerald-500/20 text-emerald-400' 
-                                            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                                        }`}
-                                    >
-                                        <span className="truncate">{opt}</span>
-                                        {selected.includes(opt) && <X size={12} />}
-                                    </div>
-                                ))}
+                                ) : options.map(opt => {
+                                    const isSelected = selected.includes(opt);
+                                    return (
+                                        <div 
+                                            key={opt}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleOption(opt);
+                                            }}
+                                            className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between group ${
+                                                isSelected 
+                                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                                            }`}
+                                        >
+                                            <span className="truncate max-w-[180px]">{opt}</span>
+                                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                                isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-slate-700 group-hover:border-slate-500'
+                                            }`}>
+                                                {isSelected && <Check size={12} className="text-slate-900" strokeWidth={3} />}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </motion.div>
                     </>
@@ -351,43 +387,46 @@ export function RankingsView() {
       </AnimatePresence>
 
       {/* Main View Header */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-slate-900/30 p-6 rounded-[3rem] border border-slate-800/50">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-slate-900/30 p-6 sm:p-8 rounded-[3rem] border border-slate-800/50">
         <div>
           <h1 className="text-4xl font-black text-white tracking-tighter flex items-center gap-4">
-            <div className="bg-emerald-500/10 p-2.5 rounded-2xl border border-emerald-500/20">
+            <div className="bg-emerald-500/10 p-2.5 rounded-2xl border border-emerald-500/20 shadow-lg">
                 <Trophy className="text-emerald-400" size={32} />
             </div>
-            RANKINGS <span className="text-emerald-500">OPERATIVOS</span>
+            RANKINGS <span className="text-emerald-500 italic">OPERATIVOS</span>
           </h1>
           <p className="text-slate-400 mt-2 uppercase tracking-[0.3em] text-[10px] font-black opacity-60 pl-1">Inteligencia de Planta & Desempeño Ejecutivo</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="flex p-1.5 bg-slate-950/80 rounded-[1.5rem] border border-slate-800 w-full sm:w-auto shadow-2xl">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center w-full xl:w-auto">
+            {/* View Switcher */}
+            <div className="flex p-1 bg-slate-950/80 rounded-[1.5rem] border border-slate-800 shadow-2xl shrink-0">
                 <button
                     onClick={() => setRankingType('production')}
-                    className={`flex-1 sm:flex-none px-8 py-3 rounded-2xl text-xs font-black transition-all duration-300 flex items-center gap-2 justify-center ${
+                    className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 justify-center ${
                     rankingType === 'production' 
                         ? 'bg-emerald-600 text-white shadow-[0_8px_20px_-6px_rgba(16,185,129,0.5)] scale-[1.02]' 
                         : 'text-slate-500 hover:text-white hover:bg-slate-800/50'
                     }`}
                 >
-                    <Box size={14} />
-                    PRODUCCIÓN
+                    <Box size={12} />
+                    Producción
                 </button>
                 <button
                     onClick={() => setRankingType('downtime')}
-                    className={`flex-1 sm:flex-none px-8 py-3 rounded-2xl text-xs font-black transition-all duration-300 flex items-center gap-2 justify-center ${
+                    className={`flex-1 md:flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 justify-center ${
                     rankingType === 'downtime' 
                         ? 'bg-emerald-600 text-white shadow-[0_8px_20px_-6px_rgba(16,185,129,0.5)] scale-[1.02]' 
                         : 'text-slate-500 hover:text-white hover:bg-slate-800/50'
                     }`}
                 >
-                    <Clock size={14} />
-                    PAROS
+                    <Clock size={12} />
+                    Paros
                 </button>
             </div>
-            <div className="w-full sm:w-80">
+
+            {/* Date Filter Container */}
+            <div className="flex-1 md:min-w-[420px] max-w-full">
                 <DateFilter 
                     onFilterChange={(range) => setDateRange(range)} 
                     defaultFilter="month" 
