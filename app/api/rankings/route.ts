@@ -194,6 +194,13 @@ export async function GET(req: Request) {
     const totalDownDuration = downRankings.byOperator.reduce((acc, curr) => acc + curr.duration, 0);
     const totalDownCount = downRankings.byOperator.reduce((acc, curr) => acc + curr.count, 0);
 
+    const sortedByCount = {
+        byCause: [...downRankings.byCause].sort((a,b) => b.count - a.count),
+        byEquipment: [...downRankings.byEquipment].sort((a,b) => b.count - a.count),
+        byOperator: [...downRankings.byOperator].sort((a,b) => b.count - a.count),
+        byMachine: [...downRankings.byMachine].sort((a,b) => b.count - a.count),
+    };
+
     const result = {
         summary: {
             production: {
@@ -205,10 +212,10 @@ export async function GET(req: Request) {
             downtime: {
                 totalDuration: totalDownDuration,
                 totalCount: totalDownCount,
-                mostFreqCause: downRankings.byCause[0]?.name || "N/A",
-                mostFreqEquipment: downRankings.byEquipment[0]?.name || "N/A",
-                topOperator: downRankings.byOperator[0]?.name || "N/A",
-                topMachine: downRankings.byMachine[0]?.name || "N/A"
+                mostFreqCause: sortedByCount.byCause[0]?.name || "N/A",
+                mostFreqEquipment: sortedByCount.byEquipment[0]?.name || "N/A",
+                topOperator: sortedByCount.byOperator[0]?.name || "N/A",
+                topMachine: sortedByCount.byMachine[0]?.name || "N/A"
             }
         },
         productionRankings: prodRankings,

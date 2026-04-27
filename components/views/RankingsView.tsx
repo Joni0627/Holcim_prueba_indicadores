@@ -20,15 +20,19 @@ interface KPICardProps {
 
 function KPICard({ title, value, subtext, icon: Icon, className = "" }: KPICardProps) {
   return (
-    <div className={`bg-slate-900/40 border border-slate-800/60 p-5 rounded-3xl backdrop-blur-sm ${className}`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{title}</p>
-          <h4 className="text-2xl font-black text-white tracking-tight">{value}</h4>
-          {subtext && <p className="text-slate-500 text-[10px] mt-1 font-medium italic">{subtext}</p>}
+    <div className={`bg-slate-800/40 border border-slate-700/50 p-5 rounded-3xl backdrop-blur-sm hover:bg-slate-800/60 transition-colors ${className}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2 truncate" title={title}>{title}</p>
+          <h4 className="text-2xl font-black text-white tracking-tight truncate" title={String(value)}>{value}</h4>
+          {subtext && (
+            <p className="text-slate-500 text-[10px] mt-2 font-bold italic truncate" title={subtext}>
+              {subtext}
+            </p>
+          )}
         </div>
-        <div className="p-2.5 bg-slate-800/80 rounded-2xl text-slate-300">
-          <Icon size={18} />
+        <div className="p-3 bg-slate-900/60 rounded-2xl text-slate-400 shrink-0 border border-slate-700/30">
+          <Icon size={20} />
         </div>
       </div>
     </div>
@@ -305,10 +309,10 @@ export function RankingsView() {
             >
               {/* Summary Production Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <KPICard title="Total Producido" value={`${data.summary.production.totalTN.toLocaleString()} TN`} icon={BarChart3} />
+                 <KPICard title="Total Producido" value={`${Math.round(data.summary.production.totalTN).toLocaleString()} TN`} icon={BarChart3} />
                  <KPICard title="Maquinista Estrella" value={data.summary.production.topOperator} subtext="Máximo volumen individual" icon={Users} />
                  <KPICard title="Línea Líder" value={data.summary.production.topPalletizer} subtext="Paletizadora más eficiente" icon={Box} />
-                 <KPICard title="Promedio TN" value={`${data.summary.production.avgTN.toLocaleString(undefined, { maximumFractionDigits: 1 })} TN`} subtext="Por maquinista registrado" icon={TrendingUp} />
+                 <KPICard title="Promedio TN" value={`${Math.round(data.summary.production.avgTN).toLocaleString()} TN`} subtext="Por maquinista registrado" icon={TrendingUp} />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -331,7 +335,7 @@ export function RankingsView() {
                                 key={item.name}
                                 rank={idx + 1}
                                 name={item.name}
-                                value={item.value}
+                                value={Math.round(item.value)}
                                 max={getMaxValue(data.productionRankings.byOperator, 'value')}
                                 unit="TN"
                                 colorClass="bg-emerald-500"
@@ -359,7 +363,7 @@ export function RankingsView() {
                                 key={item.name}
                                 rank={idx + 1}
                                 name={item.name}
-                                value={item.value}
+                                value={Math.round(item.value)}
                                 max={getMaxValue(data.productionRankings.byPalletizer, 'value')}
                                 unit="TN"
                                 percentage={(item.value / data.summary.production.totalTN) * 100}
@@ -391,9 +395,10 @@ export function RankingsView() {
             >
                {/* Downtime KPI Cards */}
                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                  <KPICard title="Horas Paro" value={`${(data.summary.downtime.totalDuration / 60).toFixed(1)}h`} subtext={`${data.summary.downtime.totalDuration} minutos totales`} icon={Clock} />
-                  <KPICard title="Incidencias" value={data.summary.downtime.totalCount} subtext="Paros registrados en período" icon={Hash} />
-                  <KPICard title="Causa Principal" value={data.summary.downtime.mostFreqCause} icon={AlertTriangle} className="xl:col-span-2 truncate" />
+                  <KPICard title="Horas Paro" value={`${(data.summary.downtime.totalDuration / 60).toFixed(1)}h`} icon={Clock} />
+                  <KPICard title="Incidencias" value={data.summary.downtime.totalCount} subtext="Paros registrados" icon={Hash} />
+                  <KPICard title="Causa Principal" value={data.summary.downtime.mostFreqCause} icon={AlertTriangle} />
+                  <KPICard title="HAC Crítico" value={data.summary.downtime.mostFreqEquipment} icon={Hammer} />
                   <KPICard title="Reporte Máximo" value={data.summary.downtime.topOperator} icon={Users} />
                   <KPICard title="Línea Crítica" value={data.summary.downtime.topMachine} icon={Settings2} />
                </div>
@@ -429,14 +434,16 @@ export function RankingsView() {
                         <h4 className="text-xs font-black text-white uppercase tracking-widest">Top Causas</h4>
                      </div>
                      <div className="space-y-1">
-                        {data.downtimeRankings.byCause.slice(0, 5).map((item, idx) => (
+                        {[...data.downtimeRankings.byCause]
+                            .sort((a,b) => b[downtimeMetric] - a[downtimeMetric])
+                            .slice(0, 5).map((item, idx) => (
                             <LeaderboardItem 
                                 key={idx}
                                 rank={idx + 1}
                                 name={item.name}
                                 value={item[downtimeMetric]}
                                 max={getMaxValue(data.downtimeRankings.byCause, downtimeMetric)}
-                                unit={downtimeMetric === 'duration' ? 'min' : 'p'}
+                                unit={downtimeMetric === 'duration' ? 'min' : 'inc'}
                                 colorClass="bg-amber-500"
                                 onClick={() => setDrillDown({ type: 'cause', value: item.name })}
                             />
@@ -453,14 +460,16 @@ export function RankingsView() {
                         <h4 className="text-xs font-black text-white uppercase tracking-widest">Fallas HAC</h4>
                      </div>
                      <div className="space-y-1">
-                        {data.downtimeRankings.byEquipment.slice(0, 5).map((item, idx) => (
+                        {[...data.downtimeRankings.byEquipment]
+                            .sort((a,b) => b[downtimeMetric] - a[downtimeMetric])
+                            .slice(0, 5).map((item, idx) => (
                             <LeaderboardItem 
                                 key={idx}
                                 rank={idx + 1}
                                 name={item.name}
                                 value={item[downtimeMetric]}
                                 max={getMaxValue(data.downtimeRankings.byEquipment, downtimeMetric)}
-                                unit={downtimeMetric === 'duration' ? 'min' : 'p'}
+                                unit={downtimeMetric === 'duration' ? 'min' : 'inc'}
                                 colorClass="bg-rose-500"
                                 onClick={() => setDrillDown({ type: 'equipment', value: item.name })}
                             />
@@ -477,14 +486,16 @@ export function RankingsView() {
                         <h4 className="text-xs font-black text-white uppercase tracking-widest">Reportes Maquinistas</h4>
                      </div>
                      <div className="space-y-1">
-                        {data.downtimeRankings.byOperator.slice(0, 5).map((item, idx) => (
+                        {[...data.downtimeRankings.byOperator]
+                            .sort((a,b) => b[downtimeMetric] - a[downtimeMetric])
+                            .slice(0, 5).map((item, idx) => (
                             <LeaderboardItem 
                                 key={idx}
                                 rank={idx + 1}
                                 name={item.name}
                                 value={item[downtimeMetric]}
                                 max={getMaxValue(data.downtimeRankings.byOperator, downtimeMetric)}
-                                unit={downtimeMetric === 'duration' ? 'min' : 'p'}
+                                unit={downtimeMetric === 'duration' ? 'min' : 'inc'}
                                 colorClass="bg-violet-500"
                                 onClick={() => setDrillDown({ type: 'operator', value: item.name })}
                             />
@@ -501,14 +512,16 @@ export function RankingsView() {
                         <h4 className="text-xs font-black text-white uppercase tracking-widest">Líneas Afectadas</h4>
                      </div>
                      <div className="space-y-1">
-                        {data.downtimeRankings.byMachine.slice(0, 5).map((item, idx) => (
+                        {[...data.downtimeRankings.byMachine]
+                            .sort((a,b) => b[downtimeMetric] - a[downtimeMetric])
+                            .slice(0, 5).map((item, idx) => (
                             <LeaderboardItem 
                                 key={idx}
                                 rank={idx + 1}
                                 name={item.name}
                                 value={item[downtimeMetric]}
                                 max={getMaxValue(data.downtimeRankings.byMachine, downtimeMetric)}
-                                unit={downtimeMetric === 'duration' ? 'min' : 'p'}
+                                unit={downtimeMetric === 'duration' ? 'min' : 'inc'}
                                 colorClass="bg-blue-500"
                                 onClick={() => setDrillDown({ type: 'machine', value: item.name })}
                             />
@@ -565,12 +578,13 @@ function CombineIcon({ className, size }: { className: string, size: number }) {
     )
 }
 
-function CombineSection({ title, data, metric, icon: Icon, color }: any) {
+function CombineSection({ title, data: rawData, metric, icon: Icon, color }: any) {
+    const data = [...rawData].sort((a,b) => b[metric] - a[metric]);
     const maxVal = Math.max(...data.map((i: any) => i[metric])) || 1;
     return (
-        <div className="bg-slate-900/20 border border-slate-800/40 rounded-[3rem] p-8 hover:bg-slate-900/40 transition-all group shadow-lg hover:shadow-black/20">
+        <div className="bg-slate-800/20 border border-slate-700/40 rounded-[3rem] p-8 hover:bg-slate-800/40 transition-all group shadow-lg hover:shadow-black/20">
             <div className="flex items-center gap-4 mb-8">
-                <div className="p-3 bg-slate-800/80 rounded-2xl text-slate-400 group-hover:text-white transition-all group-hover:scale-110">
+                <div className="p-3 bg-slate-900/80 rounded-2xl text-slate-400 group-hover:text-white transition-all group-hover:scale-110 border border-slate-700/30">
                     <Icon size={20} />
                 </div>
                 <h4 className="text-xl font-black text-white tracking-tight">{title}</h4>
@@ -583,15 +597,11 @@ function CombineSection({ title, data, metric, icon: Icon, color }: any) {
                         name={item.name}
                         value={item[metric]}
                         max={maxVal}
-                        unit={metric === 'duration' ? 'min' : 'p'}
+                        unit={metric === 'duration' ? 'min' : 'inc'}
                         colorClass={color}
                     />
                 ))}
             </div>
-            <button className="mt-8 w-full py-4 rounded-2xl border border-slate-800/60 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-800/80 hover:text-white hover:border-slate-700 transition-all flex items-center justify-center gap-2 group/btn">
-                Explorar Correlación Completa
-                <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-            </button>
         </div>
     )
 }
