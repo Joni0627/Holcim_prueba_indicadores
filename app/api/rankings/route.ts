@@ -172,23 +172,47 @@ export async function GET(req: Request) {
     const formatRank = (map: any) => Object.entries(map).map(([name, val]: [string, any]) => ({ name, ...val }));
     const formatProdRank = (map: any) => Object.entries(map).map(([name, value]: [string, any]) => ({ name, value }));
 
-    const result = {
-        productionRankings: {
-            byOperator: formatProdRank(prodByOperator).sort((a,b) => b.value - a.value),
-            byPalletizer: formatProdRank(prodByPalletizer).sort((a,b) => b.value - a.value),
-        },
-        downtimeRankings: {
-            byOperator: formatRank(parosByOperator).sort((a,b) => b.duration - a.duration),
-            byMachine: formatRank(parosByMachine).sort((a,b) => b.duration - a.duration),
-            byCause: formatRank(parosByCause).sort((a,b) => b.duration - a.duration),
-            byEquipment: formatRank(parosByEquipment).sort((a,b) => b.duration - a.duration),
-            combinations: {
-                operatorMachine: formatRank(combOpMach).sort((a,b) => b.duration - a.duration),
-                machineCause: formatRank(combMachCause).sort((a,b) => b.duration - a.duration),
-                equipmentCause: formatRank(combEquipCause).sort((a,b) => b.duration - a.duration),
-                operatorEquipment: formatRank(combOpEquip).sort((a,b) => b.duration - a.duration),
-            }
+    const prodRankings = {
+        byOperator: formatProdRank(prodByOperator).sort((a,b) => b.value - a.value),
+        byPalletizer: formatProdRank(prodByPalletizer).sort((a,b) => b.value - a.value),
+    };
+
+    const downRankings = {
+        byOperator: formatRank(parosByOperator).sort((a,b) => b.duration - a.duration),
+        byMachine: formatRank(parosByMachine).sort((a,b) => b.duration - a.duration),
+        byCause: formatRank(parosByCause).sort((a,b) => b.duration - a.duration),
+        byEquipment: formatRank(parosByEquipment).sort((a,b) => b.duration - a.duration),
+        combinations: {
+            operatorMachine: formatRank(combOpMach).sort((a,b) => b.duration - a.duration),
+            machineCause: formatRank(combMachCause).sort((a,b) => b.duration - a.duration),
+            equipmentCause: formatRank(combEquipCause).sort((a,b) => b.duration - a.duration),
+            operatorEquipment: formatRank(combOpEquip).sort((a,b) => b.duration - a.duration),
         }
+    };
+
+    const totalProdTN = prodRankings.byOperator.reduce((acc, curr) => acc + curr.value, 0);
+    const totalDownDuration = downRankings.byOperator.reduce((acc, curr) => acc + curr.duration, 0);
+    const totalDownCount = downRankings.byOperator.reduce((acc, curr) => acc + curr.count, 0);
+
+    const result = {
+        summary: {
+            production: {
+                totalTN: totalProdTN,
+                topOperator: prodRankings.byOperator[0]?.name || "N/A",
+                topPalletizer: prodRankings.byPalletizer[0]?.name || "N/A",
+                avgTN: prodRankings.byOperator.length ? totalProdTN / prodRankings.byOperator.length : 0
+            },
+            downtime: {
+                totalDuration: totalDownDuration,
+                totalCount: totalDownCount,
+                mostFreqCause: downRankings.byCause[0]?.name || "N/A",
+                mostFreqEquipment: downRankings.byEquipment[0]?.name || "N/A",
+                topOperator: downRankings.byOperator[0]?.name || "N/A",
+                topMachine: downRankings.byMachine[0]?.name || "N/A"
+            }
+        },
+        productionRankings: prodRankings,
+        downtimeRankings: downRankings
     };
 
     cache.set(cacheKey, { data: result, timestamp: now });

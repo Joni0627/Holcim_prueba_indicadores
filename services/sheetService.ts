@@ -43,6 +43,7 @@ export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEv
         hacDetail: row.hacDetail,
         sapCause: row.sapCause,
         downtimeType: row.downtimeType,
+        operatorName: row.operatorName,
         
         timestamp: new Date().toISOString()
     }));

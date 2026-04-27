@@ -30,6 +30,7 @@ export interface DowntimeEvent {
   hacDetail: string; // DETALLE HAC
   downtimeType?: string; // TIPO PARO (Interno/Externo)
   sapCause?: string; // Mapped from 'CAUSA SAP'
+  operatorName?: string; // Mapped from 'USUARIO' join 'USUARIOS'
   
   timestamp: string; // ISO String for internal use
 }
@@ -120,6 +121,22 @@ export interface BreakageEvent {
 }
 
 export interface RankingData {
+  summary: {
+    production: {
+      totalTN: number;
+      topOperator: string;
+      topPalletizer: string;
+      avgTN: number;
+    };
+    downtime: {
+      totalDuration: number;
+      totalCount: number;
+      mostFreqCause: string;
+      mostFreqEquipment: string;
+      topOperator: string;
+      topMachine: string;
+    };
+  };
   productionRankings: {
     byOperator: { name: string; value: number }[];
     byPalletizer: { name: string; value: number }[];

@@ -98,9 +98,21 @@ export async function GET(req: Request) {
     await doc.loadInfo();
 
     const sheet = doc.sheetsByTitle["PARO DE MAQUINA"];
+    const sheetUsuarios = doc.sheetsByTitle["USUARIOS"];
+
     if (!sheet) return NextResponse.json([]);
 
-    const rows = await sheet.getRows();
+    const [rows, rowsUsuarios] = await Promise.all([
+      sheet.getRows(),
+      sheetUsuarios ? sheetUsuarios.getRows() : Promise.resolve([])
+    ]);
+
+    const usersByRed: Record<string, string> = {};
+    rowsUsuarios.forEach(u => {
+        const red = String(u.get("USUARIORED") || "").trim();
+        const desc = String(u.get("DESCRIPCIÓN USUARIO") || "").trim();
+        if (red) usersByRed[red] = desc;
+    });
 
     const filtrado = rows.filter((r) => {
       const rowDate = parseSheetDate(String(getVal(r, "FECHA")));
@@ -110,6 +122,7 @@ export async function GET(req: Request) {
     const resultados = filtrado.map((r) => {
       const inicioRaw = getVal(r, "INICIO") || "00:00:00";
       const duracionRaw = getVal(r, "DURACIÓN") || "0:00:00";
+      const userRed = String(getVal(r, "USUARIO") || "").trim();
       
       return {
         id: getVal(r, "IDPARO") || Math.random().toString(36).substr(2, 9),
@@ -119,9 +132,11 @@ export async function GET(req: Request) {
         startTime: formatTimeToHHmm(inicioRaw),
         durationMinutes: hmsToMinutes(duracionRaw),
         hac: getVal(r, "HAC"),
+        hacDetail: getVal(r, "DETALLE HAC"),
         reason: getVal(r, "TEXTO DE CAUSA"),
         sapCause: getVal(r, "CAUSA SAP"),
-        downtimeType: getVal(r, "TIPO PARO")
+        downtimeType: getVal(r, "TIPO PARO"),
+        operatorName: usersByRed[userRed] || userRed || "Desconocido"
       };
     });
 
