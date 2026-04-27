@@ -93,6 +93,21 @@ function LeaderboardItem({ rank, name, value, max, unit, percentage, colorClass 
   );
 }
 
+function ContextItem({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-center gap-3 min-w-0 flex-1 sm:flex-none max-w-full sm:max-w-[400px]">
+            <span className="text-slate-500 font-black uppercase text-[10px] shrink-0 tracking-[0.1em] font-mono whitespace-nowrap">{label}:</span>
+            <span className="text-slate-200 font-bold truncate cursor-help border-b border-dashed border-slate-700/50 pb-0.5 hover:text-white transition-colors" title={value}>
+                {value}
+            </span>
+        </div>
+    );
+}
+
+function Separator() {
+    return <span className="hidden xl:block text-slate-700 font-thin select-none">|</span>;
+}
+
 export function RankingsView() {
   const [dateRange, setDateRange] = useState({
     start: new Date(new Date().setDate(new Date().getDate() - 30)),
@@ -393,14 +408,41 @@ export function RankingsView() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-8"
             >
-               {/* Downtime KPI Cards */}
-               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                  <KPICard title="Horas Paro" value={`${(data.summary.downtime.totalDuration / 60).toFixed(1)}h`} icon={Clock} />
-                  <KPICard title="Incidencias" value={data.summary.downtime.totalCount} subtext="Paros registrados" icon={Hash} />
-                  <KPICard title="Causa Principal" value={data.summary.downtime.mostFreqCause} icon={AlertTriangle} />
-                  <KPICard title="HAC Crítico" value={data.summary.downtime.mostFreqEquipment} icon={Hammer} />
-                  <KPICard title="Reporte Máximo" value={data.summary.downtime.topOperator} icon={Users} />
-                  <KPICard title="Línea Crítica" value={data.summary.downtime.topMachine} icon={Settings2} />
+               {/* Downtime Consolidated Executive Header */}
+               <div className="bg-slate-800/40 border border-slate-700/50 rounded-[2.5rem] p-8 backdrop-blur-md shadow-xl overflow-hidden">
+                  <div className="flex flex-col md:flex-row gap-12 mb-8 items-start md:items-center">
+                    <div className="flex items-baseline gap-3">
+                        <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
+                            {(data.summary.downtime.totalDuration / 60).toFixed(1)}h
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] leading-none">Horas</span>
+                          <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">De Paro</span>
+                        </div>
+                    </div>
+                    <div className="w-px h-12 bg-slate-700/30 hidden md:block" />
+                    <div className="flex items-baseline gap-3">
+                        <span className="text-6xl font-black text-white tracking-tighter shadow-sm">
+                            {data.summary.downtime.totalCount}
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] leading-none">Incidencias</span>
+                          <span className="text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">Registradas</span>
+                        </div>
+                    </div>
+                  </div>
+                  
+                  <div className="h-px bg-slate-700/30 mb-6" />
+
+                  <div className="flex flex-wrap items-center gap-y-4 gap-x-8">
+                    <ContextItem label="Causa principal" value={data.summary.downtime.mostFreqCause} />
+                    <Separator />
+                    <ContextItem label="HAC crítico" value={data.summary.downtime.mostFreqEquipment} />
+                    <Separator />
+                    <ContextItem label="Reporte máximo" value={data.summary.downtime.topOperator} />
+                    <Separator />
+                    <ContextItem label="Línea crítica" value={data.summary.downtime.topMachine} />
+                  </div>
                </div>
 
                <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-950/40 px-8 py-4 rounded-3xl border border-slate-800/60 w-fit backdrop-blur-md self-end ml-auto shadow-lg">
