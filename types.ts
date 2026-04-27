@@ -119,6 +119,25 @@ export interface BreakageEvent {
   count: number;
 }
 
+export interface RankingData {
+  productionRankings: {
+    byOperator: { name: string; value: number }[];
+    byPalletizer: { name: string; value: number }[];
+  };
+  downtimeRankings: {
+    byOperator: { name: string; duration: number; count: number }[];
+    byMachine: { name: string; duration: number; count: number }[];
+    byCause: { name: string; duration: number; count: number }[];
+    byEquipment: { name: string; duration: number; count: number }[];
+    combinations: {
+      operatorMachine: { name: string; duration: number; count: number }[];
+      machineCause: { name: string; duration: number; count: number }[];
+      equipmentCause: { name: string; duration: number; count: number }[];
+      operatorEquipment: { name: string; duration: number; count: number }[];
+    };
+  };
+}
+
 export interface DashboardState {
   selectedMachine: string | 'all';
   dateRange: 'shift' | 'day' | 'week';

@@ -10,10 +10,11 @@ import { PalletizerView } from '../components/views/PalletizerView';
 import { BreakageView } from '../components/views/BreakageView';
 import { DailyTimelineView } from '../components/views/DailyTimelineView';
 import { MonitorView } from '../components/views/MonitorView';
+import { RankingsView } from '../components/views/RankingsView';
 import { AdminPanel } from '../components/AdminPanel';
 import { useUser, UserButton, SignOutButton } from '@clerk/nextjs';
 
-type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline' | 'admin' | 'monitor';
+type ViewState = 'home' | 'stocks' | 'downtime' | 'palletizers' | 'breakage' | 'timeline' | 'admin' | 'monitor' | 'rankings';
 
 function App() {
   const [currentView, setCurrentView] = useState<ViewState>('home');
@@ -69,6 +70,7 @@ function App() {
     { id: 'home', label: 'Home', icon: Home },
     { id: 'stocks', label: 'Hoja Stocks', icon: Package },
     { id: 'timeline', label: 'Cronograma Diario', icon: Clock },
+    { id: 'rankings', label: 'Rankings', icon: BarChart3 },
     { id: 'monitor', label: 'Monitor de Planta', icon: LayoutDashboard },
     { id: 'downtime', label: 'Análisis Paros', icon: AlertCircle },
     { id: 'palletizers', label: 'Rendimiento Paletizadora', icon: Activity },
@@ -85,6 +87,7 @@ function App() {
       case 'downtime': return <DowntimeView />;
       case 'palletizers': return <PalletizerView />;
       case 'breakage': return <BreakageView />;
+      case 'rankings': return <RankingsView />;
       case 'monitor': return <MonitorView onBack={() => setCurrentView('home')} dateRange={dateRange} setDateRange={setDateRange} />;
       case 'admin': return canAccessAdmin ? <AdminPanel /> : <SummaryView dateRange={dateRange} setDateRange={setDateRange} />;
       default: return <SummaryView dateRange={dateRange} setDateRange={setDateRange} />;
