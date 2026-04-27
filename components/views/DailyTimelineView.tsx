@@ -1,10 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
-import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar, Box } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Clock, Loader2, Info, Activity, AlertTriangle, ChevronLeft, ChevronRight, Calendar, Box, RefreshCw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDowntimes, fetchProductionStats } from '../../services/sheetService';
 import { DowntimeEvent, ShiftMetric } from '../../types';
-import { DateFilter } from '../DateFilter';
 
 // CONFIGURACIÓN DE TURNOS EXACTA SEGÚN USUARIO
 const SHIFT_MAP = {
@@ -144,12 +143,7 @@ const TimelineBar: React.FC<{
 };
 
 export const DailyTimelineView: React.FC = () => {
-  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>({
-    start: new Date(),
-    end: new Date()
-  });
-
-  const selectedDay = useMemo(() => dateRange.start.toISOString().split('T')[0], [dateRange.start]);
+  const [selectedDay, setSelectedDay] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const { data: downtimes = [], isLoading: loadingDowntimes } = useQuery({
     queryKey: ['downtimes', selectedDay],
@@ -171,8 +165,14 @@ export const DailyTimelineView: React.FC = () => {
 
   const loading = loadingDowntimes || loadingProd;
 
-  const handleFilterChange = (range: { start: Date, end: Date }) => {
-    setDateRange(range);
+  const handleDayChange = (offset: number) => {
+    const d = new Date(selectedDay + "T12:00:00");
+    d.setDate(d.getDate() + offset);
+    setSelectedDay(d.toISOString().split('T')[0]);
+  };
+
+  const setToday = () => {
+    setSelectedDay(new Date().toISOString().split('T')[0]);
   };
 
   // Agrupamiento por Turno -> Máquina
@@ -222,7 +222,46 @@ export const DailyTimelineView: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-center w-full md:w-auto">
-          <DateFilter onFilterChange={handleFilterChange} />
+          <div className="flex items-center bg-slate-900/50 p-1 rounded-2xl border border-slate-700/30 shadow-inner backdrop-blur-md">
+            <button 
+              onClick={() => handleDayChange(-1)} 
+              className="p-2.5 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all active:scale-95"
+              title="Día anterior"
+            >
+                <ChevronLeft size={20} />
+            </button>
+            
+            <div className="flex items-center px-4 gap-3 border-x border-slate-800/50">
+              <div className="relative flex items-center group">
+                  <Calendar size={14} className="absolute left-0 text-emerald-500 group-hover:scale-110 transition-transform" />
+                  <input 
+                      type="date" 
+                      value={selectedDay}
+                      onChange={(e) => setSelectedDay(e.target.value)}
+                      className="bg-transparent border-none focus:ring-0 text-xs font-black text-white px-6 py-1 [color-scheme:dark] uppercase tracking-widest cursor-pointer"
+                  />
+              </div>
+              
+              <button 
+                onClick={setToday}
+                className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  selectedDay === new Date().toISOString().split('T')[0]
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40'
+                  : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                Hoy
+              </button>
+            </div>
+
+            <button 
+              onClick={() => handleDayChange(1)} 
+              className="p-2.5 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all active:scale-95"
+              title="Día siguiente"
+            >
+                <ChevronRight size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
