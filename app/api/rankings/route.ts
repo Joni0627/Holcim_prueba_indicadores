@@ -58,17 +58,22 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const startParam = searchParams.get("start"); 
     const endParam = searchParams.get("end");
+    const filterOpParam = searchParams.get("operators");
+    const filterTypeParam = searchParams.get("types");
 
     if (!startParam || !endParam) {
       return NextResponse.json({ error: "Missing date params" }, { status: 400 });
     }
 
-    const cacheKey = `rankings-${startParam}-${endParam}`;
+    const cacheKey = `rankings-${startParam}-${endParam}-${filterOpParam || 'all'}-${filterTypeParam || 'all'}`;
     const cachedEntry = cache.get(cacheKey);
     const now = Date.now();
     if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL)) {
        return NextResponse.json(cachedEntry.data);
     }
+
+    const filterOperators = filterOpParam ? filterOpParam.split(",").map(s => s.trim().toLowerCase()) : null;
+    const filterTypes = filterTypeParam ? filterTypeParam.split(",").map(s => s.trim().toLowerCase()) : null;
 
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
@@ -133,7 +138,12 @@ export async function GET(req: Request) {
     const parosByMachine: Record<string, { duration: number; count: number }> = {};
     const parosByCause: Record<string, { duration: number; count: number }> = {};
     const parosByEquipment: Record<string, { duration: number; count: number }> = {};
+    const parosByType: Record<string, { duration: number; count: number }> = {};
     
+    // Available options for UI filters (regardless of current filter selection, but within date range)
+    const availableOps = new Set<string>();
+    const availableTypes = new Set<string>();
+
     // Combinations
     const combOpMach: Record<string, { duration: number; count: number }> = {};
     const combMachCause: Record<string, { duration: number; count: number }> = {};
@@ -149,8 +159,17 @@ export async function GET(req: Request) {
         const userRed = String(getVal(row, "USUARIO") || "").trim();
         const cause = String(getVal(row, "TEXTO DE CAUSA") || "Sin Causa").trim();
         const equipment = String(getVal(row, "DETALLE HAC") || "Sin Detalle").trim();
+        const typeP = String(getVal(row, "TIPO PARO") || "Sin Tipo").trim();
 
         const operatorName = usersByRed[userRed] || userRed || "Desconocido";
+
+        // Track available options
+        availableOps.add(operatorName);
+        availableTypes.add(typeP);
+
+        // Apply filters
+        if (filterOperators && !filterOperators.includes(operatorName.toLowerCase())) return;
+        if (filterTypes && !filterTypes.includes(typeP.toLowerCase())) return;
 
         // Simple aggregations
         const update = (map: any, key: string) => {
@@ -163,6 +182,7 @@ export async function GET(req: Request) {
         update(parosByMachine, machine);
         update(parosByCause, cause);
         update(parosByEquipment, equipment);
+        update(parosByType, typeP);
 
         // Combination aggregations
         update(combOpMach, `${operatorName} @ ${machine}`);
@@ -184,6 +204,7 @@ export async function GET(req: Request) {
         byMachine: formatRank(parosByMachine).sort((a,b) => b.duration - a.duration),
         byCause: formatRank(parosByCause).sort((a,b) => b.duration - a.duration),
         byEquipment: formatRank(parosByEquipment).sort((a,b) => b.duration - a.duration),
+        byType: formatRank(parosByType).sort((a,b) => b.duration - a.duration),
         combinations: {
             operatorMachine: formatRank(combOpMach).sort((a,b) => b.duration - a.duration),
             machineCause: formatRank(combMachCause).sort((a,b) => b.duration - a.duration),
@@ -222,7 +243,11 @@ export async function GET(req: Request) {
             }
         },
         productionRankings: prodRankings,
-        downtimeRankings: downRankings
+        downtimeRankings: downRankings,
+        availableFilters: {
+            operators: Array.from(availableOps).sort(),
+            downtimeTypes: Array.from(availableTypes).sort()
+        }
     };
 
     cache.set(cacheKey, { data: result, timestamp: now });

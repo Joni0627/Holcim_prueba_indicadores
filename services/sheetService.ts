@@ -105,12 +105,20 @@ export const fetchStocks = async (start: Date, end: Date): Promise<StockStats | 
     }
 };
 
-export const fetchRankings = async (start: Date, end: Date): Promise<RankingData | null> => {
+export const fetchRankings = async (start: Date, end: Date, operators?: string[], types?: string[]): Promise<RankingData | null> => {
     try {
         const startStr = toLocalISO(start);
         const endStr = toLocalISO(end);
+        let url = `/api/rankings?start=${startStr}&end=${endStr}`;
+        
+        if (operators && operators.length > 0) {
+            url += `&operators=${encodeURIComponent(operators.join(','))}`;
+        }
+        if (types && types.length > 0) {
+            url += `&types=${encodeURIComponent(types.join(','))}`;
+        }
 
-        const res = await fetch(`/api/rankings?start=${startStr}&end=${endStr}`);
+        const res = await fetch(url);
         
         if (!res.ok) return null;
 

@@ -108,6 +108,85 @@ function Separator() {
     return <span className="hidden xl:block text-slate-700 font-thin select-none">|</span>;
 }
 
+function MultiSelectFilter({ 
+    label, 
+    options, 
+    selected, 
+    onChange, 
+    icon: Icon 
+}: { 
+    label: string, 
+    options: string[], 
+    selected: string[], 
+    onChange: (val: string[]) => void,
+    icon: any
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const toggleOption = (option: string) => {
+        if (selected.includes(option)) {
+            onChange(selected.filter(o => o !== option));
+        } else {
+            onChange([...selected, option]);
+        }
+    };
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${
+                    selected.length > 0 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                    : 'bg-slate-900/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                }`}
+            >
+                <Icon size={14} />
+                <span>{selected.length === 0 ? `Todos (${label})` : `${selected.length} ${label}`}</span>
+            </button>
+            
+            <AnimatePresence>
+                {isOpen && (
+                    <>
+                        <div className="fixed inset-0 z-[60]" onClick={() => setIsOpen(false)} />
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-[70] p-4 max-h-80 overflow-y-auto"
+                        >
+                            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+                                {selected.length > 0 && (
+                                    <button onClick={() => onChange([])} className="text-[10px] font-black text-emerald-500 uppercase hover:text-emerald-400">Limpiar</button>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                {options.length === 0 ? (
+                                    <p className="text-slate-600 text-[10px] text-center py-4">No hay opciones disponibles</p>
+                                ) : options.map(opt => (
+                                    <div 
+                                        key={opt}
+                                        onClick={() => toggleOption(opt)}
+                                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-between ${
+                                            selected.includes(opt) 
+                                            ? 'bg-emerald-500/20 text-emerald-400' 
+                                            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                                        }`}
+                                    >
+                                        <span className="truncate">{opt}</span>
+                                        {selected.includes(opt) && <X size={12} />}
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
 function getPeriodText(start: Date, end: Date) {
     const diff = Math.abs(end.getTime() - start.getTime());
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -126,10 +205,14 @@ export function RankingsView() {
   const [rankingType, setRankingType] = useState<RankingType>('production');
   const [downtimeMetric, setDowntimeMetric] = useState<'duration' | 'count'>('duration');
   const [drillDown, setDrillDown] = useState<DrillDownFilter>(null);
+  
+  // Downtime specific filters
+  const [selectedOperators, setSelectedOperators] = useState<string[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['rankings', dateRange.start, dateRange.end],
-    queryFn: () => fetchRankings(dateRange.start, dateRange.end),
+    queryKey: ['rankings', dateRange.start, dateRange.end, selectedOperators, selectedTypes],
+    queryFn: () => fetchRankings(dateRange.start, dateRange.end, selectedOperators, selectedTypes),
   });
 
   const { data: detailRecords, isLoading: isLoadingDetails } = useQuery({
@@ -481,24 +564,52 @@ export function RankingsView() {
                   </div>
                </div>
 
-               <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-950/40 px-8 py-4 rounded-3xl border border-slate-800/60 w-fit backdrop-blur-md self-end ml-auto shadow-lg">
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="text-emerald-500" size={14} />
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Criterio Global de Ranking:</span>
+               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-slate-950/40 px-8 py-4 rounded-[2.5rem] border border-slate-800/60 backdrop-blur-md shadow-lg">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <MultiSelectFilter 
+                        label="Maquinistas" 
+                        options={data.availableFilters?.operators || []} 
+                        selected={selectedOperators} 
+                        onChange={setSelectedOperators} 
+                        icon={Users} 
+                    />
+                    <MultiSelectFilter 
+                        label="Tipos" 
+                        options={data.availableFilters?.downtimeTypes || []} 
+                        selected={selectedTypes} 
+                        onChange={setSelectedTypes} 
+                        icon={Hash} 
+                    />
+                    {(selectedOperators.length > 0 || selectedTypes.length > 0) && (
+                        <button 
+                            onClick={() => { setSelectedOperators([]); setSelectedTypes([]); }}
+                            className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors flex items-center gap-1.5 px-3 py-2 hover:bg-rose-500/10 rounded-xl"
+                        >
+                            <X size={14} />
+                            Limpiar Filtros
+                        </button>
+                    )}
                   </div>
-                  <div className="flex p-1 bg-slate-900 rounded-[1.25rem] border border-slate-800/80 shadow-inner">
-                    <button 
-                        onClick={() => setDowntimeMetric('duration')}
-                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${downtimeMetric === 'duration' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                        Duración
-                    </button>
-                    <button 
-                        onClick={() => setDowntimeMetric('count')}
-                        className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${downtimeMetric === 'count' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                        Frecuencia
-                    </button>
+
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                        <TrendingUp className="text-emerald-500" size={14} />
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Ranking:</span>
+                    </div>
+                    <div className="flex p-1 bg-slate-900 rounded-[1.25rem] border border-slate-800/80 shadow-inner">
+                        <button 
+                            onClick={() => setDowntimeMetric('duration')}
+                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${downtimeMetric === 'duration' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Duración
+                        </button>
+                        <button 
+                            onClick={() => setDowntimeMetric('count')}
+                            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${downtimeMetric === 'count' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/40' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            Frecuencia
+                        </button>
+                    </div>
                   </div>
                </div>
 

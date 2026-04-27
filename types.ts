@@ -127,6 +127,7 @@ export interface RankingData {
       topOperator: string;
       topPalletizer: string;
       avgTN: number;
+      recordCount?: number;
     };
     downtime: {
       totalDuration: number;
@@ -146,12 +147,17 @@ export interface RankingData {
     byMachine: { name: string; duration: number; count: number }[];
     byCause: { name: string; duration: number; count: number }[];
     byEquipment: { name: string; duration: number; count: number }[];
+    byType?: { name: string; duration: number; count: number }[];
     combinations: {
       operatorMachine: { name: string; duration: number; count: number }[];
       machineCause: { name: string; duration: number; count: number }[];
       equipmentCause: { name: string; duration: number; count: number }[];
       operatorEquipment: { name: string; duration: number; count: number }[];
     };
+  };
+  availableFilters?: {
+    operators: string[];
+    downtimeTypes: string[];
   };
 }
 
