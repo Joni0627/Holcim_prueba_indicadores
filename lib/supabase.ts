@@ -1,7 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+let supabaseUrl = (process.env.SUPABASE_URL || "").trim();
+let supabaseKey = (process.env.SUPABASE_KEY || "").trim();
+
+// Clean quotes if any
+if (supabaseUrl.startsWith('"') && supabaseUrl.endsWith('"')) {
+    supabaseUrl = supabaseUrl.slice(1, -1).trim();
+} else if (supabaseUrl.startsWith("'") && supabaseUrl.endsWith("'")) {
+    supabaseUrl = supabaseUrl.slice(1, -1).trim();
+}
+
+if (supabaseKey.startsWith('"') && supabaseKey.endsWith('"')) {
+    supabaseKey = supabaseKey.slice(1, -1).trim();
+} else if (supabaseKey.startsWith("'") && supabaseKey.endsWith("'")) {
+    supabaseKey = supabaseKey.slice(1, -1).trim();
+}
 
 if (!supabaseUrl) {
     console.error("ERROR: SUPABASE_URL is missing in environment variables!");
