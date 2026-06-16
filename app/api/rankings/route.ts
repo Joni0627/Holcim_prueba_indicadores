@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { fetchAllRows, getSupabaseVal } from "../../../lib/supabase";
+import { fetchAllRows, getSupabaseVal, parseSheetDate } from "../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -23,27 +23,6 @@ function hmsToMinutes(hms: string | null | undefined): number {
   if (parts.length === 3) return Math.round(parts[0] * 60 + parts[1] + parts[2] / 60);
   if (parts.length === 2) return parts[0] * 60 + parts[1];
   return parseFloat(hms) || 0;
-}
-
-function parseSheetDate(dateStr: any): Date | null {
-  if (!dateStr) return null;
-  if (dateStr instanceof Date) return dateStr;
-  if (typeof dateStr === 'number') return new Date((dateStr - 25569) * 86400 * 1000);
-  if (typeof dateStr !== "string") return null;
-  
-  const cleaned = dateStr.trim();
-  let parts: string[] = [];
-  if (cleaned.includes("/")) parts = cleaned.split("/");
-  else if (cleaned.includes("-")) parts = cleaned.split("-");
-  
-  if (parts.length === 3) {
-      let day, month, year;
-      if (parts[0].length === 4) [year, month, day] = parts.map(Number);
-      else [day, month, year] = parts.map(Number);
-      if (year < 100) year += 2000;
-      return new Date(year, month - 1, day);
-  }
-  return null;
 }
 
 export async function GET(req: Request) {

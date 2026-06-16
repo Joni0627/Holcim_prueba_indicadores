@@ -106,3 +106,76 @@ export function getSupabaseVal(row: any, key: string): any {
     
     return undefined;
 }
+
+/**
+ * Robust helper to parse different date formats safely:
+ * - Date objects
+ * - Excel serial numbers (numbers)
+ * - ISO timestamps (e.g. "2025-11-20T00:00:00")
+ * - Simple dash or slash formats (e.g. "2025-11-20" or "20/11/2025")
+ */
+export function parseSheetDate(dateStr: any): Date | null {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime()) ? null : dateStr;
+  }
+  if (typeof dateStr === "number") {
+    return new Date((dateStr - 25569) * 86400 * 1000);
+  }
+  
+  const cleaned = String(dateStr).trim();
+  if (!cleaned) return null;
+
+  // 1. Try to parse ISO 8601 strings directly first (e.g. standard PostgreSQL timestamps)
+  if (cleaned.includes("T") || cleaned.includes(" ") || cleaned.length > 10) {
+    const parsed = new Date(cleaned);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  // 2. Handle DD/MM/YYYY or YYYY-MM-DD manually
+  let parts: string[] = [];
+  if (cleaned.includes("/")) {
+    parts = cleaned.split("/");
+  } else if (cleaned.includes("-")) {
+    parts = cleaned.split("-");
+  }
+
+  if (parts.length === 3) {
+    let day = 1;
+    let month = 1;
+    let year = 2025;
+    
+    const cleanPart0 = parts[0].split(/[ T]/)[0].trim();
+    const cleanPart2 = parts[2].split(/[ T]/)[0].trim();
+
+    if (cleanPart0.length === 4) {
+      year = Number(cleanPart0);
+      month = Number(parts[1]);
+      day = Number(cleanPart2);
+    } else {
+      day = Number(cleanPart0);
+      month = Number(parts[1]);
+      year = Number(cleanPart2);
+    }
+
+    if (year < 100) year += 2000;
+    
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+      const d = new Date(year, month - 1, day);
+      if (!isNaN(d.getTime())) {
+        return d;
+      }
+    }
+  }
+
+  // 3. Fallback direct parsing as dynamic Date
+  const finalFallback = new Date(cleaned);
+  if (!isNaN(finalFallback.getTime())) {
+    return finalFallback;
+  }
+
+  return null;
+}
+

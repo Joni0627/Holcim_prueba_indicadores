@@ -1,35 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { fetchAllRows, getSupabaseVal } from "../../../lib/supabase";
+import { fetchAllRows, getSupabaseVal, parseSheetDate } from "../../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
 const CACHE_TTL = 60 * 1000;
 const cache = new Map<string, { data: any; timestamp: number }>();
-
-function parseSheetDate(dateStr: any): Date | null {
-  if (!dateStr) return null;
-  if (dateStr instanceof Date) return dateStr;
-  
-  const cleaned = String(dateStr).trim();
-  let parts: string[] = [];
-  if (cleaned.includes("/")) parts = cleaned.split("/");
-  else if (cleaned.includes("-")) parts = cleaned.split("-");
-  
-  if (parts.length === 3) {
-      let day, month, year;
-      if (parts[0].length === 4) {
-          // YYYY-MM-DD
-          [year, month, day] = parts.map(Number);
-      } else {
-          // DD/MM/YYYY
-          [day, month, year] = parts.map(Number);
-      }
-      if (year < 100) year += 2000;
-      return new Date(year, month - 1, day);
-  }
-  return null;
-}
 
 function parseNumber(val: any): number {
     if (typeof val === 'number') return val;
