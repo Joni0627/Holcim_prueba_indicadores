@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Mail, Send, CheckCircle2, AlertCircle, Loader2, ShieldCheck, Users, UserCog, Shield, User, Trash2 } from 'lucide-react';
+import { Mail, Send, CheckCircle2, AlertCircle, Loader2, ShieldCheck, Users, UserCog, Shield, User, Trash2, Database, RefreshCw, Server } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ClerkUser {
@@ -25,6 +25,10 @@ export const AdminPanel = () => {
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [isInvitationsLoading, setIsInvitationsLoading] = useState(true);
   
+  // Diagnostics State
+  const [dbDiag, setDbDiag] = useState<any>(null);
+  const [dbDiagLoading, setDbDiagLoading] = useState(false);
+  
   // Confirmation Modal State
   const [confirmDelete, setConfirmDelete] = useState<{ id: string, name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -32,7 +36,21 @@ export const AdminPanel = () => {
   useEffect(() => {
     fetchUsers();
     fetchInvitations();
+    runDiagnostics();
   }, []);
+
+  const runDiagnostics = async () => {
+    setDbDiagLoading(true);
+    try {
+      const response = await fetch('/api/debug-supabase');
+      const data = await response.json();
+      setDbDiag(data);
+    } catch (err: any) {
+      setDbDiag({ success: false, error: err.message || String(err) });
+    } finally {
+      setDbDiagLoading(false);
+    }
+  };
 
   const fetchUsers = async () => {
     setIsUsersLoading(true);
@@ -296,6 +314,110 @@ export const AdminPanel = () => {
                 ))
               )}
             </div>
+          </div>
+
+          {/* Supabase Diagnostics Card */}
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="text-emerald-400" size={20} />
+                <h3 className="text-lg font-bold text-white">Estado de Supabase</h3>
+              </div>
+              <button 
+                onClick={runDiagnostics}
+                disabled={dbDiagLoading}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all disabled:opacity-50"
+                title="Sincronizar / Probar ahora"
+              >
+                <RefreshCw className={`h-4 w-4 ${dbDiagLoading ? "animate-spin text-emerald-400" : ""}`} />
+              </button>
+            </div>
+
+            {dbDiagLoading && !dbDiag ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-slate-400 text-sm">
+                <Loader2 className="animate-spin text-emerald-500" size={18} />
+                <span>Verificando conexión en el servidor...</span>
+              </div>
+            ) : dbDiag ? (
+              <div className="space-y-4 text-xs">
+                {/* Credentials check */}
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                  <p className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
+                    <Server size={12} /> Variables de Entorno (Vercel/Local)
+                  </p>
+                  <div className="space-y-1 text-slate-400">
+                    <div className="flex justify-between">
+                      <span>SUPABASE_URL:</span>
+                      <span className={dbDiag.reports?.cleanedEnvVars?.urlTrimmedLength > 0 ? "text-emerald-400 font-mono" : "text-red-400"}>
+                        {dbDiag.reports?.cleanedEnvVars?.urlMasked || "No detectado ❌"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>SUPABASE_KEY:</span>
+                      <span className={dbDiag.reports?.cleanedEnvVars?.keyTrimmedLength > 0 ? "text-emerald-400 font-mono" : "text-red-400"}>
+                        {dbDiag.reports?.cleanedEnvVars?.keyMasked || "No detectado ❌"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table details */}
+                <div className="space-y-2">
+                  <p className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Lectura de Tablas</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {dbDiag.reports?.tableTests ? (
+                      Object.entries(dbDiag.reports.tableTests).map(([tableName, testResult]: [string, any]) => (
+                        <div key={tableName} className="p-2.5 bg-slate-950/50 rounded-lg border border-slate-800/80 flex items-center justify-between">
+                          <span className="font-mono text-slate-300">{tableName}</span>
+                          <span className="flex items-center gap-1.5">
+                            {testResult.success ? (
+                              <>
+                                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span className="text-emerald-400 font-bold">{testResult.rowCountFetched} filas</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                <span className="text-red-400 font-medium cursor-help" title={testResult.error?.message}>
+                                  Error ({testResult.error?.code || 'X'})
+                                </span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-red-400 text-center py-2">No se pudieron realizar las pruebas de tablas.</p>
+                    )}
+                  </div>
+                </div>
+
+                {dbDiag.success ? (
+                  <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 size={16} className="shrink-0" />
+                    <span>Conexión exitosa, Supabase está respondiendo con éxito.</span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={16} className="shrink-0" />
+                      <span className="font-bold">Error de Conexión</span>
+                    </div>
+                    <p className="opacity-90">{dbDiag.error || "Revisa las credenciales de Supabase en Vercel."}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <button
+                  type="button"
+                  onClick={runDiagnostics}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all"
+                >
+                  Comenzar Diagnóstico
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
