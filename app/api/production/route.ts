@@ -104,10 +104,12 @@ export async function GET(req: Request) {
     const endDate = endParam ? new Date(endParam + "T23:59:59") : null;
 
     // Fetch from Supabase tables
-    const [rowsCabecera, rowsLista, rowsParos] = await Promise.all([
+    const [rowsCabecera, rowsLista, rowsParos, rowsTurnos, rowsPaletizadoras] = await Promise.all([
         fetchAllRows("produccionv2"),
         fetchAllRows("detalles_produccionv2"),
-        fetchAllRows("parosv2")
+        fetchAllRows("parosv2"),
+        fetchAllRows("turnosv2"),
+        fetchAllRows("paletizadorav2")
     ]);
 
     if (topParam) {
@@ -116,8 +118,10 @@ export async function GET(req: Request) {
         const dailySums: Record<string, { tn: number, machineId: string, machineName: string, date: string }> = {};
         
         rowsCabecera.forEach(row => {
-            const maquinaId = getSupabaseVal(row, "palletizadora") || "Desconocida";
-            const maquinaDesc = getSupabaseVal(row, "hac_paletizadora") || maquinaId;
+            const palId = getSupabaseVal(row, "palletizadora_id");
+            const palletizerRow = rowsPaletizadoras.find(p => String(getSupabaseVal(p, "id")) === String(palId));
+            const maquinaId = palId ? String(palId) : (getSupabaseVal(row, "palletizadora") || "Desconocida");
+            const maquinaDesc = palletizerRow ? (getSupabaseVal(palletizerRow, "hac_id") || getSupabaseVal(palletizerRow, "nombre") || maquinaId) : (getSupabaseVal(row, "hac_paletizadora") || maquinaId);
             
             const rawDate = getSupabaseVal(row, "fecha");
             const d = parseSheetDate(rawDate);
@@ -211,36 +215,65 @@ export async function GET(req: Request) {
     }> = {};
 
     cabecerasFiltradas.forEach(row => {
-        const maquinaId = getSupabaseVal(row, "palletizadora") || "Desconocida";
-        const maquinaDesc = getSupabaseVal(row, "hac_paletizadora") || maquinaId;
-        const turno = getSupabaseVal(row, "descripcion_turno") || "Sin Turno";
+        const palId = getSupabaseVal(row, "palletizadora_id");
+        const palletizerRow = rowsPaletizadoras.find(p => String(getSupabaseVal(p, "id")) === String(palId));
+        const maquinaId = palId ? String(palId) : (getSupabaseVal(row, "palletizadora") || "Desconocida");
+        const maquinaDesc = palletizerRow ? (getSupabaseVal(palletizerRow, "hac_id") || getSupabaseVal(palletizerRow, "nombre") || maquinaId) : (getSupabaseVal(row, "hac_paletizadora") || maquinaId);
+
+        const shiftId = getSupabaseVal(row, "turno_id");
+        const shiftRow = rowsTurnos.find(t => String(getSupabaseVal(t, "id")) === String(shiftId));
+        const turno = getSupabaseVal(row, "descripcion_turno") || (shiftRow ? getSupabaseVal(shiftRow, "name") : null) || "Sin Turno";
         const fecha = getSupabaseVal(row, "fecha") || "Sin Fecha";
         const key = `${maquinaId}|${turno}|${fecha}`;
 
         const tnHeader = parseNumber(getSupabaseVal(row, "tn_producidas"));
-        const hsMarcha = parseNumber(getSupabaseVal(row, "hs_marcha_tis"));
         
         let rendimiento = parseNumber(getSupabaseVal(row, "rendimiento"));
         if (rendimiento > 1.0) rendimiento = rendimiento / 100;
 
+        // Fetch duration_hours from matched turnosv2 or fallback
+        const duracionTurno = shiftRow ? parseNumber(getSupabaseVal(shiftRow, "duration_hours")) : (parseNumber(getSupabaseVal(row, "duracion_turno")) || 8);
+        const duracionTurnoMinutes = duracionTurno * 60;
+
         // Calculate dynamic availability based on actual downtime events (parosv2)
         const matchedParos = rowsParos.filter(p => {
-            const pDate = getSupabaseVal(p, "FECHA");
-            const pMachine = getSupabaseVal(p, "MÁQUINA AFECTADA") || getSupabaseVal(p, "machine_id");
-            const pShift = getSupabaseVal(p, "TURNO");
+            const pDate = getSupabaseVal(p, "FECHA") || getSupabaseVal(p, "fecha");
+            const pMachine = getSupabaseVal(p, "MÁQUINA AFECTADA") || getSupabaseVal(p, "maquina_afectada") || getSupabaseVal(p, "machine_id") || getSupabaseVal(p, "machine");
+            const pTurnoId = getSupabaseVal(p, "turno_id");
+            const rowTurnoId = getSupabaseVal(row, "turno_id");
 
-            return sameDate(fecha, pDate) && 
-                   (isMachineMatch(maquinaId, pMachine) || isMachineMatch(maquinaDesc, pMachine)) && 
-                   normalizeShift(turno) === normalizeShift(pShift);
+            const isDateMatch = sameDate(fecha, pDate);
+            const isMachineMatchResult = isMachineMatch(maquinaDesc, pMachine) || isMachineMatch(maquinaId, pMachine);
+            const isShiftMatch = (pTurnoId && rowTurnoId)
+                ? String(pTurnoId) === String(rowTurnoId)
+                : normalizeShift(turno) === normalizeShift(getSupabaseVal(p, "TURNO") || getSupabaseVal(p, "turno"));
+
+            return isDateMatch && isMachineMatchResult && isShiftMatch;
         });
 
-        const stopMinutes = matchedParos.reduce((total, p) => {
-            const durRaw = getSupabaseVal(p, "DURACIÓN") || getSupabaseVal(p, "duration_minutes") || "0:00:00";
-            return total + hmsToMinutes(durRaw);
-        }, 0);
+        // Split paros into internal and external minutes
+        let paroInternoMinutes = 0;
+        let paroExternoMinutes = 0;
 
-        const scheduledMinutes = (hsMarcha > 0 ? hsMarcha : 8) * 60;
-        let calculatedDisp = scheduledMinutes > 0 ? (scheduledMinutes - stopMinutes) / scheduledMinutes : 1.0;
+        matchedParos.forEach(p => {
+            const durRaw = getSupabaseVal(p, "DURACIÓN") || getSupabaseVal(p, "duracion") || getSupabaseVal(p, "duration_minutes") || "0:00:00";
+            const durMinutes = hmsToMinutes(durRaw);
+            const tipoParoRaw = String(getSupabaseVal(p, "TIPO PARO") || getSupabaseVal(p, "tipo_paro") || getSupabaseVal(p, "tipo") || "").toLowerCase();
+            
+            if (tipoParoRaw.includes("externo")) {
+                paroExternoMinutes += durMinutes;
+            } else {
+                paroInternoMinutes += durMinutes;
+            }
+        });
+
+        // Calculate dynamic runtime hours (hsMarcha)
+        let hsMarcha = (duracionTurnoMinutes - paroInternoMinutes - paroExternoMinutes) / 60;
+        if (hsMarcha < 0) hsMarcha = 0;
+
+        // Availability formula = (hs_paro_externo + hs_marcha) / duracion_turno
+        const hsParoExterno = paroExternoMinutes / 60;
+        let calculatedDisp = duracionTurno > 0 ? (hsParoExterno + hsMarcha) / duracionTurno : 1.0;
         if (calculatedDisp < 0) calculatedDisp = 0;
         if (calculatedDisp > 1) calculatedDisp = 1;
 
@@ -281,9 +314,14 @@ export async function GET(req: Request) {
         const cabecera = cabecerasFiltradas.find(c => getSupabaseVal(c, "id") === idCab);
         if (!cabecera) return;
 
-        const turno = getSupabaseVal(cabecera, "descripcion_turno") || "Sin Turno";
-        const maquinaId = getSupabaseVal(cabecera, "palletizadora") || "Desconocida";
-        const maquinaDesc = getSupabaseVal(cabecera, "hac_paletizadora") || maquinaId;
+        const palId = getSupabaseVal(cabecera, "palletizadora_id");
+        const palletizerRow = rowsPaletizadoras.find(p => String(getSupabaseVal(p, "id")) === String(palId));
+        const maquinaId = palId ? String(palId) : (getSupabaseVal(cabecera, "palletizadora") || "Desconocida");
+        const maquinaDesc = palletizerRow ? (getSupabaseVal(palletizerRow, "hac_id") || getSupabaseVal(palletizerRow, "nombre") || maquinaId) : (getSupabaseVal(cabecera, "hac_paletizadora") || maquinaId);
+
+        const shiftId = getSupabaseVal(cabecera, "turno_id");
+        const shiftRow = rowsTurnos.find(t => String(getSupabaseVal(t, "id")) === String(shiftId));
+        const turno = getSupabaseVal(cabecera, "descripcion_turno") || (shiftRow ? getSupabaseVal(shiftRow, "name") : null) || "Sin Turno";
         const fecha = getSupabaseVal(cabecera, "fecha") || "Sin Fecha";
         const key = `${maquinaId}|${turno}|${fecha}`;
 
