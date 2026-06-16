@@ -26,12 +26,48 @@ const toLocalISO = (date: Date) => {
 
 const sheetDateToISO = (sheetDate: string) => {
     if (!sheetDate) return '';
-    if (sheetDate.includes('-')) return sheetDate; // Already ISO
-    const parts = sheetDate.split('/');
-    if (parts.length !== 3) return sheetDate;
-    let year = parts[2];
-    if (year.length === 2) year = `20${year}`;
-    return `${year}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    const cleanStr = String(sheetDate).split(/[ T]/)[0].trim();
+    if (cleanStr.includes('-')) {
+        const parts = cleanStr.split('-');
+        if (parts.length === 3) {
+            let year = parts[0];
+            let month = parts[1];
+            let day = parts[2];
+            if (year.length !== 4 && day.length === 4) {
+                const tmp = year;
+                year = day;
+                day = tmp;
+            }
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        return cleanStr;
+    }
+    const parts = cleanStr.split('/');
+    if (parts.length === 3) {
+        let year = parts[2];
+        let month = parts[1];
+        let day = parts[0];
+        if (year.length !== 4 && day.length === 4) {
+            const tmp = year;
+            year = day;
+            day = tmp;
+        }
+        if (year.length === 2) year = `20${year}`;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    return cleanStr;
+};
+
+const isMachineMatch = (id1: string | null | undefined, id2: string | null | undefined): boolean => {
+  if (!id1 || !id2) return false;
+  const s1 = String(id1).replace(/\s/g, '').toUpperCase();
+  const s2 = String(id2).replace(/\s/g, '').toUpperCase();
+  if (s1.includes(s2) || s2.includes(s1)) return true;
+  
+  const a1 = s1.replace(/[^A-Z0-9]/g, '');
+  const a2 = s2.replace(/[^A-Z0-9]/g, '');
+  if (!a1 || !a2) return false;
+  return a1.includes(a2) || a2.includes(a1);
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -138,21 +174,35 @@ export const SummaryView: React.FC<{
   }, [unifiedDetails]);
 
   const byMachine = useMemo(() => {
-    const stats: Record<string, { bags: number, tn: number, availSum: number, perfSum: number, hsMarchaTotal: number, count: number, machineId: string, machineName: string }> = {};
+    // 3 standard palletizers pre-initialized so they are always listed on Home
+    const stats: Record<string, { bags: number, tn: number, availSum: number, perfSum: number, hsMarchaTotal: number, count: number, machineId: string, machineName: string }> = {
+      'MG.672-PZ1': { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: 'MG.672-PZ1', machineName: 'Paletizadora 672' },
+      'MG.673-PZ1': { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: 'MG.673-PZ1', machineName: 'Paletizadora 673' },
+      'MG.674-PZ1': { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: 'MG.674-PZ1', machineName: 'Paletizadora 674' }
+    };
+
     unifiedDetails.forEach(d => {
-      if (!stats[d.machineId]) stats[d.machineId] = { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: d.machineId, machineName: d.machineName };
-      stats[d.machineId].tn += (d.valueTn || 0);
-      stats[d.machineId].bags += (d.valueBags || 0);
+      // Find a matched base machine from pre-initialized keys, or add a new one on-the-fly
+      let key = Object.keys(stats).find(k => isMachineMatch(d.machineId, k) || isMachineMatch(d.machineName, k));
+      if (!key) {
+        stats[d.machineId] = { bags: 0, tn: 0, availSum: 0, perfSum: 0, hsMarchaTotal: 0, count: 0, machineId: d.machineId, machineName: d.machineName };
+        key = d.machineId;
+      }
+      
+      stats[key].tn += (d.valueTn || 0);
+      stats[key].bags += (d.valueBags || 0);
       
       const hs = d.hsMarcha || 0;
-      stats[d.machineId].availSum += (d.availability || 0) * hs;
-      stats[d.machineId].perfSum += (d.performance || 0) * hs;
-      stats[d.machineId].hsMarchaTotal += hs;
-      stats[d.machineId].count += 1;
+      stats[key].availSum += (d.availability || 0) * hs;
+      stats[key].perfSum += (d.performance || 0) * hs;
+      stats[key].hsMarchaTotal += hs;
+      stats[key].count += 1;
     });
+
     return Object.entries(stats).map(([id, s]) => {
-      const avgAvail = s.hsMarchaTotal > 0 ? s.availSum / s.hsMarchaTotal : 0;
-      const avgPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 0;
+      // Default to 100% (1.0) availability & performance if no dynamic run hours are reported
+      const avgAvail = s.hsMarchaTotal > 0 ? s.availSum / s.hsMarchaTotal : 1.0;
+      const avgPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 1.0;
       return {
         name: s.machineName,
         machineId: id,

@@ -43,6 +43,18 @@ function normalizeMachine(m: any): string {
     return String(m).trim().toUpperCase().replace(/[\s_\-\.\/]+/g, '');
 }
 
+function isMachineMatch(id1: string | null | undefined, id2: string | null | undefined): boolean {
+  if (!id1 || !id2) return false;
+  const s1 = String(id1).replace(/\s/g, '').toUpperCase();
+  const s2 = String(id2).replace(/\s/g, '').toUpperCase();
+  if (s1.includes(s2) || s2.includes(s1)) return true;
+  
+  const a1 = s1.replace(/[^A-Z0-9]/g, '');
+  const a2 = s2.replace(/[^A-Z0-9]/g, '');
+  if (!a1 || !a2) return false;
+  return a1.includes(a2) || a2.includes(a1);
+}
+
 function normalizeShift(s: any): string {
     if (!s) return "";
     let str = String(s).trim().toUpperCase();
@@ -218,7 +230,7 @@ export async function GET(req: Request) {
             const pShift = getSupabaseVal(p, "TURNO");
 
             return sameDate(fecha, pDate) && 
-                   normalizeMachine(maquinaId) === normalizeMachine(pMachine) && 
+                   (isMachineMatch(maquinaId, pMachine) || isMachineMatch(maquinaDesc, pMachine)) && 
                    normalizeShift(turno) === normalizeShift(pShift);
         });
 

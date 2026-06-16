@@ -68,12 +68,22 @@ export async function GET() {
     const tablesToTest = ["produccionv2", "parosv2", "detalles_produccionv2", "inventario_fisico", "inventario_fisicov2"];
     reports.tableTests = {};
 
+    // Get diagnostics as well
+    let produccionv2Samples: any[] = [];
+    let parosv2Samples: any[] = [];
+
     for (const table of tablesToTest) {
       try {
         const { data, error, status, statusText } = await client
           .from(table)
           .select("*")
-          .limit(3);
+          .limit(50); // Fetch up to 50 rows for analyzing
+
+        if (table === "produccionv2" && data) {
+          produccionv2Samples = data;
+        } else if (table === "parosv2" && data) {
+          parosv2Samples = data;
+        }
 
         reports.tableTests[table] = {
           success: !error,
@@ -86,7 +96,12 @@ export async function GET() {
             hint: error.hint,
             code: error.code
           } : null,
-          sampleData: data && data.length > 0 ? data.map(d => ({ id: d.id || d.idparo || d.id_produccion || "no-id-field" })) : []
+          sampleData: data && data.length > 0 ? data.slice(0, 3).map(d => ({ 
+            id: d.id || d.idparo || d.id_produccion || "no-id-field",
+            fecha: d.fecha || d.FECHA || d.Fecha,
+            machine: d.palletizadora || d.hac_paletizadora || d["MÁQUINA AFECTADA"] || d.machine_id,
+            shift: d.descripcion_turno || d.turno || d.TURNO
+          })) : []
         };
       } catch (tableErr: any) {
         reports.tableTests[table] = {
@@ -98,6 +113,25 @@ export async function GET() {
         };
       }
     }
+
+    // Include unique values comparison diagnostic
+    reports.diagnostics = {
+      produccionv2_unique_palletizer: Array.from(new Set(produccionv2Samples.map(d => d.palletizadora || d.hac_paletizadora))),
+      produccionv2_unique_hac_paletizadora: Array.from(new Set(produccionv2Samples.map(d => d.hac_paletizadora))),
+      produccionv2_unique_shift: Array.from(new Set(produccionv2Samples.map(d => d.descripcion_turno))),
+      produccionv2_unique_dates: Array.from(new Set(produccionv2Samples.map(d => d.fecha))),
+      
+      parosv2_unique_machine_affected: Array.from(new Set(parosv2Samples.map(d => d["MÁQUINA AFECTADA"] || d.machine_id || d.machine))),
+      parosv2_unique_shift: Array.from(new Set(parosv2Samples.map(d => d.TURNO || d.turno))),
+      parosv2_unique_dates: Array.from(new Set(parosv2Samples.map(d => d.FECHA || d.fecha))),
+      
+      parosv2_sample_durations: parosv2Samples.slice(0, 10).map(d => ({
+        id: d.id || d.idparo,
+        fecha: d.FECHA || d.fecha,
+        machine: d["MÁQUINA AFECTADA"],
+        duracion: d["DURACIÓN"] || d.duracion || d.duration_minutes
+      }))
+    };
 
     return NextResponse.json({
       success: true,
