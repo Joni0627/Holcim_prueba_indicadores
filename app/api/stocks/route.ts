@@ -64,19 +64,43 @@ export async function GET(req: Request) {
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
 
-    // Fetch from Supabase tables instead of Google Sheets
-    const [rowsConteo, rowsCabecera, rowsLista] = await Promise.all([
+    // Fetch from Supabase tables instead of Google Sheets, including turnosv2 and materialesv2
+    const [rowsConteo, rowsCabecera, rowsLista, rowsTurnos, rowsMateriales] = await Promise.all([
         fetchAllRows("inventario_fisico"),
         fetchAllRows("produccionv2"),
-        fetchAllRows("detalles_produccionv2")
+        fetchAllRows("detalles_produccionv2"),
+        fetchAllRows("turnosv2"),
+        fetchAllRows("materialesv2")
     ]);
+
+    // Map turnosv2 to find the ID with the name 'NOCHE'
+    const turnoNocheRow = rowsTurnos.find(t => {
+        const name = String(getSupabaseVal(t, "name") || getSupabaseVal(t, "nombre") || "").toUpperCase();
+        return name === "NOCHE" || name.includes("NOCHE");
+    });
+    const turnoNocheId = turnoNocheRow ? getSupabaseVal(turnoNocheRow, "id") : null;
+
+    // Filter productive materials where es_productivo is true/TRUE
+    const materialesProductivos = rowsMateriales.filter(m => {
+        const esProd = getSupabaseVal(m, "es_productivo");
+        return esProd === true || esProd === "true" || esProd === "TRUE" || esProd === 1 || esProd === "1";
+    });
 
     // 1. OBTENER PRODUCCION NOCHE
     const cabecerasNoche = rowsCabecera.filter(row => {
         const d = parseSheetDate(getSupabaseVal(row, "fecha"));
+        if (!d) return false;
+        
+        const isDateMatch = d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
+        if (!isDateMatch) return false;
+
+        const shiftId = getSupabaseVal(row, "turno_id");
         const turnoRaw = String(getSupabaseVal(row, "descripcion_turno") || getSupabaseVal(row, "turno") || "").trim().toUpperCase();
-        const isTurnoNoche = turnoRaw === "3.NOCHE" || turnoRaw.startsWith("3.");
-        return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime() && isTurnoNoche;
+        
+        const isShiftIdNoche = shiftId && turnoNocheId && String(shiftId) === String(turnoNocheId);
+        const isTurnoRawNoche = turnoRaw === "3.NOCHE" || turnoRaw.startsWith("3.") || turnoRaw === "NOCHE";
+
+        return isShiftIdNoche || isTurnoRawNoche;
     });
 
     const idsNoche = new Set(cabecerasNoche.map(r => getSupabaseVal(r, "id")));
@@ -86,8 +110,8 @@ export async function GET(req: Request) {
     rowsLista.forEach(row => {
         const prodId = getSupabaseVal(row, "produccion_id");
         if (prodId && idsNoche.has(prodId)) {
-            const material = cleanName(getSupabaseVal(row, "descripcion_material"));
-            const tn = parseNumber(getSupabaseVal(row, "tn_producidas"));
+            const material = cleanName(getSupabaseVal(row, "descripcion_material") || getSupabaseVal(row, "material"));
+            const tn = parseNumber(getSupabaseVal(row, "tn_producidas") || getSupabaseVal(row, "tn_producida"));
             
             if (!nightProductionMap[material]) nightProductionMap[material] = 0;
             nightProductionMap[material] += tn;
@@ -97,39 +121,73 @@ export async function GET(req: Request) {
     // 2. OBTENER CONTEO (SNAPSHOT) FROM inventario_fisico
     const conteosFiltrados = rowsConteo.filter(row => {
         const d = parseSheetDate(getSupabaseVal(row, "fecha"));
-        return d && d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
-    });
+        if (!d) return false;
 
-    const PRODUCED_PRODUCTS = new Set([
-        "CEMENTO MAESTRO",
-        "CEMENTO CPF 40",
-        "CEMENTO RAPIDO",
-        "CEMENTO CPC 30"
-    ]);
+        const isDateMatch = d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
+        if (!isDateMatch) return false;
+
+        const rowTurnoId = getSupabaseVal(row, "turno_id") || getSupabaseVal(row, "id_turno");
+        const rowTurnoRaw = String(getSupabaseVal(row, "turno") || getSupabaseVal(row, "descripcion_turno") || "").trim().toUpperCase();
+
+        const isShiftMatch = (rowTurnoId && turnoNocheId)
+            ? String(rowTurnoId) === String(turnoNocheId)
+            : (rowTurnoRaw === "NOCHE" || rowTurnoRaw.includes("NOCHE") || rowTurnoRaw.startsWith("3."));
+            
+        return isShiftMatch;
+    });
 
     const stockMap: Record<string, { displayName: string, qty: number, tn: number, isProduced: boolean, date: string }> = {};
 
     conteosFiltrados.forEach(row => {
-        const productoOriginal = String(getSupabaseVal(row, "descripcion_material") || "").trim();
+        const rowMatId = getSupabaseVal(row, "material_id") || getSupabaseVal(row, "id_material");
+        const productoOriginal = String(getSupabaseVal(row, "descripcion_material") || getSupabaseVal(row, "material") || "").trim();
         const productoNorm = cleanName(productoOriginal);
-        
-        const cantidad = parseNumber(getSupabaseVal(row, "cantidad"));
-        const tn = parseNumber(getSupabaseVal(row, "peso_tn"));
+
+        // Find match in productive materials list from materialesv2
+        let matchedMaterialName = "";
+        let isProductive = false;
+
+        if (rowMatId) {
+            const mat = materialesProductivos.find(m => String(getSupabaseVal(m, "id")) === String(rowMatId));
+            if (mat) {
+                matchedMaterialName = String(getSupabaseVal(mat, "nombre") || getSupabaseVal(mat, "name") || "").trim();
+                isProductive = true;
+            }
+        }
+
+        if (!isProductive && productoNorm) {
+            const mat = materialesProductivos.find(m => {
+                const mNameNorm = cleanName(getSupabaseVal(m, "nombre") || getSupabaseVal(m, "name") || "");
+                return mNameNorm === productoNorm;
+            });
+            if (mat) {
+                matchedMaterialName = String(getSupabaseVal(mat, "nombre") || getSupabaseVal(mat, "name") || "").trim();
+                isProductive = true;
+            }
+        }
+
+        // We only showcase productive materials
+        if (!isProductive) {
+            return;
+        }
+
+        const cantidad = parseNumber(getSupabaseVal(row, "cantidad") || getSupabaseVal(row, "qty"));
+        const tn = parseNumber(getSupabaseVal(row, "peso_tn") || getSupabaseVal(row, "peso") || getSupabaseVal(row, "tonelaje") || getSupabaseVal(row, "tn"));
         const fecha = getSupabaseVal(row, "fecha");
         
-        const isProduced = PRODUCED_PRODUCTS.has(productoNorm);
+        const normKey = cleanName(matchedMaterialName);
         
-        if (!stockMap[productoNorm]) {
-            stockMap[productoNorm] = { 
-                displayName: productoOriginal, 
+        if (!stockMap[normKey]) {
+            stockMap[normKey] = { 
+                displayName: matchedMaterialName, 
                 qty: 0, 
                 tn: 0, 
-                isProduced, 
+                isProduced: true, 
                 date: String(fecha)
             };
         }
-        stockMap[productoNorm].qty += cantidad;
-        stockMap[productoNorm].tn += tn;
+        stockMap[normKey].qty += cantidad;
+        stockMap[normKey].tn += tn;
     });
 
     // 3. SUMAR PRODUCCIÓN NOCHE A LOS TOTALES
