@@ -33,6 +33,18 @@ export async function GET() {
       cleanKey = cleanKey.slice(1, -1).trim();
     }
 
+    // Clean trailing /v1/, /v1, /rest/v1/ or /rest/v1 or just premium path trails that ruin client routing
+    if (cleanUrl) {
+      cleanUrl = cleanUrl.replace(/\/+$/, "");
+      if (cleanUrl.endsWith("/v1")) {
+        cleanUrl = cleanUrl.substring(0, cleanUrl.length - 3);
+      }
+      if (cleanUrl.endsWith("/rest")) {
+        cleanUrl = cleanUrl.substring(0, cleanUrl.length - 5);
+      }
+      cleanUrl = cleanUrl.replace(/\/+$/, "");
+    }
+
     reports.cleanedEnvVars = {
       urlMasked: cleanUrl ? `${cleanUrl.substring(0, 12)}...${cleanUrl.substring(cleanUrl.length - 4)}` : "missing",
       keyMasked: cleanKey ? `${cleanKey.substring(0, 8)}...${cleanKey.substring(cleanKey.length - 8)}` : "missing",

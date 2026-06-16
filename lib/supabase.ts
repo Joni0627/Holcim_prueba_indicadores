@@ -16,6 +16,18 @@ if (supabaseKey.startsWith('"') && supabaseKey.endsWith('"')) {
     supabaseKey = supabaseKey.slice(1, -1).trim();
 }
 
+// Clean trailing /v1/, /v1, /rest/v1/ or /rest/v1 or just premium path trails that ruin client routing
+if (supabaseUrl) {
+    supabaseUrl = supabaseUrl.replace(/\/+$/, "");
+    if (supabaseUrl.endsWith("/v1")) {
+        supabaseUrl = supabaseUrl.substring(0, supabaseUrl.length - 3);
+    }
+    if (supabaseUrl.endsWith("/rest")) {
+        supabaseUrl = supabaseUrl.substring(0, supabaseUrl.length - 5);
+    }
+    supabaseUrl = supabaseUrl.replace(/\/+$/, "");
+}
+
 if (!supabaseUrl) {
     console.error("ERROR: SUPABASE_URL is missing in environment variables!");
 }
