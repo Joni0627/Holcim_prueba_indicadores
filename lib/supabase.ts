@@ -164,20 +164,20 @@ export function parseSheetDate(dateStr: any): Date | null {
   const cleaned = String(dateStr).trim();
   if (!cleaned) return null;
 
-  // 1. Try to parse ISO 8601 strings directly first (e.g. standard PostgreSQL timestamps)
-  if (cleaned.includes("T") || cleaned.includes(" ") || cleaned.length > 10) {
-    const parsed = new Date(cleaned);
-    if (!isNaN(parsed.getTime())) {
-      return parsed;
-    }
+  // Extract date portion (up to space or 'T') to parse consistently as a local date
+  let datePart = cleaned;
+  if (cleaned.includes("T")) {
+    datePart = cleaned.split("T")[0].trim();
+  } else if (cleaned.includes(" ")) {
+    datePart = cleaned.split(" ")[0].trim();
   }
 
-  // 2. Handle DD/MM/YYYY or YYYY-MM-DD manually
+  // 2. Handle DD/MM/YYYY or YYYY-MM-DD manually to avoid timezone shift
   let parts: string[] = [];
-  if (cleaned.includes("/")) {
-    parts = cleaned.split("/");
-  } else if (cleaned.includes("-")) {
-    parts = cleaned.split("-");
+  if (datePart.includes("/")) {
+    parts = datePart.split("/");
+  } else if (datePart.includes("-")) {
+    parts = datePart.split("-");
   }
 
   if (parts.length === 3) {

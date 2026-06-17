@@ -110,11 +110,58 @@ export async function GET(req: Request) {
     rowsLista.forEach(row => {
         const prodId = getSupabaseVal(row, "produccion_id");
         if (prodId && idsNoche.has(prodId)) {
-            const material = cleanName(getSupabaseVal(row, "descripcion_material") || getSupabaseVal(row, "material"));
+            const rowMatId = getSupabaseVal(row, "material_id") || 
+                             getSupabaseVal(row, "id_material") ||
+                             getSupabaseVal(row, "id_materiales") ||
+                             getSupabaseVal(row, "idmaterial");
+                             
+            const materialOriginal = String(getSupabaseVal(row, "descripcion_material") || 
+                                            getSupabaseVal(row, "material") || 
+                                            getSupabaseVal(row, "nombre") || 
+                                            "").trim();
+            const materialNorm = cleanName(materialOriginal);
+            
+            let matchedMaterialName = "";
+            let isProd = false;
+
+            if (rowMatId) {
+                const mat = materialesProductivos.find(m => String(getSupabaseVal(m, "id")) === String(rowMatId));
+                if (mat) {
+                    matchedMaterialName = String(getSupabaseVal(mat, "nombre") || getSupabaseVal(mat, "name") || "").trim();
+                    isProd = true;
+                }
+            }
+
+            if (!isProd && materialNorm) {
+                const mat = materialesProductivos.find(m => {
+                    const mNameNorm = cleanName(getSupabaseVal(m, "nombre") || getSupabaseVal(m, "name") || "");
+                    return mNameNorm === materialNorm || 
+                           (mNameNorm.length > 3 && materialNorm.length > 3 && (mNameNorm.includes(materialNorm) || materialNorm.includes(mNameNorm)));
+                });
+                if (mat) {
+                    matchedMaterialName = String(getSupabaseVal(mat, "nombre") || getSupabaseVal(mat, "name") || "").trim();
+                    isProd = true;
+                }
+            }
+            
+            if (!isProd && rowMatId) {
+                const normMatId = cleanName(String(rowMatId));
+                const mat = materialesProductivos.find(m => {
+                    const mNameNorm = cleanName(getSupabaseVal(m, "nombre") || getSupabaseVal(m, "name") || "");
+                    return mNameNorm === normMatId || 
+                           (mNameNorm.length > 3 && normMatId.length > 3 && (mNameNorm.includes(normMatId) || normMatId.includes(mNameNorm)));
+                });
+                if (mat) {
+                    matchedMaterialName = String(getSupabaseVal(mat, "nombre") || getSupabaseVal(mat, "name") || "").trim();
+                    isProd = true;
+                }
+            }
+
+            const targetKey = isProd ? cleanName(matchedMaterialName) : materialNorm;
             const tn = parseNumber(getSupabaseVal(row, "tn_producidas") || getSupabaseVal(row, "tn_producida"));
             
-            if (!nightProductionMap[material]) nightProductionMap[material] = 0;
-            nightProductionMap[material] += tn;
+            if (!nightProductionMap[targetKey]) nightProductionMap[targetKey] = 0;
+            nightProductionMap[targetKey] += tn;
         }
     });
 
@@ -144,6 +191,19 @@ export async function GET(req: Request) {
 
     const stockMap: Record<string, { displayName: string, qty: number, tn: number, isProduced: boolean, date: string }> = {};
 
+    // Initialize stockMap with all productive materials to make sure none are missing
+    materialesProductivos.forEach(m => {
+        const mName = String(getSupabaseVal(m, "nombre") || getSupabaseVal(m, "name") || "").trim();
+        const normKey = cleanName(mName);
+        stockMap[normKey] = {
+            displayName: mName,
+            qty: 0,
+            tn: 0,
+            isProduced: true,
+            date: startParam
+        };
+    });
+
     conteosFiltrados.forEach(row => {
         const rowMatId = getSupabaseVal(row, "material_id") || 
                          getSupabaseVal(row, "id_material") ||
@@ -172,7 +232,8 @@ export async function GET(req: Request) {
         if (!isProductive && productoNorm) {
             const mat = materialesProductivos.find(m => {
                 const mNameNorm = cleanName(getSupabaseVal(m, "nombre") || getSupabaseVal(m, "name") || "");
-                return mNameNorm === productoNorm;
+                return mNameNorm === productoNorm || 
+                       (mNameNorm.length > 3 && productoNorm.length > 3 && (mNameNorm.includes(productoNorm) || productoNorm.includes(mNameNorm)));
             });
             if (mat) {
                 matchedMaterialName = String(getSupabaseVal(mat, "nombre") || getSupabaseVal(mat, "name") || "").trim();
@@ -184,7 +245,8 @@ export async function GET(req: Request) {
             const normMatId = cleanName(String(rowMatId));
             const mat = materialesProductivos.find(m => {
                 const mNameNorm = cleanName(getSupabaseVal(m, "nombre") || getSupabaseVal(m, "name") || "");
-                return mNameNorm === normMatId;
+                return mNameNorm === normMatId || 
+                       (mNameNorm.length > 3 && normMatId.length > 3 && (mNameNorm.includes(normMatId) || normMatId.includes(mNameNorm)));
             });
             if (mat) {
                 matchedMaterialName = String(getSupabaseVal(mat, "nombre") || getSupabaseVal(mat, "name") || "").trim();
@@ -214,6 +276,9 @@ export async function GET(req: Request) {
         }
         stockMap[normKey].qty += cantidad;
         stockMap[normKey].tn += tn;
+        if (fecha) {
+            stockMap[normKey].date = String(fecha);
+        }
     });
 
     // 3. SUMAR PRODUCCIÓN NOCHE A LOS TOTALES
