@@ -1179,9 +1179,6 @@ export const SummaryView: React.FC<{
                             Sin observaciones registradas para este reporte. Escriba en la sección izquierda del editor para personalizar este espacio del resumen corporativo.
                           </span>
                         )}
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block text-right mt-4">
-                          Redactor Técnico de Turno
-                        </span>
                       </div>
                     </div>
 
