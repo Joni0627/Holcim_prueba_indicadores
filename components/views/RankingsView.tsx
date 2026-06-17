@@ -414,7 +414,7 @@ export function RankingsView() {
           <p className="text-slate-400 mt-2 uppercase tracking-[0.3em] text-[10px] font-black opacity-60 pl-1">Inteligencia de Planta & Desempeño Ejecutivo</p>
         </div>
         
-        <div className="flex flex-col md:flex-row flex-wrap gap-4 items-stretch md:items-center justify-end w-full xl:w-auto">
+        <div className="flex flex-col sm:flex-row gap-4 items-center justify-end w-full xl:w-auto">
             {/* View Switcher */}
             <div className="flex p-1 bg-slate-950/80 rounded-[1.5rem] border border-slate-800 shadow-2xl shrink-0">
                 <button
@@ -441,13 +441,10 @@ export function RankingsView() {
                 </button>
             </div>
 
-            {/* Date Filter Container */}
-            <div className="w-full sm:w-[420px] max-w-full">
-                <DateFilter 
-                    onFilterChange={(range) => setDateRange(range)} 
-                    defaultFilter="month" 
-                />
-            </div>
+            <DateFilter 
+                onFilterChange={(range) => setDateRange(range)} 
+                defaultFilter="month" 
+            />
         </div>
       </div>
 
