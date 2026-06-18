@@ -1139,14 +1139,6 @@ export const SummaryView: React.FC<{
                           <h1 className="text-xl font-black text-white tracking-tight uppercase leading-none">EXPEDICION MALAGUEÑO</h1>
                           <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">PLANTA MALAGUEÑO • HOLCIM ARGENTINA</p>
                         </div>
-                        <div className="mt-4 flex gap-4 text-xs font-bold">
-                          <div>
-                            <span className="text-slate-500 text-[8px] uppercase tracking-wider block">Periodo de Análisis</span>
-                            <span className="text-[12px] font-black text-white uppercase mt-0.5 block">
-                              {isSingleDay ? formatDate(dateRange.start) : `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`}
-                            </span>
-                          </div>
-                        </div>
                       </div>
 
                       <div className="text-right">
@@ -1154,17 +1146,26 @@ export const SummaryView: React.FC<{
                       </div>
                     </div>
 
-                    {/* Section 1: Producción Total (Highlighted Indigo Card) */}
+                    {/* Section 1: Producción Total & Periodo (Highlighted Indigo Card with Split Layout) */}
                     <div className="mt-5">
-                      <div className="bg-gradient-to-r from-blue-600 via-indigo-650 to-indigo-850 border border-blue-400/30 p-4 rounded-xl flex justify-between items-center shadow-[0_4px_20px_rgba(37,99,235,0.2)]">
-                        <div>
+                      <div className="bg-gradient-to-r from-blue-600 via-indigo-650 to-indigo-850 border border-blue-400/30 rounded-xl shadow-[0_4px_20px_rgba(37,99,235,0.2)] flex">
+                        {/* Left block (70% approx) */}
+                        <div className="w-[70%] p-4 flex flex-col justify-center">
                           <span className="text-[9px] font-extrabold uppercase text-blue-100 tracking-wider block opacity-90">PRODUCCIÓN TOTAL</span>
                           <span className="text-3xl font-black text-white tracking-tighter mt-1 block">
                             {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-sm font-bold text-blue-200">Tn</span>
                           </span>
                         </div>
-                        <div className="w-10 h-10 bg-white/20 border border-white/10 rounded-lg flex items-center justify-center text-white shadow-lg animate-pulse">
-                          <PackageCheck size={20} />
+
+                        {/* Subtle vertical separator */}
+                        <div className="w-[1px] bg-white/20 self-stretch my-3"></div>
+
+                        {/* Right block (30% approx) */}
+                        <div className="w-[30%] p-4 pl-6 flex flex-col justify-center text-left">
+                          <span className="text-[9px] font-extrabold uppercase text-blue-100/70 tracking-wider block">PERIODO DE ANÁLISIS</span>
+                          <span className="text-[11px] font-black text-white uppercase mt-1 block tracking-tight leading-snug">
+                            {isSingleDay ? formatDate(dateRange.start) : `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`}
+                          </span>
                         </div>
                       </div>
                     </div>
