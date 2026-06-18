@@ -983,12 +983,27 @@ export const SummaryView: React.FC<{
                         setIsSharing(true);
                         try {
                           await new Promise(r => setTimeout(r, 200));
-                          const canvas = await html2canvas(node, {
+                          
+                          // Clone the node and render it off-screen at 1:1 scale
+                          // This completely bypasses parental CSS scale and transform factors which distort html2canvas
+                          const clone = node.cloneNode(true) as HTMLDivElement;
+                          clone.style.position = 'absolute';
+                          clone.style.left = '-9999px';
+                          clone.style.top = '0';
+                          clone.style.transform = 'none';
+                          clone.style.width = '800px';
+                          clone.style.height = 'auto';
+                          document.body.appendChild(clone);
+                          
+                          const canvas = await html2canvas(clone, {
                             scale: 2,
                             useCORS: true,
                             logging: false,
                             backgroundColor: '#ffffff'
                           });
+                          
+                          document.body.removeChild(clone);
+                          
                           const imgData = canvas.toDataURL('image/png', 1.0);
                           const filename = `Reporte_PSCQube_${startStr}.png`;
                           const link = document.createElement('a');
@@ -1030,12 +1045,27 @@ export const SummaryView: React.FC<{
                         setIsSharing(true);
                         try {
                           await new Promise(r => setTimeout(r, 200));
-                          const canvas = await html2canvas(node, {
+                          
+                          // Clone the node and render it off-screen at 1:1 scale
+                          // This completely bypasses parental CSS scale and transform factors which distort html2canvas
+                          const clone = node.cloneNode(true) as HTMLDivElement;
+                          clone.style.position = 'absolute';
+                          clone.style.left = '-9999px';
+                          clone.style.top = '0';
+                          clone.style.transform = 'none';
+                          clone.style.width = '800px';
+                          clone.style.height = 'auto';
+                          document.body.appendChild(clone);
+
+                          const canvas = await html2canvas(clone, {
                             scale: 2,
                             useCORS: true,
                             logging: false,
                             backgroundColor: '#ffffff'
                           });
+
+                          document.body.removeChild(clone);
+
                           const imgData = canvas.toDataURL('image/png', 1.0);
                           const response = await fetch(imgData);
                           const blob = await response.blob();
@@ -1082,7 +1112,7 @@ export const SummaryView: React.FC<{
                     {/* Header Row */}
                     <div className="pb-5 border-b-4 border-slate-900 flex justify-between items-start">
                       <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none uppercase">Reporte General de Expedición</h1>
+                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight uppercase pb-1">Reporte General de Expedición</h1>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Planta Malagueño</p>
                         <div className="mt-4 flex gap-4 text-xs font-bold">
                           <div>
