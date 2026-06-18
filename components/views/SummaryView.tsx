@@ -933,43 +933,54 @@ export const SummaryView: React.FC<{
 
       {/* Dynamic Share PDF-style Modal with custom observation saved in memory */}
       {showShareModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="relative bg-[#0f172a] border border-slate-800 rounded-3xl w-full max-w-6xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            className="relative bg-[#1e293b] border-2 border-slate-700 rounded-3xl w-full max-w-6xl shadow-[0_0_80px_rgba(0,0,0,0.85)] flex flex-col max-h-[90vh] overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700 bg-slate-800/80">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600/20 text-blue-400 rounded-xl">
+                <div className="p-2 bg-blue-500/20 text-blue-400 rounded-xl">
                   <FileText size={20} />
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-white uppercase tracking-widest">Resumen Corporativo</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Generación de Reporte Ejecutivo en formato de alta resolución (PDF/PNG)</p>
+                  <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Generación de Reporte de Expedición en formato de alta resolución (Tema Oscuro)</p>
                 </div>
               </div>
               <button 
                 onClick={() => setShowShareModal(false)}
-                className="p-1 px-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer border-none outline-none"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Inner Body (Split Left Editor / Right preview) */}
-            <div className="flex-1 overflow-y-auto p-6 bg-[#0a0f1e] flex flex-col lg:flex-row gap-6">
+            <div className="flex-1 overflow-y-auto p-6 bg-[#0f172a] flex flex-col lg:flex-row gap-6">
               {/* Left Column (Inputs & Buttons) */}
               <div className="w-full lg:w-1/3 flex flex-col justify-between gap-6">
                 <div className="space-y-4">
+                  {/* Warning Info */}
+                  <div className="p-3.5 bg-blue-500/10 border border-blue-400/20 rounded-xl space-y-2">
+                    <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Layout size={12} />
+                      Exportación en Alta Calidad
+                    </h4>
+                    <p className="text-[10px] text-slate-300 leading-relaxed font-semibold">
+                      El reporte ha sido rediseñado para usar la estética oscura oficial. Ideal para compartir directamente por WhatsApp Corporativo, Teams o Slack manteniendo la misma coherencia visual que el monitor principal.
+                    </p>
+                  </div>
+
                   {/* Observation Input */}
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 block">Redactar Observación</label>
                     <textarea
                       value={customObservation}
                       onChange={(e) => setCustomObservation(e.target.value)}
-                      placeholder="Ej: Producción normal en los tres turnos. Se realizó mantenimiento preventivo en PZ1 de 14:00hs a 15:30hs sin impacto crítico en el stock..."
+                      placeholder="Ej: Despachos sin desvíos críticos. Se realizó mantenimiento preventivo en PZ1 de 14:00hs a 15:30hs sin impacto crítico en el stock..."
                       className="w-full h-32 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 placeholder-slate-600 resize-none transition-all font-medium"
                     />
                   </div>
@@ -985,9 +996,9 @@ export const SummaryView: React.FC<{
                         try {
                           await new Promise(r => setTimeout(r, 200));
                           
-                          // Convert the high-contrast white document node directly to high-quality PNG
+                          // Convert the dark theme document node directly to high-quality PNG
                           const imgData = await toPng(node, {
-                            backgroundColor: '#ffffff',
+                            backgroundColor: '#0b0f19',
                             style: {
                               transform: 'scale(1)',
                               transformOrigin: 'top left',
@@ -1039,7 +1050,7 @@ export const SummaryView: React.FC<{
                           await new Promise(r => setTimeout(r, 250));
                           
                           const imgData = await toPng(node, {
-                            backgroundColor: '#ffffff',
+                            backgroundColor: '#0b0f19',
                             style: {
                               transform: 'scale(1)',
                               transformOrigin: 'top left',
@@ -1080,26 +1091,33 @@ export const SummaryView: React.FC<{
                 </div>
               </div>
 
-              {/* Right Column (High contrast white PDF page simulator) */}
-              <div className="flex-1 bg-slate-950/50 rounded-2xl p-4 flex justify-center items-start overflow-auto shadow-inner relative max-h-[70vh] lg:max-h-none">
+              {/* Right Column (High contrast dark dashboard preview matches application layout perfectly!) */}
+              <div className="flex-1 bg-slate-950/70 border border-slate-850/80 rounded-2xl p-4 flex justify-center items-start overflow-auto shadow-inner relative max-h-[70vh] lg:max-h-none">
                 {/* Scaled Preview Wrapper */}
                 <div className="origin-top scale-[0.6] sm:scale-[0.7] md:scale-[0.75] lg:scale-[0.65] xl:scale-[0.75] transition-transform duration-300 h-0" style={{ minWidth: '800px', height: 'fit-content', paddingBottom: '1050px' }}>
                   
-                  {/* The actual high-contrast white document element we target with html2canvas */}
+                  {/* The actual premium dark dashboard node used for image generation */}
                   <div
                     ref={pdfRef}
-                    className="bg-white text-slate-900 border border-slate-300 rounded-lg shadow-2xl p-10 text-left select-none relative"
+                    className="bg-[#0b0f19] text-slate-200 border border-slate-800/80 rounded-2xl shadow-2xl p-8 text-left select-none relative"
                     style={{ width: '800px', fontFamily: 'sans-serif', minHeight: '1000px' }}
                   >
                     {/* Header Row */}
-                    <div className="pb-5 border-b-4 border-slate-900 flex justify-between items-start">
+                    <div className="pb-5 border-b-2 border-slate-800 flex justify-between items-start">
                       <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight uppercase pb-1">Reporte General de Expedición</h1>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Planta Malagueño</p>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-600 rounded-lg shadow-lg">
+                            <Layout size={18} className="text-white" />
+                          </div>
+                          <div>
+                            <h1 className="text-xl font-black text-white tracking-tight uppercase leading-none">EXPEDICION MALAGUEÑO</h1>
+                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">PLANTA MALAGUEÑO • HOLCIM ARGENTINA</p>
+                          </div>
+                        </div>
                         <div className="mt-4 flex gap-4 text-xs font-bold">
                           <div>
-                            <span className="text-slate-400 text-[8px] uppercase tracking-wider block">Período de Análisis</span>
-                            <span className="text-[13px] font-black text-blue-900 uppercase">
+                            <span className="text-slate-500 text-[8px] uppercase tracking-wider block">Periodo de Análisis</span>
+                            <span className="text-[12px] font-black text-white uppercase mt-0.5 block">
                               {isSingleDay ? formatDate(dateRange.start) : `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`}
                             </span>
                           </div>
@@ -1107,20 +1125,21 @@ export const SummaryView: React.FC<{
                       </div>
 
                       <div className="text-right">
-                        <span className="font-mono text-2xl font-black tracking-tighter text-blue-900 block leading-none">PSCQube</span>
+                        <span className="font-mono text-2xl font-black tracking-tighter text-blue-500 block leading-none">PSCQube</span>
+                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1 block">MONITOR DISPATCH</span>
                       </div>
                     </div>
 
-                    {/* Section 1: KPI Resumen */}
-                    <div className="mt-4">
-                      <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
+                    {/* Section 1: Producción Total (Highlighted Indigo Card) */}
+                    <div className="mt-5">
+                      <div className="bg-gradient-to-r from-blue-700 via-indigo-800 to-indigo-950 border border-blue-500/20 p-4 rounded-xl flex justify-between items-center shadow-lg">
                         <div>
-                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Producción Total</span>
-                          <span className="text-2xl font-black text-slate-900 tracking-tight mt-1 block">
-                            {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-bold text-slate-400">Tn</span>
+                          <span className="text-[9px] font-black uppercase text-blue-300 tracking-wider block">PRODUCCIÓN TOTAL</span>
+                          <span className="text-3xl font-black text-white tracking-tighter mt-1 block">
+                            {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-sm font-bold text-blue-300/80">Tn</span>
                           </span>
                         </div>
-                        <div className="w-10 h-10 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                        <div className="w-10 h-10 bg-white/10 border border-white/5 rounded-lg flex items-center justify-center text-blue-100">
                           <PackageCheck size={20} />
                         </div>
                       </div>
@@ -1128,93 +1147,93 @@ export const SummaryView: React.FC<{
 
                     {/* Section I: Tn totales por producto */}
                     <div className="mt-5">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                      <div className="bg-[#0f172a] border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300 text-[9px] font-black uppercase tracking-widest mb-2.5">
                         I. Producción por Tipo de Producto
-                      </h4>
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         {allProductsBreakdown.map((p: any) => (
-                          <div key={p.name} className="border border-slate-200 bg-slate-50/50 p-2 text-xs rounded-lg flex justify-between items-center font-bold">
-                            <span className="text-[10px] text-slate-600 uppercase tracking-wide truncate max-w-[200px]" title={p.name}>
+                          <div key={p.name} className="border border-slate-800 bg-[#131b2e]/60 p-2.5 text-xs rounded-lg flex justify-between items-center font-bold">
+                            <span className="text-[10px] text-slate-300 uppercase tracking-wide truncate max-w-[200px]" title={p.name}>
                               {p.name}
                             </span>
-                            <span className="text-slate-900 font-extrabold whitespace-nowrap">
-                              {(p.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
+                            <span className="text-white font-extrabold whitespace-nowrap">
+                              {(p.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400">Tn</span>
                             </span>
                           </div>
                         ))}
                         {allProductsBreakdown.length === 0 && (
-                          <span className="col-span-2 text-xs text-slate-400 italic">Sin datos de producción en el período.</span>
+                          <span className="col-span-2 text-xs text-slate-500 italic">Sin datos de producción en el período.</span>
                         )}
                       </div>
                     </div>
 
                     {/* Section II: Producción por Turno */}
                     <div className="mt-5">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                      <div className="bg-[#0f172a] border border-slate-800 px-3 py-1.5 rounded-lg text-slate-300 text-[9px] font-black uppercase tracking-widest mb-2.5">
                         II. Producción por Turno
-                      </h4>
+                      </div>
                       <div className="grid grid-cols-4 gap-3">
                         {shiftData.map((s: any) => {
                           const cleanName = s.name.replace(/^\d\./, ''); // Removes '1.' from '1.MAÑANA' to leave 'MAÑANA'
                           return (
-                            <div key={s.name} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg flex flex-col justify-between font-bold">
+                            <div key={s.name} className="border border-slate-800 bg-[#131b2e]/60 p-2.5 rounded-lg flex flex-col justify-between font-bold">
                               <div>
                                 <span className="text-[8px] text-slate-400 uppercase tracking-widest block truncate">{cleanName}</span>
-                                <span className="text-sm font-black text-slate-900 block mt-0.5">
+                                <span className="text-base font-black text-white block mt-0.5">
                                   {(s.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
                                 </span>
                               </div>
-                              <div className="mt-2 pt-1 border-t border-slate-200 space-y-0.5 text-[8px] text-slate-500 font-semibold">
+                              <div className="mt-2.5 pt-1.5 border-t border-slate-800 space-y-1 text-[8px] text-slate-400 font-semibold">
                                 <div className="flex justify-between">
                                   <span>Hs Marcha:</span>
-                                  <span className="font-mono text-slate-950 font-extrabold">{(s.hsMarcha || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}h</span>
+                                  <span className="font-mono text-emerald-400 font-extrabold">{(s.hsMarcha || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}h</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Disp / Rend:</span>
-                                  <span className="font-mono text-slate-950 font-extrabold">{s.disp}% / {s.rend}%</span>
+                                  <span className="font-mono text-blue-400 font-extrabold">{s.disp}% / {s.rend}%</span>
                                 </div>
                               </div>
                             </div>
                           );
                         })}
                         {shiftData.length === 0 && (
-                          <span className="col-span-4 text-xs text-slate-400 italic">Sin datos de turno en el período.</span>
+                          <span className="col-span-4 text-xs text-slate-500 italic">Sin datos de turno en el período.</span>
                         )}
                       </div>
                     </div>
 
                     {/* Section III: Tn producidas por paletizadora */}
                     <div className="mt-5">
-                      <div className="flex justify-between items-end border-b border-slate-200 pb-1 mb-2">
-                        <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      <div className="flex justify-between items-center bg-[#0f172a] border border-slate-800 px-3 py-1.5 rounded-lg mb-2.5">
+                        <span className="text-slate-300 text-[9px] font-black uppercase tracking-widest">
                           III. Producción por Paletizadora
-                        </h4>
-                        <span className="text-[9px] font-black text-white bg-slate-900 px-2 py-0.5 rounded">
-                          Total Paletizadoras: {byMachine.reduce((sum, m) => sum + (m.valueTn || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
+                        </span>
+                        <span className="text-[8.5px] font-black text-blue-400 bg-blue-950/40 border border-blue-900/30 px-2 py-0.5 rounded">
+                          Total: {byMachine.reduce((sum, m) => sum + (m.valueTn || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         {byMachine.map((m: any) => (
-                          <div key={m.machineId} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg flex flex-col justify-between font-bold">
+                          <div key={m.machineId} className="border border-slate-800 bg-[#131b2e]/60 p-2.5 rounded-lg flex flex-col justify-between font-bold">
                             <div>
                               <span className="text-[8px] text-slate-400 uppercase tracking-widest block truncate">{m.name}</span>
-                              <span className="text-base font-black text-slate-900 block mt-0.5">
+                              <span className="text-lg font-black text-white block mt-0.5">
                                 {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
                               </span>
                             </div>
                             
-                            <div className="mt-2 pt-2 border-t border-slate-150 space-y-0.5 text-[8px] text-slate-600 font-semibold">
+                            <div className="mt-2.5 pt-2 border-t border-slate-800 space-y-1 text-[8px] text-slate-400 font-semibold">
                               <div className="flex justify-between">
                                 <span>Hs Marcha:</span>
-                                <span className="font-mono text-slate-900 font-extrabold">{(m.hsMarcha || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} hs</span>
+                                <span className="font-mono text-emerald-400 font-extrabold">{(m.hsMarcha || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}hs</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Disponibilidad:</span>
-                                <span className={`font-mono font-extrabold ${m.availability < 76 ? 'text-red-600' : 'text-slate-950'}`}>{(m.availability || 0).toFixed(1)}%</span>
+                                <span className={`font-mono font-extrabold ${m.availability < 76 ? 'text-red-400' : 'text-slate-100'}`}>{(m.availability || 0).toFixed(1)}%</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>Rendimiento:</span>
-                                <span className={`font-mono font-extrabold ${m.performance < 92 ? 'text-red-600' : 'text-slate-950'}`}>{(m.performance || 0).toFixed(1)}%</span>
+                                <span className={`font-mono font-extrabold ${m.performance < 92 ? 'text-rose-400' : 'text-slate-100'}`}>{(m.performance || 0).toFixed(1)}%</span>
                               </div>
                             </div>
                           </div>
@@ -1224,36 +1243,37 @@ export const SummaryView: React.FC<{
 
                     {/* Section IV: Tn de materiales productivos contadas en stock físico */}
                     <div className="mt-5">
-                      <div className="flex justify-between items-end border-b border-slate-200 pb-1 mb-2">
-                        <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                          IV. Stock Conteo
-                        </h4>
-                        <span className="text-[9px] font-black text-emerald-900 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                      <div className="flex justify-between items-center bg-[#011e13] border border-emerald-500/20 px-3 py-1.5 rounded-lg mb-2.5">
+                        <span className="text-emerald-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                          IV. STOCK A LAS 06:00 HS
+                        </span>
+                        <span className="text-[8.5px] font-black text-emerald-400 bg-emerald-950/50 border border-emerald-900/30 px-2 py-0.5 rounded">
                           Total Conteo: {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn
                         </span>
                       </div>
                       <div className="grid grid-cols-4 gap-3">
                         {producedStock.map((item) => (
-                          <div key={item.id} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg text-center font-bold">
+                          <div key={item.id} className="border border-slate-800 bg-[#131b2e]/60 p-2.5 rounded-lg text-center font-bold">
                             <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block truncate" title={item.product}>
                               {item.product.replace('CEMENTO ', '')}
                             </span>
-                            <span className="text-sm font-black text-slate-900 block mt-0.5 tracking-tight">
-                              {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] text-slate-400 font-bold ml-0.5">Tn</span>
+                            <span className="text-base font-black text-white block mt-0.5 tracking-tight">
+                              {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] text-slate-500 font-bold ml-0.5">Tn</span>
                             </span>
                           </div>
                         ))}
                         {producedStock.length === 0 && (
-                          <span className="col-span-4 text-xs text-slate-400 italic">Sin datos de stock físico en el período.</span>
+                          <span className="col-span-4 text-xs text-slate-500 italic text-center w-full block">Sin datos de stock físico en el período.</span>
                         )}
                       </div>
                     </div>
 
                     {/* Section V: Los cinco paros internos más relevantes por paletizadora */}
                     <div className="mt-5">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
-                        V. Paros Internos Relevantes
-                      </h4>
+                      <div className="bg-[#451a03] border border-amber-500/20 px-3 py-1.5 rounded-lg text-amber-400 text-[9px] font-black uppercase tracking-widest mb-2.5">
+                        V. Paros Internos (Top 5 por Máquina)
+                      </div>
                       <div className="grid grid-cols-3 gap-3">
                         {[
                           { id: 'MG.672-PZ1', name: 'Paletizadora 672' },
@@ -1264,23 +1284,23 @@ export const SummaryView: React.FC<{
                           const stops = matchedKey ? topDowntimesByMachine[matchedKey] : [];
 
                           return (
-                            <div key={core.id} className="border border-slate-200 bg-slate-50/30 rounded-lg p-2.5 font-bold">
-                              <span className="text-[9px] font-black text-blue-900 uppercase tracking-wider block border-b border-slate-200 pb-0.5 mb-1.5">{core.name}</span>
+                            <div key={core.id} className="border border-slate-800 bg-[#131b2e]/40 rounded-lg p-2.5 font-bold">
+                              <span className="text-[9px] font-black text-blue-400 uppercase tracking-wider block border-b border-slate-800 pb-1 mb-2">{core.name}</span>
                               {stops && stops.length > 0 ? (
-                                <ul className="space-y-1.5 font-medium text-slate-700">
+                                <ul className="space-y-1.5 font-medium text-slate-300">
                                   {stops.map((stop: any, idx: number) => (
-                                    <li key={idx} className="text-[8.5px] leading-snug flex justify-between items-baseline gap-2 py-0.5 border-b border-dashed border-slate-100 last:border-none">
-                                      <span className="text-slate-800 break-words flex-1 leading-normal" title={stop.reason}>
+                                    <li key={idx} className="text-[8.5px] leading-snug flex justify-between items-baseline gap-2 py-0.5 border-b border-dashed border-slate-800/40 last:border-none">
+                                      <span className="text-slate-300 break-words flex-1 leading-normal" title={stop.reason}>
                                         {idx + 1}. {stop.reason}
                                       </span>
-                                      <span className="text-red-600 font-mono font-black whitespace-nowrap shrink-0 text-right">
+                                      <span className="text-red-400 font-mono font-black whitespace-nowrap shrink-0 text-right bg-red-950/20 px-1 border border-red-900/30 rounded">
                                         {stop.duration}m
                                       </span>
                                     </li>
                                   ))}
                                 </ul>
                               ) : (
-                                <span className="text-[8px] text-slate-400 italic block">Sin paros internos de relevancia.</span>
+                                <span className="text-[8px] text-slate-500 italic block py-4 text-center">Sin paros internos.</span>
                               )}
                             </div>
                           );
@@ -1290,16 +1310,16 @@ export const SummaryView: React.FC<{
 
                     {/* Section VI: Observaciones de la Jornada (Active user-input) */}
                     <div className="mt-5">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                      <div className="bg-[#0f172a] border border-slate-800 px-3 py-1.5 rounded-lg text-slate-305 text-[9px] font-black uppercase tracking-widest mb-2.5">
                         VI. Observaciones Operativas
-                      </h4>
-                      <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+                      </div>
+                      <div className="border border-slate-800 rounded-lg p-3.5 bg-slate-950/65">
                         {customObservation.trim() ? (
-                          <p className="text-[10px] text-slate-800 leading-relaxed font-semibold whitespace-pre-wrap">
+                          <p className="text-[10px] text-slate-200 leading-relaxed font-semibold whitespace-pre-wrap">
                             {customObservation}
                           </p>
                         ) : (
-                          <span className="text-[10px] text-slate-400 italic font-semibold">
+                          <span className="text-[10px] text-slate-500 italic font-semibold">
                             Sin observaciones registradas para este reporte. Escriba en la sección izquierda del editor para personalizar este espacio del resumen corporativo.
                           </span>
                         )}
@@ -1307,7 +1327,7 @@ export const SummaryView: React.FC<{
                     </div>
 
                     {/* Footer Certification */}
-                    <div className="mt-10 pt-4 flex justify-between items-center text-[8px] font-black text-slate-400 uppercase border-t border-slate-200">
+                    <div className="mt-8 pt-4 flex justify-between items-center text-[8px] font-black text-slate-500 uppercase border-t border-slate-800/80">
                       <span> PSCQube • HOLCIM ARGENTINA S.A. </span>
                       <span> GENERADO: {new Date().toLocaleDateString('es-AR')} {new Date().toLocaleTimeString('es-AR', { hour12: false })} </span>
                     </div>
