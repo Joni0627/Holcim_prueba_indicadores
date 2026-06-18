@@ -1151,7 +1151,6 @@ export const SummaryView: React.FC<{
 
                       <div className="text-right">
                         <span className="font-mono text-2xl font-black tracking-tighter text-blue-500 block leading-none">PSCQube</span>
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1 block">MONITOR DISPATCH</span>
                       </div>
                     </div>
 
@@ -1299,7 +1298,7 @@ export const SummaryView: React.FC<{
                       <div className="flex justify-between items-center bg-sky-950/45 border border-sky-500/30 px-3 py-1.5 rounded-lg mb-2.5">
                         <span className="text-sky-300 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
-                          V. DESPACHOS (PRODUCTOS COMERCIALIZADOS)
+                          V. DESPACHOS
                         </span>
                         <span className="text-[8.5px] font-black text-sky-350 bg-sky-950/30 border border-sky-900/30 px-2 py-0.5 rounded">
                           Total Despachos: {totalDispatchTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn
