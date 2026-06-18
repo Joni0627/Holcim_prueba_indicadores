@@ -358,6 +358,26 @@ export const SummaryView: React.FC<{
     return breakdown;
   }, [prodResult]);
 
+  const allProductsBreakdown = useMemo(() => {
+    if (!prodResult?.byMachineProduct) return [];
+    return prodResult.byMachineProduct.reduce((acc: any[], curr) => {
+      Object.keys(curr).forEach(key => {
+        if (key !== 'name') {
+          const existing = acc.find(p => p.name === key);
+          if (existing) {
+            existing.value += (curr[key] as number);
+          } else {
+            acc.push({ name: key, value: curr[key] as number });
+          }
+        }
+      });
+      return acc;
+    }, []).sort((a, b) => b.value - a.value).map(p => ({
+      name: p.name,
+      valueTn: p.value
+    }));
+  }, [prodResult]);
+
   const maxProductValue = useMemo(() => 
     Math.max(...productBreakdown.map(p => p.valueTn), 1), 
   [productBreakdown]);
@@ -1106,76 +1126,118 @@ export const SummaryView: React.FC<{
                       </div>
                     </div>
 
-                    {/* Section 2: Detalle de Stocks Contados */}
-                    <div className="mt-6">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2.5">
-                        I. Inventario Físico
+                    {/* Section 2: Tn totales por producto */}
+                    <div className="mt-5">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                        I. Producción por Tipo de Producto
                       </h4>
-                      <div className="grid grid-cols-4 gap-3">
-                        {producedStock.map((item) => (
-                          <div key={item.id} className="border border-slate-200 bg-slate-50/50 p-3 rounded-lg text-center">
-                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block truncate" title={item.product}>
-                              {item.product.replace('CEMENTO ', '')}
+                      <div className="grid grid-cols-2 gap-3">
+                        {allProductsBreakdown.map((p: any) => (
+                          <div key={p.name} className="border border-slate-200 bg-slate-50/50 p-2 text-xs rounded-lg flex justify-between items-center font-bold">
+                            <span className="text-[10px] text-slate-600 uppercase tracking-wide truncate max-w-[200px]" title={p.name}>
+                              {p.name}
                             </span>
-                            <span className="text-base font-black text-slate-900 block mt-1 tracking-tight">
-                              {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] text-slate-400 font-bold ml-0.5">Tn</span>
+                            <span className="text-slate-900 font-extrabold whitespace-nowrap">
+                              {(p.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
+                            </span>
+                          </div>
+                        ))}
+                        {allProductsBreakdown.length === 0 && (
+                          <span className="col-span-2 text-xs text-slate-400 italic">Sin datos de producción en el período.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Section 3: Tn producidas por paletizadora */}
+                    <div className="mt-5">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                        II. Producción por Paletizadora
+                      </h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        {byMachine.map((m: any) => (
+                          <div key={m.machineId} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg text-center font-bold">
+                            <span className="text-[8px] text-slate-400 uppercase tracking-widest block truncate">{m.name}</span>
+                            <span className="text-base font-black text-slate-900 block mt-0.5">
+                              {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
                             </span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Section 3: Desempeño por Envasadoras (Paletizadoras) */}
-                    <div className="mt-6">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-3">
-                        II. Rendimiento & Productividad
+                    {/* Section 4: Tn de materiales productivos contadas en stock físico */}
+                    <div className="mt-5">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                        III. Stock Físico (Materiales Productivos)
                       </h4>
-                      <div className="border border-slate-200 rounded-lg overflow-hidden">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b border-slate-200">
-                            <tr>
-                              <th className="px-4 py-2.5">Paletizadora</th>
-                              <th className="px-4 py-2.5 text-right">Prod. (Tn)</th>
-                              <th className="px-4 py-2.5 text-right">Disp. %</th>
-                              <th className="px-4 py-2.5 text-right">Rend. %</th>
-                              <th className="px-4 py-2.5 text-right">OEE Promedio</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-150">
-                            {byMachine.map((m: any) => (
-                              <tr key={m.machineId} className="hover:bg-slate-50 font-bold text-slate-700">
-                                <td className="px-4 py-2.5 text-slate-900 font-extrabold uppercase">{m.name}</td>
-                                <td className="px-4 py-2.5 text-right font-mono text-slate-900">
-                                  {m.valueTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn
-                                </td>
-                                <td className={`px-4 py-2.5 text-right font-mono font-black ${m.availability < 76 ? 'text-red-600' : 'text-slate-900'}`}>
-                                  {m.availability.toFixed(0)}%
-                                </td>
-                                <td className={`px-4 py-2.5 text-right font-mono font-black ${m.performance < 92 ? 'text-red-600' : 'text-slate-900'}`}>
-                                  {m.performance.toFixed(0)}%
-                                </td>
-                                <td className="px-4 py-2.5 text-right font-mono font-black text-blue-900">
-                                  {m.oee.toFixed(0)}%
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="grid grid-cols-4 gap-3">
+                        {producedStock.map((item) => (
+                          <div key={item.id} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg text-center font-bold">
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block truncate" title={item.product}>
+                              {item.product.replace('CEMENTO ', '')}
+                            </span>
+                            <span className="text-sm font-black text-slate-900 block mt-0.5 tracking-tight">
+                              {(item.tonnage || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] text-slate-400 font-bold ml-0.5">Tn</span>
+                            </span>
+                          </div>
+                        ))}
+                        {producedStock.length === 0 && (
+                          <span className="col-span-4 text-xs text-slate-400 italic">Sin datos de stock físico en el período.</span>
+                        )}
                       </div>
                     </div>
 
-                    {/* Section 4: Observaciones de la Jornada (Active user-input) */}
-                    <div className="mt-6">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2.5">
-                        III. Observaciones Operativas
+                    {/* Section 5: Los cinco paros internos más relevantes por paletizadora */}
+                    <div className="mt-5">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                        IV. Paros Internos más Relevantes (Top 5 por Máquina)
                       </h4>
-                      <div className="border border-slate-300 rounded-lg p-4 bg-slate-50/50 min-h-[100px] flex flex-col justify-between">
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { id: 'MG.672-PZ1', name: 'Paletizadora 672' },
+                          { id: 'MG.673-PZ1', name: 'Paletizadora 673' },
+                          { id: 'MG.674-PZ1', name: 'Paletizadora 674' }
+                        ].map((core) => {
+                          const matchedKey = Object.keys(topDowntimesByMachine).find(k => isMachineMatch(core.id, k));
+                          const stops = matchedKey ? topDowntimesByMachine[matchedKey] : [];
+
+                          return (
+                            <div key={core.id} className="border border-slate-200 bg-slate-50/30 rounded-lg p-2.5 font-bold">
+                              <span className="text-[9px] font-black text-blue-900 uppercase tracking-wider block border-b border-slate-200 pb-0.5 mb-1.5">{core.name}</span>
+                              {stops && stops.length > 0 ? (
+                                <ul className="space-y-1 font-semibold text-slate-700">
+                                  {stops.map((stop: any, idx: number) => (
+                                    <li key={idx} className="text-[8px] leading-tight flex justify-between items-start gap-1">
+                                      <span className="truncate max-w-[155px]" title={stop.reason}>
+                                        {idx + 1}. {stop.reason}
+                                      </span>
+                                      <span className="text-red-600 font-mono font-bold whitespace-nowrap ml-1 text-right">
+                                        {stop.duration}m
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <span className="text-[8px] text-slate-400 italic block">Sin paros internos de relevancia.</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Section 6: Observaciones de la Jornada (Active user-input) */}
+                    <div className="mt-5">
+                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
+                        V. Observaciones Operativas
+                      </h4>
+                      <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
                         {customObservation.trim() ? (
-                          <p className="text-xs text-slate-800 leading-relaxed font-semibold whitespace-pre-wrap">
+                          <p className="text-[10px] text-slate-800 leading-relaxed font-semibold whitespace-pre-wrap">
                             {customObservation}
                           </p>
                         ) : (
-                          <span className="text-xs text-slate-400 italic font-semibold">
+                          <span className="text-[10px] text-slate-400 italic font-semibold">
                             Sin observaciones registradas para este reporte. Escriba en la sección izquierda del editor para personalizar este espacio del resumen corporativo.
                           </span>
                         )}
