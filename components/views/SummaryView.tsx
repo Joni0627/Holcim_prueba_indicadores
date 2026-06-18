@@ -442,7 +442,7 @@ export const SummaryView: React.FC<{
     setIsSharing(true);
     try {
       const canvas = await html2canvas(element, {
-        scale: 2, 
+        scale: 3, 
         useCORS: true,
         logging: false,
         backgroundColor: '#0a0f1e',
@@ -574,7 +574,7 @@ export const SummaryView: React.FC<{
     setIsSharing(true);
     try {
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         logging: false,
         backgroundColor: '#0f172a',
@@ -1035,7 +1035,7 @@ export const SummaryView: React.FC<{
                               opacity: '1',
                               display: 'block'
                             },
-                            pixelRatio: 2.5, // Super crisp retina export quality
+                            pixelRatio: 4.0, // Ultra-high resolution crisp export quality
                           });
                           
                           const filename = `Reporte_PSCQube_${startStr}.png`;
@@ -1087,7 +1087,7 @@ export const SummaryView: React.FC<{
                               opacity: '1',
                               display: 'block'
                             },
-                            pixelRatio: 2.5, // Crisp retina copy
+                            pixelRatio: 4.0, // Ultra-crisp copy resolution
                           });
 
                           const response = await fetch(imgData);
@@ -1181,7 +1181,7 @@ export const SummaryView: React.FC<{
                               {p.name}
                             </span>
                             <span className="text-white font-extrabold whitespace-nowrap">
-                              {(p.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400">Tn</span>
+                              {(p.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] text-slate-400">Tn</span>
                             </span>
                           </div>
                         ))}
@@ -1204,7 +1204,7 @@ export const SummaryView: React.FC<{
                               <div>
                                 <span className="text-[8px] text-slate-300 uppercase tracking-widest block truncate">{cleanName}</span>
                                 <span className="text-base font-black text-white block mt-0.5">
-                                  {(s.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
+                                  {(s.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
                                 </span>
                               </div>
                               <div className="mt-2.5 pt-1.5 border-t border-slate-700/60 space-y-1 text-[8px] text-slate-350 font-semibold">
@@ -1233,7 +1233,7 @@ export const SummaryView: React.FC<{
                           III. Producción por Paletizadora
                         </span>
                         <span className="text-[8.5px] font-black text-violet-305 bg-violet-950/30 border border-violet-905 px-2 py-0.5 rounded">
-                          Total: {byMachine.reduce((sum, m) => sum + (m.valueTn || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
+                          Total: {byMachine.reduce((sum, m) => sum + (m.valueTn || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
@@ -1242,7 +1242,7 @@ export const SummaryView: React.FC<{
                             <div>
                               <span className="text-[8px] text-slate-300 uppercase tracking-widest block truncate">{m.name}</span>
                               <span className="text-lg font-black text-white block mt-0.5">
-                                {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
+                                {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
                               </span>
                             </div>
                             
