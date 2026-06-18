@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'motion/react';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchBreakageStats } from '@/services/sheetService';
 import { DowntimeEvent, ShiftMetric, StockStats, BreakageStats } from '@/types';
@@ -984,27 +985,18 @@ export const SummaryView: React.FC<{
                         try {
                           await new Promise(r => setTimeout(r, 200));
                           
-                          // Clone the node and render it off-screen at 1:1 scale
-                          // This completely bypasses parental CSS scale and transform factors which distort html2canvas
-                          const clone = node.cloneNode(true) as HTMLDivElement;
-                          clone.style.position = 'absolute';
-                          clone.style.left = '-9999px';
-                          clone.style.top = '0';
-                          clone.style.transform = 'none';
-                          clone.style.width = '800px';
-                          clone.style.height = 'auto';
-                          document.body.appendChild(clone);
-                          
-                          const canvas = await html2canvas(clone, {
-                            scale: 2,
-                            useCORS: true,
-                            logging: false,
-                            backgroundColor: '#ffffff'
+                          // Convert the high-contrast white document node directly to high-quality PNG
+                          const imgData = await toPng(node, {
+                            backgroundColor: '#ffffff',
+                            style: {
+                              transform: 'scale(1)',
+                              transformOrigin: 'top left',
+                              opacity: '1',
+                              display: 'block'
+                            },
+                            pixelRatio: 2.5, // Super crisp retina export quality
                           });
                           
-                          document.body.removeChild(clone);
-                          
-                          const imgData = canvas.toDataURL('image/png', 1.0);
                           const filename = `Reporte_PSCQube_${startStr}.png`;
                           const link = document.createElement('a');
                           link.download = filename;
@@ -1044,29 +1036,19 @@ export const SummaryView: React.FC<{
                         if (!node) return;
                         setIsSharing(true);
                         try {
-                          await new Promise(r => setTimeout(r, 200));
+                          await new Promise(r => setTimeout(r, 250));
                           
-                          // Clone the node and render it off-screen at 1:1 scale
-                          // This completely bypasses parental CSS scale and transform factors which distort html2canvas
-                          const clone = node.cloneNode(true) as HTMLDivElement;
-                          clone.style.position = 'absolute';
-                          clone.style.left = '-9999px';
-                          clone.style.top = '0';
-                          clone.style.transform = 'none';
-                          clone.style.width = '800px';
-                          clone.style.height = 'auto';
-                          document.body.appendChild(clone);
-
-                          const canvas = await html2canvas(clone, {
-                            scale: 2,
-                            useCORS: true,
-                            logging: false,
-                            backgroundColor: '#ffffff'
+                          const imgData = await toPng(node, {
+                            backgroundColor: '#ffffff',
+                            style: {
+                              transform: 'scale(1)',
+                              transformOrigin: 'top left',
+                              opacity: '1',
+                              display: 'block'
+                            },
+                            pixelRatio: 2.5, // Crisp retina copy
                           });
 
-                          document.body.removeChild(clone);
-
-                          const imgData = canvas.toDataURL('image/png', 1.0);
                           const response = await fetch(imgData);
                           const blob = await response.blob();
                           
@@ -1285,13 +1267,13 @@ export const SummaryView: React.FC<{
                             <div key={core.id} className="border border-slate-200 bg-slate-50/30 rounded-lg p-2.5 font-bold">
                               <span className="text-[9px] font-black text-blue-900 uppercase tracking-wider block border-b border-slate-200 pb-0.5 mb-1.5">{core.name}</span>
                               {stops && stops.length > 0 ? (
-                                <ul className="space-y-1 font-semibold text-slate-700">
+                                <ul className="space-y-1.5 font-medium text-slate-700">
                                   {stops.map((stop: any, idx: number) => (
-                                    <li key={idx} className="text-[8px] leading-tight flex justify-between items-start gap-1">
-                                      <span className="truncate max-w-[155px]" title={stop.reason}>
+                                    <li key={idx} className="text-[8.5px] leading-snug flex justify-between items-baseline gap-2 py-0.5 border-b border-dashed border-slate-100 last:border-none">
+                                      <span className="text-slate-800 break-words flex-1 leading-normal" title={stop.reason}>
                                         {idx + 1}. {stop.reason}
                                       </span>
-                                      <span className="text-red-600 font-mono font-bold whitespace-nowrap ml-1 text-right">
+                                      <span className="text-red-600 font-mono font-black whitespace-nowrap shrink-0 text-right">
                                         {stop.duration}m
                                       </span>
                                     </li>
@@ -1325,7 +1307,7 @@ export const SummaryView: React.FC<{
                     </div>
 
                     {/* Footer Certification */}
-                    <div className="absolute bottom-6 left-10 right-10 flex justify-between items-center text-[8px] font-black text-slate-400 uppercase border-t border-slate-200 pt-3">
+                    <div className="mt-10 pt-4 flex justify-between items-center text-[8px] font-black text-slate-400 uppercase border-t border-slate-200">
                       <span> PSCQube • HOLCIM ARGENTINA S.A. </span>
                       <span> GENERADO: {new Date().toLocaleDateString('es-AR')} {new Date().toLocaleTimeString('es-AR', { hour12: false })} </span>
                     </div>
