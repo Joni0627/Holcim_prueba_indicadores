@@ -1083,7 +1083,7 @@ export const SummaryView: React.FC<{
                     <div className="pb-5 border-b-4 border-slate-900 flex justify-between items-start">
                       <div>
                         <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-none uppercase">Reporte General de Expedición</h1>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">PSCQube • Planta Malagueño</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Planta Malagueño</p>
                         <div className="mt-4 flex gap-4 text-xs font-bold">
                           <div>
                             <span className="text-slate-400 text-[8px] uppercase tracking-wider block">Período de Análisis</span>
@@ -1096,7 +1096,6 @@ export const SummaryView: React.FC<{
 
                       <div className="text-right">
                         <span className="font-mono text-2xl font-black tracking-tighter text-blue-900 block leading-none">PSCQube</span>
-                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Holcim Argentina S.A.</span>
                       </div>
                     </div>
 
