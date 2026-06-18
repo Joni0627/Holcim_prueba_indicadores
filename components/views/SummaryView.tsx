@@ -211,7 +211,8 @@ export const SummaryView: React.FC<{
         value: s.bags,
         availability: avgAvail * 100,
         performance: avgPerf * 100,
-        oee: (avgAvail * avgPerf) * 100
+        oee: (avgAvail * avgPerf) * 100,
+        hsMarcha: s.hsMarchaTotal
       };
     });
   }, [unifiedDetails]);
@@ -1100,10 +1101,10 @@ export const SummaryView: React.FC<{
                     </div>
 
                     {/* Section 1: KPI Resumen */}
-                    <div className="mt-6 grid grid-cols-2 gap-4">
+                    <div className="mt-4">
                       <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
                         <div>
-                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Producción Total Consolidada</span>
+                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Producción Total</span>
                           <span className="text-2xl font-black text-slate-900 tracking-tight mt-1 block">
                             {totalTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-bold text-slate-400">Tn</span>
                           </span>
@@ -1112,21 +1113,9 @@ export const SummaryView: React.FC<{
                           <PackageCheck size={20} />
                         </div>
                       </div>
-
-                      <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-                        <div>
-                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Stock Total Registrado</span>
-                          <span className="text-2xl font-black text-emerald-700 tracking-tight mt-1 block">
-                            {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-xs font-bold text-emerald-600/60 font-medium ml-1">Tn</span>
-                          </span>
-                        </div>
-                        <div className="w-10 h-10 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
-                          <Clock size={20} />
-                        </div>
-                      </div>
                     </div>
 
-                    {/* Section 2: Tn totales por producto */}
+                    {/* Section I: Tn totales por producto */}
                     <div className="mt-5">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
                         I. Producción por Tipo de Producto
@@ -1148,28 +1137,90 @@ export const SummaryView: React.FC<{
                       </div>
                     </div>
 
-                    {/* Section 3: Tn producidas por paletizadora */}
+                    {/* Section II: Producción por Turno */}
                     <div className="mt-5">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
-                        II. Producción por Paletizadora
+                        II. Producción por Turno
                       </h4>
+                      <div className="grid grid-cols-4 gap-3">
+                        {shiftData.map((s: any) => {
+                          const cleanName = s.name.replace(/^\d\./, ''); // Removes '1.' from '1.MAÑANA' to leave 'MAÑANA'
+                          return (
+                            <div key={s.name} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg flex flex-col justify-between font-bold">
+                              <div>
+                                <span className="text-[8px] text-slate-400 uppercase tracking-widest block truncate">{cleanName}</span>
+                                <span className="text-sm font-black text-slate-900 block mt-0.5">
+                                  {(s.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
+                                </span>
+                              </div>
+                              <div className="mt-2 pt-1 border-t border-slate-200 space-y-0.5 text-[8px] text-slate-500 font-semibold">
+                                <div className="flex justify-between">
+                                  <span>Hs Marcha:</span>
+                                  <span className="font-mono text-slate-950 font-extrabold">{(s.hsMarcha || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}h</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Disp / Rend:</span>
+                                  <span className="font-mono text-slate-950 font-extrabold">{s.disp}% / {s.rend}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {shiftData.length === 0 && (
+                          <span className="col-span-4 text-xs text-slate-400 italic">Sin datos de turno en el período.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Section III: Tn producidas por paletizadora */}
+                    <div className="mt-5">
+                      <div className="flex justify-between items-end border-b border-slate-200 pb-1 mb-2">
+                        <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                          III. Producción por Paletizadora
+                        </h4>
+                        <span className="text-[9px] font-black text-white bg-slate-900 px-2 py-0.5 rounded">
+                          Total Paletizadoras: {byMachine.reduce((sum, m) => sum + (m.valueTn || 0), 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} Tn
+                        </span>
+                      </div>
                       <div className="grid grid-cols-3 gap-3">
                         {byMachine.map((m: any) => (
-                          <div key={m.machineId} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg text-center font-bold">
-                            <span className="text-[8px] text-slate-400 uppercase tracking-widest block truncate">{m.name}</span>
-                            <span className="text-base font-black text-slate-900 block mt-0.5">
-                              {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
-                            </span>
+                          <div key={m.machineId} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg flex flex-col justify-between font-bold">
+                            <div>
+                              <span className="text-[8px] text-slate-400 uppercase tracking-widest block truncate">{m.name}</span>
+                              <span className="text-base font-black text-slate-900 block mt-0.5">
+                                {(m.valueTn || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} <span className="text-[9px] text-slate-400 font-bold">Tn</span>
+                              </span>
+                            </div>
+                            
+                            <div className="mt-2 pt-2 border-t border-slate-150 space-y-0.5 text-[8px] text-slate-600 font-semibold">
+                              <div className="flex justify-between">
+                                <span>Hs Marcha:</span>
+                                <span className="font-mono text-slate-900 font-extrabold">{(m.hsMarcha || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} hs</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Disponibilidad:</span>
+                                <span className={`font-mono font-extrabold ${m.availability < 76 ? 'text-red-600' : 'text-slate-950'}`}>{(m.availability || 0).toFixed(1)}%</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Rendimiento:</span>
+                                <span className={`font-mono font-extrabold ${m.performance < 92 ? 'text-red-600' : 'text-slate-950'}`}>{(m.performance || 0).toFixed(1)}%</span>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Section 4: Tn de materiales productivos contadas en stock físico */}
+                    {/* Section IV: Tn de materiales productivos contadas en stock físico */}
                     <div className="mt-5">
-                      <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
-                        III. Stock Físico (Materiales Productivos)
-                      </h4>
+                      <div className="flex justify-between items-end border-b border-slate-200 pb-1 mb-2">
+                        <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+                          IV. Stock Físico (Materiales Productivos)
+                        </h4>
+                        <span className="text-[9px] font-black text-emerald-900 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                          Total Conteo: {totalStockTn.toLocaleString(undefined, { maximumFractionDigits: 0 })} Tn
+                        </span>
+                      </div>
                       <div className="grid grid-cols-4 gap-3">
                         {producedStock.map((item) => (
                           <div key={item.id} className="border border-slate-200 bg-slate-50/50 p-2.5 rounded-lg text-center font-bold">
@@ -1187,10 +1238,10 @@ export const SummaryView: React.FC<{
                       </div>
                     </div>
 
-                    {/* Section 5: Los cinco paros internos más relevantes por paletizadora */}
+                    {/* Section V: Los cinco paros internos más relevantes por paletizadora */}
                     <div className="mt-5">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
-                        IV. Paros Internos más Relevantes (Top 5 por Máquina)
+                        V. Paros Internos más Relevantes (Top 5 por Máquina)
                       </h4>
                       <div className="grid grid-cols-3 gap-3">
                         {[
@@ -1226,10 +1277,10 @@ export const SummaryView: React.FC<{
                       </div>
                     </div>
 
-                    {/* Section 6: Observaciones de la Jornada (Active user-input) */}
+                    {/* Section VI: Observaciones de la Jornada (Active user-input) */}
                     <div className="mt-5">
                       <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-200 pb-1 mb-2">
-                        V. Observaciones Operativas
+                        VI. Observaciones Operativas
                       </h4>
                       <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/50">
                         {customObservation.trim() ? (
