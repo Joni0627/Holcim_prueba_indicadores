@@ -267,17 +267,34 @@ export async function GET(req: Request) {
             }
         });
 
-        // Calculate dynamic runtime hours (hsMarcha)
-        let hsMarcha = (duracionTurnoMinutes - paroInternoMinutes - paroExternoMinutes) / 60;
-        if (hsMarcha < 0) hsMarcha = 0;
+        // Determine availability based on user rules
+        let disponibilidad = 1.0;
+        let hsMarcha = 0;
 
-        // Availability formula = (hs_paro_externo + hs_marcha) / duracion_turno
-        const hsParoExterno = paroExternoMinutes / 60;
-        let calculatedDisp = duracionTurno > 0 ? (hsParoExterno + hsMarcha) / duracionTurno : 1.0;
-        if (calculatedDisp < 0) calculatedDisp = 0;
-        if (calculatedDisp > 1) calculatedDisp = 1;
+        if (paroInternoMinutes >= duracionTurnoMinutes) {
+            // Rule 3: If the registered downtime for the whole shift is internal, availability must be 0%
+            disponibilidad = 0.0;
+            hsMarcha = 0;
+        } else if (paroExternoMinutes >= duracionTurnoMinutes) {
+            // Rule 2: If the registered downtime for the whole shift is external, availability must be 100%
+            disponibilidad = 1.0;
+            hsMarcha = 0;
+        } else if (tnHeader === 0) {
+            // Rule 1: If there are no productions registered, availability must be 100%
+            disponibilidad = 1.0;
+            hsMarcha = Math.max(0, duracionTurnoMinutes - paroInternoMinutes - paroExternoMinutes) / 60;
+        } else {
+            // Standard dynamic calculation
+            hsMarcha = (duracionTurnoMinutes - paroInternoMinutes - paroExternoMinutes) / 60;
+            if (hsMarcha < 0) hsMarcha = 0;
 
-        const disponibilidad = calculatedDisp;
+            const hsParoExterno = paroExternoMinutes / 60;
+            let calculatedDisp = duracionTurno > 0 ? (hsParoExterno + hsMarcha) / duracionTurno : 1.0;
+            if (calculatedDisp < 0) calculatedDisp = 0;
+            if (calculatedDisp > 1) calculatedDisp = 1;
+            disponibilidad = calculatedDisp;
+        }
+
         const oee = disponibilidad * rendimiento;
         
         if (!machineStats[maquinaId]) machineStats[maquinaId] = { bags: 0, tn: 0, name: maquinaDesc };
