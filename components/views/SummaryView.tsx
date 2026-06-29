@@ -202,21 +202,57 @@ export const SummaryView: React.FC<{
     });
 
     return Object.entries(stats).map(([id, s]) => {
-      // Default to 100% (1.0) availability & performance if no dynamic run hours are reported
-      const avgAvail = s.hsMarchaTotal > 0 ? s.availSum / s.hsMarchaTotal : 1.0;
-      const avgPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 1.0;
+      let finalAvail = 1.0;
+      let finalPerf = 1.0;
+      let finalOee = 1.0;
+
+      if (s.tn === 0) {
+        // No production registered
+        finalPerf = 0.0;
+        finalOee = 0.0;
+
+        const machineDowntimes = downtimeResult 
+          ? downtimeResult.filter(d => 
+              isMachineMatch(d.machineId, id) || 
+              isMachineMatch(d.machineId, s.machineName)
+            )
+          : [];
+
+        const internalParos = machineDowntimes.filter(p => String(p.downtimeType || '').toLowerCase().includes('interno'));
+        const internalMinutes = internalParos.reduce((sum, p) => sum + (p.durationMinutes || 0), 0);
+        const externalParos = machineDowntimes.filter(p => String(p.downtimeType || '').toLowerCase().includes('externo'));
+        const externalMinutes = externalParos.reduce((sum, p) => sum + (p.durationMinutes || 0), 0);
+
+        const totalPeriodMinutes = (s.count > 0 ? s.count : 1) * 480;
+
+        if (machineDowntimes.length === 0) {
+          finalAvail = 1.0;
+        } else if (externalMinutes >= totalPeriodMinutes) {
+          finalAvail = 1.0;
+        } else if (internalMinutes > 0) {
+          finalAvail = Math.max(0, (totalPeriodMinutes - internalMinutes) / totalPeriodMinutes);
+        } else {
+          finalAvail = 1.0;
+        }
+      } else {
+        // Normal production registered
+        finalAvail = s.hsMarchaTotal > 0 ? s.availSum / s.hsMarchaTotal : 1.0;
+        finalPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 1.0;
+        finalOee = finalAvail * finalPerf;
+      }
+
       return {
         name: s.machineName,
         machineId: id,
         valueTn: s.tn,
         value: s.bags,
-        availability: avgAvail * 100,
-        performance: avgPerf * 100,
-        oee: (avgAvail * avgPerf) * 100,
+        availability: finalAvail * 100,
+        performance: finalPerf * 100,
+        oee: finalOee * 100,
         hsMarcha: s.hsMarchaTotal
       };
     });
-  }, [unifiedDetails]);
+  }, [unifiedDetails, downtimeResult]);
 
   const topDowntimesByMachine = useMemo(() => {
     if (!downtimeResult) return {};

@@ -280,8 +280,17 @@ export async function GET(req: Request) {
             disponibilidad = 1.0;
             hsMarcha = 0;
         } else if (tnHeader === 0) {
-            // Rule 1: If there are no productions registered, availability must be 100%
-            disponibilidad = 1.0;
+            // Rule 1: If there are no productions registered
+            rendimiento = 0.0;
+            if (paroInternoMinutes === 0 && paroExternoMinutes === 0) {
+                disponibilidad = 1.0;
+            } else if (paroExternoMinutes >= duracionTurnoMinutes) {
+                disponibilidad = 1.0;
+            } else if (paroInternoMinutes > 0) {
+                disponibilidad = Math.max(0, (duracionTurnoMinutes - paroInternoMinutes) / duracionTurnoMinutes);
+            } else {
+                disponibilidad = 1.0;
+            }
             hsMarcha = Math.max(0, duracionTurnoMinutes - paroInternoMinutes - paroExternoMinutes) / 60;
         } else {
             // Standard dynamic calculation
