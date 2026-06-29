@@ -1013,7 +1013,7 @@ export const SummaryView: React.FC<{
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-white uppercase tracking-widest">Resumen Corporativo</h3>
-                  <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Generación de Reporte de Expedición en formato de alta resolución (Tema Oscuro)</p>
+                  <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Generación de Reporte de Expedición</p>
                 </div>
               </div>
               <button 
