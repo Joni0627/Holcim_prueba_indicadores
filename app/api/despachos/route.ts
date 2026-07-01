@@ -60,9 +60,9 @@ export async function GET(req: Request) {
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
 
-    // Calculate Month-to-Date range for despachoAcumulado (from the 1st of the month of the endDate up to endDate)
+    // Calculate Month-to-Date range for despachoAcumulado (covers the entire month of the selected endDate, regardless of filter range start)
     const mtdStartDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1, 0, 0, 0);
-    const mtdEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
+    const mtdEndDate = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0, 23, 59, 59);
 
     // Fetch from Supabase
     const [rowsDespachos, rowsMateriales] = await Promise.all([
