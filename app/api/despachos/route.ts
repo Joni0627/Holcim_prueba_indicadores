@@ -60,25 +60,23 @@ export async function GET(req: Request) {
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
 
+    // Calculate Month-to-Date range for despachoAcumulado (from the 1st of the month of the endDate up to endDate)
+    const mtdStartDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1, 0, 0, 0);
+    const mtdEndDate = new Date(endDate.getTime());
+
     // Fetch from Supabase
     const [rowsDespachos, rowsMateriales] = await Promise.all([
         fetchAllRows("despachosv2"),
         fetchAllRows("materialesv2")
     ]);
 
-    const despachosFiltrados = rowsDespachos.filter(row => {
-        const d = parseSheetDate(getSupabaseVal(row, "fecha") || getSupabaseVal(row, "date"));
-        if (!d) return false;
-        return d.getTime() >= startDate.getTime() && d.getTime() <= endDate.getTime();
+    // Pre-process materials for faster lookup and categorization
+    const materialsMap = new Map();
+    rowsMateriales.forEach(m => {
+        materialsMap.set(String(getSupabaseVal(m, "id")), m);
     });
 
-    let despachoTotalSum = 0;
-    let bolsaSum = 0;
-    let granelSum = 0;
-
-    const details: any[] = [];
-
-    despachosFiltrados.forEach(row => {
+    const getMaterialProperties = (row: any) => {
         const rowMatId = getSupabaseVal(row, "material_id") || 
                          getSupabaseVal(row, "id_material") || 
                          getSupabaseVal(row, "material") || 
@@ -94,7 +92,7 @@ export async function GET(req: Request) {
 
         let matchedMat = null;
         if (rowMatId) {
-            matchedMat = rowsMateriales.find(m => String(getSupabaseVal(m, "id")) === String(rowMatId));
+            matchedMat = materialsMap.get(String(rowMatId));
         }
         if (!matchedMat && materialName) {
             const nameNorm = cleanName(materialName);
@@ -145,34 +143,66 @@ export async function GET(req: Request) {
             getSupabaseVal(row, "qty")
         );
 
-        if (isDespacho) despachoTotalSum += tonnage;
-        if (isProductive) bolsaSum += tonnage;
-        if (isGranel) granelSum += tonnage;
+        return { isDespacho, isProductive, isGranel, tonnage, materialName, matchedMat };
+    };
 
-        details.push({
-            material: materialName || (matchedMat ? (getSupabaseVal(matchedMat, "nombre") || getSupabaseVal(matchedMat, "name")) : "Desconocido"),
-            tonnage,
-            isDespacho,
-            isProductive,
-            isGranel
-        });
+    // Calculate filter range values (Daily / Custom Selected Range)
+    let despachoTotalSum = 0;
+    let bolsaSum = 0;
+    let granelSum = 0;
+    const details: any[] = [];
+
+    // Calculate Month-to-Date (MTD) sum for dispatch accumulation
+    let mtdTotalSum = 0;
+
+    rowsDespachos.forEach(row => {
+        const d = parseSheetDate(getSupabaseVal(row, "fecha") || getSupabaseVal(row, "date"));
+        if (!d) return;
+
+        const t = d.getTime();
+        const { isDespacho, isProductive, isGranel, tonnage, materialName, matchedMat } = getMaterialProperties(row);
+
+        // Sum for filtered date range
+        if (t >= startDate.getTime() && t <= endDate.getTime()) {
+            if (isDespacho) despachoTotalSum += tonnage;
+            if (isProductive) bolsaSum += tonnage;
+            if (isGranel) granelSum += tonnage;
+
+            details.push({
+                material: materialName || (matchedMat ? (getSupabaseVal(matchedMat, "nombre") || getSupabaseVal(matchedMat, "name")) : "Desconocido"),
+                tonnage,
+                isDespacho,
+                isProductive,
+                isGranel
+            });
+        }
+
+        // Sum for MTD (Month-to-Date) up to the selected end date
+        if (t >= mtdStartDate.getTime() && t <= mtdEndDate.getTime()) {
+            if (isDespacho || isProductive || isGranel) {
+                mtdTotalSum += tonnage;
+            }
+        }
     });
 
     // Elegant Mock Fallback to keep preview alive and functional if database returns zero rows
-    if (despachosFiltrados.length === 0) {
+    if (rowsDespachos.length === 0) {
         // Hash the date range to produce deterministic but different mock values per date
         const dateHash = (startParam.charCodeAt(startParam.length - 1) + endParam.charCodeAt(endParam.length - 1)) % 10;
         
-        despachoTotalSum = 1100 + dateHash * 45;
-        bolsaSum = 750 + dateHash * 30;
-        granelSum = 350 + dateHash * 15;
+        despachoTotalSum = 110 + dateHash * 15;
+        bolsaSum = 75 + dateHash * 10;
+        granelSum = 35 + dateHash * 5;
+        
+        // Month to date represents about 25-30x daily sum for realistic metrics representation
+        mtdTotalSum = (despachoTotalSum + bolsaSum + granelSum) * (endDate.getDate() || 15) * 0.85;
     }
 
     const responseData = {
         despachoTotal: parseFloat(despachoTotalSum.toFixed(2)),
         bolsa: parseFloat(bolsaSum.toFixed(2)),
         granel: parseFloat(granelSum.toFixed(2)),
-        despachoAcumulado: parseFloat((despachoTotalSum + bolsaSum + granelSum).toFixed(2)),
+        despachoAcumulado: parseFloat(mtdTotalSum.toFixed(2)), // Month-To-Date Sum of all categories
         details
     };
 

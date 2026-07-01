@@ -909,46 +909,58 @@ export const SummaryView: React.FC<{
                             </span>
                         </div>
                         <div className="p-6">
-                            <div className="overflow-x-auto no-scrollbar">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-white/10">
-                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Categoría de Despacho</th>
-                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción / Criterio</th>
-                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Tonelaje Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5 text-sm font-bold">
-                                        <tr className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="py-3.5 px-4 text-sky-400 font-black">Despacho total</td>
-                                            <td className="py-3.5 px-4 text-slate-400 font-semibold text-xs">Suma de productos marcados como despacho en el maestro</td>
-                                            <td className="py-3.5 px-4 text-right text-lg font-black text-white">
-                                                {(despachosResult?.despachoTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs text-slate-500 font-bold ml-1">TN</span>
-                                            </td>
-                                        </tr>
-                                        <tr className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="py-3.5 px-4 text-emerald-400 font-black">Bolsa</td>
-                                            <td className="py-3.5 px-4 text-slate-400 font-semibold text-xs">Suma de productos marcados como productivos en el maestro</td>
-                                            <td className="py-3.5 px-4 text-right text-lg font-black text-white">
-                                                {(despachosResult?.bolsa || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs text-slate-500 font-bold ml-1">TN</span>
-                                            </td>
-                                        </tr>
-                                        <tr className="hover:bg-white/[0.02] transition-colors">
-                                            <td className="py-3.5 px-4 text-amber-400 font-black">Granel</td>
-                                            <td className="py-3.5 px-4 text-slate-400 font-semibold text-xs">Suma de productos marcados como granel en el maestro</td>
-                                            <td className="py-3.5 px-4 text-right text-lg font-black text-white">
-                                                {(despachosResult?.granel || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs text-slate-500 font-bold ml-1">TN</span>
-                                            </td>
-                                        </tr>
-                                        <tr className="bg-sky-500/5 hover:bg-sky-500/10 transition-colors border-t border-sky-500/20">
-                                            <td className="py-4 px-4 text-violet-400 font-black text-base">Despacho acumulado</td>
-                                            <td className="py-4 px-4 text-sky-200 font-extrabold text-xs">Suma total de las categorías anteriores (Despacho total + Bolsa + Granel)</td>
-                                            <td className="py-4 px-4 text-right text-2xl font-black text-white tracking-tight">
-                                                {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm text-sky-400 font-black ml-1">TN</span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {/* CARD 1: Despacho Total */}
+                                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 hover:bg-white/[0.04] transition-all duration-300">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-sky-400 mb-2">Despacho Total</div>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-3xl font-black text-white tracking-tight">
+                                            {(despachosResult?.despachoTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-500">TN</span>
+                                    </div>
+                                    <div className="text-[9px] text-slate-500 mt-1 font-semibold">Productos marcados como despacho en el maestro</div>
+                                </div>
+
+                                {/* CARD 2: Bolsa */}
+                                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 hover:bg-white/[0.04] transition-all duration-300">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2">Bolsa</div>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-3xl font-black text-white tracking-tight">
+                                            {(despachosResult?.bolsa || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-500">TN</span>
+                                    </div>
+                                    <div className="text-[9px] text-slate-500 mt-1 font-semibold">Productos marcados como productivo en el maestro</div>
+                                </div>
+
+                                {/* CARD 3: Granel */}
+                                <div className="bg-white/[0.02] border border-white/5 rounded-xl p-5 hover:bg-white/[0.04] transition-all duration-300">
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-2">Granel</div>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-3xl font-black text-white tracking-tight">
+                                            {(despachosResult?.granel || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                        </span>
+                                        <span className="text-xs font-bold text-slate-500">TN</span>
+                                    </div>
+                                    <div className="text-[9px] text-slate-500 mt-1 font-semibold">Productos marcados como granel en el maestro</div>
+                                </div>
+
+                                {/* CARD 4: Despacho Acumulado (MTD) */}
+                                <div className="bg-sky-500/5 border border-sky-500/10 rounded-xl p-5 hover:bg-sky-500/10 transition-all duration-300 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/5 rounded-full blur-2xl -mr-5 -mt-5"></div>
+                                    <div className="text-[10px] font-black uppercase tracking-widest text-violet-400 mb-2 flex items-center gap-1.5">
+                                        Despacho Acumulado
+                                        <span className="text-[8px] bg-violet-950/60 border border-violet-850/40 text-violet-300 px-1.5 py-0.2 rounded font-black">MES</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-3xl font-black text-white tracking-tight drop-shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+                                            {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                        </span>
+                                        <span className="text-xs font-bold text-sky-400">TN</span>
+                                    </div>
+                                    <div className="text-[9px] text-sky-300/80 mt-1 font-bold">Acumulado total de lo que va del mes actual</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1515,43 +1527,38 @@ export const SummaryView: React.FC<{
                           VII. Resumen de Despachos (Expedición)
                         </span>
                         <span className="text-[8.5px] font-black text-sky-300 bg-sky-950/30 border border-sky-900/30 px-2 py-0.5 rounded">
-                          Total Acumulado: {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
+                          Total Acumulado Mes: {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
                         </span>
                       </div>
                       <div className="border border-slate-700/60 bg-slate-800/25 rounded-lg p-2.5 font-bold">
                         <table className="w-full text-left border-collapse text-[9px]">
                           <thead>
                             <tr className="border-b border-slate-700/50">
-                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest">Categoría</th>
-                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest">Criterio / Descripción</th>
-                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest text-right">Tons</th>
+                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest">Categoría de Despacho</th>
+                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest text-right">Tonelaje Total</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-800 text-[9.5px]">
                             <tr>
                               <td className="py-1.5 px-2 text-sky-400 font-extrabold">Despacho total</td>
-                              <td className="py-1.5 px-2 text-slate-300 font-semibold text-[8.5px]">Productos despacho: true en el maestro</td>
                               <td className="py-1.5 px-2 text-right text-white font-black">
                                 {(despachosResult?.despachoTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
                               </td>
                             </tr>
                             <tr>
                               <td className="py-1.5 px-2 text-emerald-400 font-extrabold">Bolsa</td>
-                              <td className="py-1.5 px-2 text-slate-300 font-semibold text-[8.5px]">Productos productivo: true en el maestro</td>
                               <td className="py-1.5 px-2 text-right text-white font-black">
                                 {(despachosResult?.bolsa || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
                               </td>
                             </tr>
                             <tr>
                               <td className="py-1.5 px-2 text-amber-400 font-extrabold">Granel</td>
-                              <td className="py-1.5 px-2 text-slate-300 font-semibold text-[8.5px]">Productos granel: true en el maestro</td>
                               <td className="py-1.5 px-2 text-right text-white font-black">
                                 {(despachosResult?.granel || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
                               </td>
                             </tr>
                             <tr className="bg-sky-500/5 font-black border-t border-sky-500/20">
-                              <td className="py-1.5 px-2 text-violet-400 font-black text-[10px]">Despacho acumulado</td>
-                              <td className="py-1.5 px-2 text-sky-200 font-extrabold text-[8.5px]">Suma de las anteriores categorías</td>
+                              <td className="py-1.5 px-2 text-violet-400 font-black text-[10px]">Despacho acumulado (Mes actual)</td>
                               <td className="py-1.5 px-2 text-right text-sky-350 font-black text-[10.5px]">
                                 {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
                               </td>
