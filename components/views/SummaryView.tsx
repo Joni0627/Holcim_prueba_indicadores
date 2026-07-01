@@ -148,18 +148,12 @@ export const SummaryView: React.FC<{
     refetchInterval: 300000,
   });
 
-  const { data: targetDayProdResult, isLoading: loadingTargetProd } = useQuery({
-    queryKey: ['production', targetStockDate.toISOString(), targetStockDate.toISOString()],
-    queryFn: () => fetchProductionStats(targetStockDate, targetStockDate),
-    refetchInterval: 300000,
-  });
-
   const { data: breakageResult, isLoading: loadingBreakage } = useQuery({
     queryKey: ['breakage', dateRange.start.toISOString(), dateRange.end.toISOString()],
     queryFn: () => fetchBreakageStats(dateRange.start, dateRange.end),
   });
 
-  const isLoading = loadingDowntimes || loadingProd || loadingStocks || loadingBreakage || loadingTargetStocks || loadingTargetProd;
+  const isLoading = loadingDowntimes || loadingProd || loadingStocks || loadingBreakage || loadingTargetStocks;
 
   const handleFilterChange = (range: { start: Date, end: Date }, type: 'today' | 'yesterday' | 'week' | 'month' | 'custom') => {
     setDateRange(range);
@@ -447,59 +441,12 @@ export const SummaryView: React.FC<{
     Math.max(...productBreakdown.map(p => p.valueTn), 1), 
   [productBreakdown]);
 
-  const cleanName = (val: string): string => {
-    return val
-      .toUpperCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  };
-
-  const nightProductionMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    if (!targetDayProdResult?.productionByShiftProduct) return map;
-
-    targetDayProdResult.productionByShiftProduct.forEach((item: any) => {
-      const shiftUpper = String(item.shift || '').toUpperCase();
-      const isNight = shiftUpper.includes('NOCHE') && !shiftUpper.includes('FIN');
-      if (isNight) {
-        const productNorm = cleanName(item.product);
-        if (!map[productNorm]) map[productNorm] = 0;
-        map[productNorm] += item.tonnage || 0;
-      }
-    });
-    return map;
-  }, [targetDayProdResult]);
-
   const producedStock = useMemo(() => {
     if (!targetDayStockResult?.items) return [];
     
     const order = ["CEMENTO CPF 40", "CEMENTO CPC 30", "CEMENTO MAESTRO", "CEMENTO RAPIDO"];
     const items = targetDayStockResult.items
-      .filter(i => i.isProduced)
-      .map(item => {
-        let tonnage = item.tonnage || 0;
-        
-        const productNorm = cleanName(item.product);
-        // Try exact match or sub-string match
-        let nightTn = nightProductionMap[productNorm] || 0;
-        if (!nightTn) {
-          // fallback: find any key that includes or is included in productNorm
-          const matchedKey = Object.keys(nightProductionMap).find(k => 
-            k === productNorm || k.includes(productNorm) || productNorm.includes(k)
-          );
-          if (matchedKey) {
-            nightTn = nightProductionMap[matchedKey];
-          }
-        }
-        tonnage += nightTn;
-        
-        return {
-          ...item,
-          tonnage
-        };
-      });
+      .filter(i => i.isProduced);
 
     return items.sort((a, b) => {
         const nameA = a.product.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -513,7 +460,7 @@ export const SummaryView: React.FC<{
         if (indexB === -1) return -1;
         return indexA - indexB;
       });
-  }, [targetDayStockResult, nightProductionMap]);
+  }, [targetDayStockResult]);
 
   const dispatchStock = useMemo(() => {
     if (!targetDayStockResult?.items) return [];
