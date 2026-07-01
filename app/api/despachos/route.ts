@@ -60,9 +60,9 @@ export async function GET(req: Request) {
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
 
-    // Calculate Month-to-Date range for despachoAcumulado (from the 1st of the month of the endDate up to endDate)
+    // Calculate Month-to-Date range for despachoAcumulado (covers the entire month of the selected endDate, regardless of filter range start)
     const mtdStartDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1, 0, 0, 0);
-    const mtdEndDate = new Date(endDate.getTime());
+    const mtdEndDate = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0, 23, 59, 59);
 
     // Fetch from Supabase
     const [rowsDespachos, rowsMateriales] = await Promise.all([
@@ -103,7 +103,12 @@ export async function GET(req: Request) {
             });
         }
 
-        const isDespacho = matchedMat ? (
+        const nameNorm = cleanName(materialName);
+        const nameContainsBolsa = nameNorm.includes("BOLSA");
+        const nameContainsGranel = nameNorm.includes("GRANEL");
+        const nameContainsDespacho = nameNorm.includes("DESPACHO");
+
+        const isDespacho = (matchedMat ? (
             getSupabaseVal(matchedMat, "despacho") === true ||
             getSupabaseVal(matchedMat, "despacho") === "true" ||
             getSupabaseVal(matchedMat, "despacho") === "TRUE" ||
@@ -111,9 +116,9 @@ export async function GET(req: Request) {
             getSupabaseVal(matchedMat, "despacho") === "1" ||
             getSupabaseVal(matchedMat, "es_despacho") === true ||
             getSupabaseVal(matchedMat, "es_despacho") === "true"
-        ) : false;
+        ) : false) || nameContainsDespacho;
 
-        const isProductive = matchedMat ? (
+        const isProductive = (matchedMat ? (
             getSupabaseVal(matchedMat, "es_productivo") === true ||
             getSupabaseVal(matchedMat, "es_productivo") === "true" ||
             getSupabaseVal(matchedMat, "es_productivo") === "TRUE" ||
@@ -121,9 +126,9 @@ export async function GET(req: Request) {
             getSupabaseVal(matchedMat, "es_productivo") === "1" ||
             getSupabaseVal(matchedMat, "productivo") === true ||
             getSupabaseVal(matchedMat, "productivo") === "true"
-        ) : false;
+        ) : false) || nameContainsBolsa;
 
-        const isGranel = matchedMat ? (
+        const isGranel = (matchedMat ? (
             getSupabaseVal(matchedMat, "granel") === true ||
             getSupabaseVal(matchedMat, "granel") === "true" ||
             getSupabaseVal(matchedMat, "granel") === "TRUE" ||
@@ -131,7 +136,7 @@ export async function GET(req: Request) {
             getSupabaseVal(matchedMat, "granel") === "1" ||
             getSupabaseVal(matchedMat, "es_granel") === true ||
             getSupabaseVal(matchedMat, "es_granel") === "true"
-        ) : false;
+        ) : false) || nameContainsGranel;
 
         const tonnage = parseNumber(
             getSupabaseVal(row, "tonelaje") || 
@@ -155,7 +160,16 @@ export async function GET(req: Request) {
     // Calculate Month-to-Date (MTD) sum for dispatch accumulation
     let mtdTotalSum = 0;
 
+    // Use a Set to prevent any potential duplicate rows from double-counting
+    const processedRowIds = new Set<string>();
+
     rowsDespachos.forEach(row => {
+        const rowId = String(getSupabaseVal(row, "id") || getSupabaseVal(row, "ID") || "");
+        if (rowId) {
+            if (processedRowIds.has(rowId)) return;
+            processedRowIds.add(rowId);
+        }
+
         const d = parseSheetDate(getSupabaseVal(row, "fecha") || getSupabaseVal(row, "date"));
         if (!d) return;
 
@@ -177,7 +191,7 @@ export async function GET(req: Request) {
             });
         }
 
-        // Sum for MTD (Month-to-Date) up to the selected end date (strictly Bolsa and Granel)
+        // Sum for MTD (Month-to-Date) covering the entire selected month (strictly Bolsa and Granel)
         if (t >= mtdStartDate.getTime() && t <= mtdEndDate.getTime()) {
             if (isProductive || isGranel) {
                 mtdTotalSum += tonnage;
