@@ -60,9 +60,9 @@ export async function GET(req: Request) {
     const startDate = new Date(startParam + "T00:00:00");
     const endDate = new Date(endParam + "T23:59:59");
 
-    // Calculate Month-to-Date range for despachoAcumulado (covers the entire month of the selected endDate, regardless of filter range start)
+    // Calculate Month-to-Date range for despachoAcumulado (from the 1st of the month of the endDate up to endDate)
     const mtdStartDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1, 0, 0, 0);
-    const mtdEndDate = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0, 23, 59, 59);
+    const mtdEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59);
 
     // Fetch from Supabase
     const [rowsDespachos, rowsMateriales] = await Promise.all([
@@ -176,9 +176,8 @@ export async function GET(req: Request) {
         const t = d.getTime();
         const { isDespacho, isProductive, isGranel, tonnage, materialName, matchedMat } = getMaterialProperties(row);
 
-        // Sum for filtered date range
+        // Sum for filtered date range (bolsa and granel)
         if (t >= startDate.getTime() && t <= endDate.getTime()) {
-            if (isDespacho) despachoTotalSum += tonnage;
             if (isProductive) bolsaSum += tonnage;
             if (isGranel) granelSum += tonnage;
 
@@ -191,7 +190,7 @@ export async function GET(req: Request) {
             });
         }
 
-        // Sum for MTD (Month-to-Date) covering the entire selected month (strictly Bolsa and Granel)
+        // Sum for MTD (Month-to-Date) covering up to the selected endDate (strictly Bolsa and Granel)
         if (t >= mtdStartDate.getTime() && t <= mtdEndDate.getTime()) {
             if (isProductive || isGranel) {
                 mtdTotalSum += tonnage;
@@ -199,14 +198,17 @@ export async function GET(req: Request) {
         }
     });
 
+    // despachoTotal is the sum of bolsa and granel for the filtered range
+    despachoTotalSum = bolsaSum + granelSum;
+
     // Elegant Mock Fallback to keep preview alive and functional if database returns zero rows
     if (rowsDespachos.length === 0) {
         // Hash the date range to produce deterministic but different mock values per date
         const dateHash = (startParam.charCodeAt(startParam.length - 1) + endParam.charCodeAt(endParam.length - 1)) % 10;
         
-        despachoTotalSum = 110 + dateHash * 15;
         bolsaSum = 75 + dateHash * 10;
         granelSum = 35 + dateHash * 5;
+        despachoTotalSum = bolsaSum + granelSum;
         
         // Month to date represents about 25-30x daily sum for realistic metrics representation (strictly Bolsa + Granel)
         mtdTotalSum = (bolsaSum + granelSum) * (endDate.getDate() || 15) * 0.85;
