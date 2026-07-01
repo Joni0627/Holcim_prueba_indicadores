@@ -1,5 +1,5 @@
 
-import { DowntimeEvent, ProductionStats, BreakageStats, StockStats, ShiftNews, RankingData } from "../types";
+import { DowntimeEvent, ProductionStats, BreakageStats, StockStats, ShiftNews, RankingData, DespachoStats } from "../types";
 
 const toLocalISO = (date: Date) => {
     const y = date.getFullYear();
@@ -157,3 +157,21 @@ export const fetchShiftNews = async (start: Date, end: Date): Promise<ShiftNews[
         return [];
     }
 };
+
+export const fetchDespachos = async (start: Date, end: Date): Promise<DespachoStats | null> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+
+        const res = await fetch(`/api/despachos?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return data as DespachoStats;
+    } catch (error) {
+        console.error("Error al obtener despachos:", error);
+        return null;
+    }
+};
+

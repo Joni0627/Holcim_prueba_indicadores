@@ -7,8 +7,8 @@ import { motion } from 'motion/react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
-import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchBreakageStats } from '@/services/sheetService';
-import { DowntimeEvent, ShiftMetric, StockStats, BreakageStats } from '@/types';
+import { fetchDowntimes, fetchProductionStats, fetchStocks, fetchBreakageStats, fetchDespachos } from '@/services/sheetService';
+import { DowntimeEvent, ShiftMetric, StockStats, BreakageStats, DespachoStats } from '@/types';
 import { DateFilter } from '@/components/DateFilter';
 
 // Helper for hh:mm format
@@ -136,6 +136,11 @@ export const SummaryView: React.FC<{
     queryFn: async () => fetchProductionStats(dateRange.start, dateRange.end),
   });
 
+  const { data: despachosResult, isLoading: loadingDespachos } = useQuery({
+    queryKey: ['despachos', dateRange.start.toISOString(), dateRange.end.toISOString()],
+    queryFn: () => fetchDespachos(dateRange.start, dateRange.end),
+  });
+
   const { data: stockResult, isLoading: loadingStocks } = useQuery({
     queryKey: ['stocks', dateRange.start.toISOString(), dateRange.end.toISOString()],
     queryFn: () => fetchStocks(dateRange.start, dateRange.end),
@@ -153,7 +158,7 @@ export const SummaryView: React.FC<{
     queryFn: () => fetchBreakageStats(dateRange.start, dateRange.end),
   });
 
-  const isLoading = loadingDowntimes || loadingProd || loadingStocks || loadingBreakage || loadingTargetStocks;
+  const isLoading = loadingDowntimes || loadingProd || loadingStocks || loadingBreakage || loadingTargetStocks || loadingDespachos;
 
   const handleFilterChange = (range: { start: Date, end: Date }, type: 'today' | 'yesterday' | 'week' | 'month' | 'custom') => {
     setDateRange(range);
@@ -891,6 +896,64 @@ export const SummaryView: React.FC<{
                     </div>
                 </div>
 
+                {/* ROW 2.5: EXPEDICION Y DESPACHOS */}
+                <div className="w-full mt-4">
+                    <div className="bg-white/[0.03] backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col overflow-hidden">
+                        <div className="bg-sky-600/80 text-white px-5 py-3 flex items-center justify-between border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <Weight className="text-white" size={20} />
+                                <h3 className="font-black text-white uppercase text-[11px] tracking-[0.2em]">Resumen de Despachos (Expedición)</h3>
+                            </div>
+                            <span className="text-[10px] bg-sky-950/40 border border-sky-400/30 px-2.5 py-0.5 rounded font-black text-sky-200 uppercase tracking-widest">
+                                despachosv2
+                            </span>
+                        </div>
+                        <div className="p-6">
+                            <div className="overflow-x-auto no-scrollbar">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-white/10">
+                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Categoría de Despacho</th>
+                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción / Criterio</th>
+                                            <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Tonelaje Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5 text-sm font-bold">
+                                        <tr className="hover:bg-white/[0.02] transition-colors">
+                                            <td className="py-3.5 px-4 text-sky-400 font-black">Despacho total</td>
+                                            <td className="py-3.5 px-4 text-slate-400 font-semibold text-xs">Suma de productos marcados como despacho en el maestro</td>
+                                            <td className="py-3.5 px-4 text-right text-lg font-black text-white">
+                                                {(despachosResult?.despachoTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs text-slate-500 font-bold ml-1">TN</span>
+                                            </td>
+                                        </tr>
+                                        <tr className="hover:bg-white/[0.02] transition-colors">
+                                            <td className="py-3.5 px-4 text-emerald-400 font-black">Bolsa</td>
+                                            <td className="py-3.5 px-4 text-slate-400 font-semibold text-xs">Suma de productos marcados como productivos en el maestro</td>
+                                            <td className="py-3.5 px-4 text-right text-lg font-black text-white">
+                                                {(despachosResult?.bolsa || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs text-slate-500 font-bold ml-1">TN</span>
+                                            </td>
+                                        </tr>
+                                        <tr className="hover:bg-white/[0.02] transition-colors">
+                                            <td className="py-3.5 px-4 text-amber-400 font-black">Granel</td>
+                                            <td className="py-3.5 px-4 text-slate-400 font-semibold text-xs">Suma de productos marcados como granel en el maestro</td>
+                                            <td className="py-3.5 px-4 text-right text-lg font-black text-white">
+                                                {(despachosResult?.granel || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-xs text-slate-500 font-bold ml-1">TN</span>
+                                            </td>
+                                        </tr>
+                                        <tr className="bg-sky-500/5 hover:bg-sky-500/10 transition-colors border-t border-sky-500/20">
+                                            <td className="py-4 px-4 text-violet-400 font-black text-base">Despacho acumulado</td>
+                                            <td className="py-4 px-4 text-sky-200 font-extrabold text-xs">Suma total de las categorías anteriores (Despacho total + Bolsa + Granel)</td>
+                                            <td className="py-4 px-4 text-right text-2xl font-black text-white tracking-tight">
+                                                {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} <span className="text-sm text-sky-400 font-black ml-1">TN</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* ROW 3: DOWNTIME TABLE (Full Width) */}
                 <div className="w-full">
                     <div data-chart="downtime" className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl border border-white/10 flex flex-col relative overflow-hidden group min-h-[400px]">
@@ -1444,10 +1507,64 @@ export const SummaryView: React.FC<{
                       </div>
                     </div>
 
-                    {/* Section VII: Observaciones de la Jornada (Active user-input) */}
+                    {/* Section VII: Resumen de Despachos (Expedición) */}
+                    <div className="mt-5">
+                      <div className="flex justify-between items-center bg-sky-950/45 border border-sky-500/30 px-3 py-1.5 rounded-lg mb-2.5">
+                        <span className="text-sky-300 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                          VII. Resumen de Despachos (Expedición)
+                        </span>
+                        <span className="text-[8.5px] font-black text-sky-300 bg-sky-950/30 border border-sky-900/30 px-2 py-0.5 rounded">
+                          Total Acumulado: {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
+                        </span>
+                      </div>
+                      <div className="border border-slate-700/60 bg-slate-800/25 rounded-lg p-2.5 font-bold">
+                        <table className="w-full text-left border-collapse text-[9px]">
+                          <thead>
+                            <tr className="border-b border-slate-700/50">
+                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest">Categoría</th>
+                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest">Criterio / Descripción</th>
+                              <th className="py-1 px-2 font-black text-slate-400 uppercase tracking-widest text-right">Tons</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800 text-[9.5px]">
+                            <tr>
+                              <td className="py-1.5 px-2 text-sky-400 font-extrabold">Despacho total</td>
+                              <td className="py-1.5 px-2 text-slate-300 font-semibold text-[8.5px]">Productos despacho: true en el maestro</td>
+                              <td className="py-1.5 px-2 text-right text-white font-black">
+                                {(despachosResult?.despachoTotal || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="py-1.5 px-2 text-emerald-400 font-extrabold">Bolsa</td>
+                              <td className="py-1.5 px-2 text-slate-300 font-semibold text-[8.5px]">Productos productivo: true en el maestro</td>
+                              <td className="py-1.5 px-2 text-right text-white font-black">
+                                {(despachosResult?.bolsa || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="py-1.5 px-2 text-amber-400 font-extrabold">Granel</td>
+                              <td className="py-1.5 px-2 text-slate-300 font-semibold text-[8.5px]">Productos granel: true en el maestro</td>
+                              <td className="py-1.5 px-2 text-right text-white font-black">
+                                {(despachosResult?.granel || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
+                              </td>
+                            </tr>
+                            <tr className="bg-sky-500/5 font-black border-t border-sky-500/20">
+                              <td className="py-1.5 px-2 text-violet-400 font-black text-[10px]">Despacho acumulado</td>
+                              <td className="py-1.5 px-2 text-sky-200 font-extrabold text-[8.5px]">Suma de las anteriores categorías</td>
+                              <td className="py-1.5 px-2 text-right text-sky-350 font-black text-[10.5px]">
+                                {(despachosResult?.despachoAcumulado || 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tn
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Section VIII: Observaciones de la Jornada (Active user-input) */}
                     <div className="mt-5">
                       <div className="bg-[#1e293b] border border-slate-600/30 px-3 py-1.5 rounded-lg text-slate-300 text-[9px] font-black uppercase tracking-widest mb-2.5">
-                        VII. Observaciones Operativas
+                        VIII. Observaciones Operativas
                       </div>
                       <div className="border border-slate-700 rounded-lg p-3.5 bg-slate-800/20">
                         {customObservation.trim() ? (

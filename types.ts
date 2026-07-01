@@ -180,3 +180,18 @@ export interface ShiftNews {
   shift: string;
   detail: string;
 }
+
+export interface DespachoStats {
+  despachoTotal: number;
+  bolsa: number;
+  granel: number;
+  despachoAcumulado: number;
+  details?: {
+    material: string;
+    tonnage: number;
+    isDespacho: boolean;
+    isProductive: boolean;
+    isGranel: boolean;
+  }[];
+}
+
