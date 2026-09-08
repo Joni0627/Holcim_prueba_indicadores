@@ -276,8 +276,8 @@ export const SummaryView: React.FC<{
         }
       } else {
         // Normal production registered
-        finalAvail = s.hsMarchaTotal > 0 ? s.availSum / s.hsMarchaTotal : 1.0;
-        finalPerf = s.hsMarchaTotal > 0 ? s.perfSum / s.hsMarchaTotal : 1.0;
+        finalAvail = hsMarchaTotal > 0 ? s.availSum / hsMarchaTotal : 1.0;
+        finalPerf = hsMarchaTotal > 0 ? s.perfSum / hsMarchaTotal : 1.0;
         finalOee = finalAvail * finalPerf;
       }
 
