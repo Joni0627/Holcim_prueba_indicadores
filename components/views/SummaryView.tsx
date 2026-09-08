@@ -289,7 +289,7 @@ export const SummaryView: React.FC<{
         availability: finalAvail * 100,
         performance: finalPerf * 100,
         oee: finalOee * 100,
-        hsMarcha: s.hsMarchaTotal
+        hsMarcha: hsMarchaTotal
       };
     });
   }, [unifiedDetails, downtimeResult]);
