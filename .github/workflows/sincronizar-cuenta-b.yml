@@ -1,0 +1,27 @@
+name: Sincronizar Repositorio con Cuenta B
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código de Cuenta A
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configurar identidad Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Sincronizar con repositorio de Cuenta B
+        run: |
+          REMOTE_REPO="https://x-access-token:${{ secrets.CUENTA_B_TOKEN }}@github.com/AMG0-EXP-totem01amg0-rgb/PSQube_indicadores_amg0.git"
+          git push --mirror "$REMOTE_REPO"

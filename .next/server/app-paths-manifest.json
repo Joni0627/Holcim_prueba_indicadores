@@ -1,0 +1,9 @@
+{
+  "/icon.jpg/route": "app/icon.jpg/route.js",
+  "/page": "app/page.js",
+  "/api/production/route": "app/api/production/route.js",
+  "/api/stocks/route": "app/api/stocks/route.js",
+  "/api/paros/route": "app/api/paros/route.js",
+  "/api/despachos/route": "app/api/despachos/route.js",
+  "/api/breakage/route": "app/api/breakage/route.js"
+}

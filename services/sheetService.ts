@@ -1,0 +1,177 @@
+
+import { DowntimeEvent, ProductionStats, BreakageStats, StockStats, ShiftNews, RankingData, DespachoStats } from "../types";
+
+const toLocalISO = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+export const fetchDowntimes = async (start: Date, end: Date): Promise<DowntimeEvent[]> => {
+  try {
+    const startStr = toLocalISO(start);
+    const endStr = toLocalISO(end);
+    
+    // Llamada a la API con el rango de fechas
+    const res = await fetch(`/api/paros?start=${startStr}&end=${endStr}`);
+    
+    if (!res.ok) {
+        console.warn("La API devolvió un error, se usará un arreglo vacío");
+        return [];
+    }
+
+    const data = await res.json();
+    
+    if (!Array.isArray(data) || data.length === 0) {
+        return [];
+    }
+
+    // Mapeo de datos brutos de la API a los tipos de la aplicación
+    return data.map((row: any) => ({
+        id: row.id,
+        reason: row.reason || 'Sin motivo',
+        durationMinutes: row.durationMinutes || 0,
+        machineId: row.machineId || 'Desconocida',
+        category: row.sapCause || 'Otros',
+        
+        // Campos específicos para el cronograma y tabla detallada
+        date: row.date,
+        shift: row.shift,
+        startTime: row.startTime, // CRÍTICO: Asegurar que este campo pase al front
+        hac: row.hac,
+        hacDetail: row.hacDetail,
+        sapCause: row.sapCause,
+        downtimeType: row.downtimeType,
+        operatorName: row.operatorName,
+        
+        timestamp: new Date().toISOString()
+    }));
+
+  } catch (error) {
+    console.error("Error al obtener paros de la hoja:", error);
+    return [];
+  }
+};
+
+export const fetchProductionStats = async (start: Date, end: Date): Promise<ProductionStats | null> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+
+        const res = await fetch(`/api/production?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return data as ProductionStats;
+    } catch (error) {
+        console.error("Error al obtener estadísticas de producción:", error);
+        return null;
+    }
+};
+
+export const fetchBreakageStats = async (start: Date, end: Date): Promise<BreakageStats | null> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+
+        const res = await fetch(`/api/breakage?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return data as BreakageStats;
+    } catch (error) {
+        console.error("Error al obtener estadísticas de roturas:", error);
+        return null;
+    }
+};
+
+export const fetchStocks = async (start: Date, end: Date): Promise<StockStats | null> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+
+        const res = await fetch(`/api/stocks?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return data as StockStats;
+    } catch (error) {
+        console.error("Error al obtener stocks:", error);
+        return null;
+    }
+};
+
+export const fetchRankings = async (start: Date, end: Date, operators?: string[], types?: string[]): Promise<RankingData | null> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+        let url = `/api/rankings?start=${startStr}&end=${endStr}`;
+        
+        if (operators && operators.length > 0) {
+            url += `&operators=${encodeURIComponent(operators.join(','))}`;
+        }
+        if (types && types.length > 0) {
+            url += `&types=${encodeURIComponent(types.join(','))}`;
+        }
+
+        const res = await fetch(url);
+        
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return data as RankingData;
+    } catch (error) {
+        console.error("Error al obtener rankings:", error);
+        return null;
+    }
+};
+
+export const fetchTopRecords = async (count: number = 3): Promise<any[]> => {
+    try {
+        const res = await fetch(`/api/production?top=${count}`);
+        if (!res.ok) return [];
+        return await res.json();
+    } catch (error) {
+        console.error("Error al obtener podio histórico:", error);
+        return [];
+    }
+};
+
+export const fetchShiftNews = async (start: Date, end: Date): Promise<ShiftNews[]> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+
+        const res = await fetch(`/api/novedades?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return [];
+
+        const data = await res.json();
+        return data as ShiftNews[];
+    } catch (error) {
+        console.error("Error al obtener novedades de turno:", error);
+        return [];
+    }
+};
+
+export const fetchDespachos = async (start: Date, end: Date): Promise<DespachoStats | null> => {
+    try {
+        const startStr = toLocalISO(start);
+        const endStr = toLocalISO(end);
+
+        const res = await fetch(`/api/despachos?start=${startStr}&end=${endStr}`);
+        
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        return data as DespachoStats;
+    } catch (error) {
+        console.error("Error al obtener despachos:", error);
+        return null;
+    }
+};
+

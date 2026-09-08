@@ -1,0 +1,575 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Mail, Send, CheckCircle2, AlertCircle, Loader2, ShieldCheck, Users, UserCog, Shield, User, Trash2, Database, RefreshCw, Server } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+
+interface ClerkUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+  createdAt: number;
+  lastSignInAt: number | null;
+}
+
+export const AdminPanel = () => {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+  
+  const [users, setUsers] = useState<ClerkUser[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [isInvitationsLoading, setIsInvitationsLoading] = useState(true);
+  
+  // Diagnostics State
+  const [dbDiag, setDbDiag] = useState<any>(null);
+  const [dbDiagLoading, setDbDiagLoading] = useState(false);
+  
+  // Confirmation Modal State
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string, name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchInvitations();
+    runDiagnostics();
+  }, []);
+
+  const runDiagnostics = async () => {
+    setDbDiagLoading(true);
+    try {
+      const response = await fetch('/api/debug-supabase');
+      const data = await response.json();
+      setDbDiag(data);
+    } catch (err: any) {
+      setDbDiag({ success: false, error: err.message || String(err) });
+    } finally {
+      setDbDiagLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    setIsUsersLoading(true);
+    try {
+      const response = await fetch('/api/admin/users');
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (err) {
+      console.error('Error fetching users:', err);
+    } finally {
+      setIsUsersLoading(false);
+    }
+  };
+
+  const fetchInvitations = async () => {
+    setIsInvitationsLoading(true);
+    try {
+      const response = await fetch('/api/admin/invitations');
+      if (response.ok) {
+        const data = await response.json();
+        setInvitations(data);
+      }
+    } catch (err) {
+      console.error('Error fetching invitations:', err);
+    } finally {
+      setIsInvitationsLoading(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string) => {
+    try {
+      const response = await fetch(`/api/admin/invitations?invitationId=${invitationId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        fetchInvitations();
+      }
+    } catch (err) {
+      console.error('Error revoking invitation:', err);
+    }
+  };
+
+  const handleUpdateRole = async (targetUserId: string, newRole: string) => {
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId, newRole }),
+      });
+
+      if (response.ok) {
+        setUsers(users.map(u => u.id === targetUserId ? { ...u, role: newRole } : u));
+      }
+    } catch (err) {
+      console.error('Error updating role:', err);
+    }
+  };
+
+  const handleDeleteUser = async (targetUserId: string) => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/users?userId=${targetUserId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setUsers(users.filter(u => u.id !== targetUserId));
+        setStatus('success');
+        setMessage('Usuario eliminado con éxito');
+        setTimeout(() => setStatus('idle'), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al eliminar usuario');
+      }
+    } catch (err: any) {
+      setStatus('error');
+      setMessage(err.message || 'Error al eliminar usuario');
+      setTimeout(() => setStatus('idle'), 3000);
+    } finally {
+      setIsDeleting(false);
+      setConfirmDelete(null);
+    }
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setIsLoading(true);
+    setStatus('idle');
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/admin/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al enviar la invitación');
+      }
+
+      setStatus('success');
+      setMessage(`Invitación enviada con éxito a ${email}`);
+      setEmail('');
+      // Refresh user list and invitations
+      fetchUsers();
+      fetchInvitations();
+    } catch (err: any) {
+      setStatus('error');
+      setMessage(err.message || 'Ocurrió un error inesperado');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto space-y-8 p-4 sm:p-6">
+      <div className="flex items-center gap-4 mb-8">
+        <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+          <ShieldCheck className="text-emerald-400" size={32} />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-emerald-500">
+            Panel de Gestión Usuarios
+          </h1>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Invitation & Info */}
+        <div className="lg:col-span-1 space-y-8">
+          {/* Invitation Form */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl relative overflow-hidden group"
+          >
+            {/* Neon Accents */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[80px] rounded-full" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 blur-[60px] rounded-full" />
+
+            <div className="relative z-10 space-y-6">
+              <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                <Mail size={18} />
+                <span className="text-xs font-bold uppercase tracking-widest">Enviar Invitación</span>
+              </div>
+
+              <form onSubmit={handleInvite} className="space-y-4">
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="correo@ejemplo.com"
+                    className="w-full bg-slate-950 border border-slate-800 text-white px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-slate-600"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
+                >
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <>
+                      <Send size={18} />
+                      <span>Enviar Acceso</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <AnimatePresence mode="wait">
+                {status !== 'idle' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className={`flex items-start gap-3 p-4 rounded-2xl border ${
+                      status === 'success' 
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                        : 'bg-red-500/10 border-red-500/20 text-red-400'
+                    }`}
+                  >
+                    {status === 'success' ? <CheckCircle2 size={20} className="shrink-0" /> : <AlertCircle size={20} className="shrink-0" />}
+                    <p className="text-sm font-medium">{message}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+
+          {/* Info Card */}
+          <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-white">
+              <ShieldCheck className="text-emerald-500" size={20} />
+              Seguridad del Sistema
+            </h3>
+            <ul className="space-y-4">
+              {[
+                'Whitelist estricta: Solo emails invitados pueden registrarse.',
+                'Eliminación automática de usuarios no autorizados.',
+                'Sincronización en tiempo real vía Webhooks.',
+                'Asignación automática de roles al primer ingreso.',
+                'Auditoría de accesos y gestión de permisos.'
+              ].map((item, i) => (
+                <li key={i} className="flex items-center gap-3 text-sm text-slate-300">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Pending Invitations Card */}
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[400px]">
+            <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="text-amber-400" size={20} />
+                <h3 className="text-lg font-bold text-white">Invitaciones Pendientes</h3>
+              </div>
+              <button 
+                onClick={fetchInvitations}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-all"
+                title="Refrescar invitaciones"
+              >
+                <Loader2 className={isInvitationsLoading ? "animate-spin" : ""} size={14} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {isInvitationsLoading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-amber-500" size={24} />
+                </div>
+              ) : invitations.length === 0 ? (
+                <p className="text-center py-8 text-slate-500 text-sm italic">No hay invitaciones pendientes.</p>
+              ) : (
+                invitations.map((inv) => (
+                  <div key={inv.id} className="bg-slate-950/50 border border-slate-800/50 rounded-xl p-3 flex items-center justify-between group">
+                    <div className="min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{inv.email}</p>
+                      <p className="text-slate-500 text-[10px]">{new Date(inv.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <button 
+                      onClick={() => handleRevokeInvitation(inv.id)}
+                      className="text-red-400/50 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                      title="Revocar invitación"
+                    >
+                      <AlertCircle size={14} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Supabase Diagnostics Card */}
+          <div className="bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="text-emerald-400" size={20} />
+                <h3 className="text-lg font-bold text-white">Estado de Supabase</h3>
+              </div>
+              <button 
+                onClick={runDiagnostics}
+                disabled={dbDiagLoading}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all disabled:opacity-50"
+                title="Sincronizar / Probar ahora"
+              >
+                <RefreshCw className={`h-4 w-4 ${dbDiagLoading ? "animate-spin text-emerald-400" : ""}`} />
+              </button>
+            </div>
+
+            {dbDiagLoading && !dbDiag ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-slate-400 text-sm">
+                <Loader2 className="animate-spin text-emerald-500" size={18} />
+                <span>Verificando conexión en el servidor...</span>
+              </div>
+            ) : dbDiag ? (
+              <div className="space-y-4 text-xs">
+                {/* Credentials check */}
+                <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2">
+                  <p className="font-semibold text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
+                    <Server size={12} /> Variables de Entorno (Vercel/Local)
+                  </p>
+                  <div className="space-y-1 text-slate-400">
+                    <div className="flex justify-between">
+                      <span>SUPABASE_URL:</span>
+                      <span className={dbDiag.reports?.cleanedEnvVars?.urlTrimmedLength > 0 ? "text-emerald-400 font-mono" : "text-red-400"}>
+                        {dbDiag.reports?.cleanedEnvVars?.urlMasked || "No detectado ❌"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>SUPABASE_KEY:</span>
+                      <span className={dbDiag.reports?.cleanedEnvVars?.keyTrimmedLength > 0 ? "text-emerald-400 font-mono" : "text-red-400"}>
+                        {dbDiag.reports?.cleanedEnvVars?.keyMasked || "No detectado ❌"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Table details */}
+                <div className="space-y-2">
+                  <p className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Lectura de Tablas</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {dbDiag.reports?.tableTests ? (
+                      Object.entries(dbDiag.reports.tableTests).map(([tableName, testResult]: [string, any]) => (
+                        <div key={tableName} className="p-2.5 bg-slate-950/50 rounded-lg border border-slate-800/80 flex items-center justify-between">
+                          <span className="font-mono text-slate-300">{tableName}</span>
+                          <span className="flex items-center gap-1.5">
+                            {testResult.success ? (
+                              <>
+                                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                                <span className="text-emerald-400 font-bold">{testResult.rowCountFetched} filas</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                <span className="text-red-400 font-medium cursor-help" title={testResult.error?.message}>
+                                  Error ({testResult.error?.code || 'X'})
+                                </span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-red-400 text-center py-2">No se pudieron realizar las pruebas de tablas.</p>
+                    )}
+                  </div>
+                </div>
+
+                {dbDiag.success ? (
+                  <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 size={16} className="shrink-0" />
+                    <span>Conexión exitosa, Supabase está respondiendo con éxito.</span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={16} className="shrink-0" />
+                      <span className="font-bold">Error de Conexión</span>
+                    </div>
+                    <p className="opacity-90">{dbDiag.error || "Revisa las credenciales de Supabase en Vercel."}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <button
+                  type="button"
+                  onClick={runDiagnostics}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-all"
+                >
+                  Comenzar Diagnóstico
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: User List */}
+        <div className="lg:col-span-2">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden h-full flex flex-col"
+          >
+            <div className="p-8 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="text-blue-400" size={24} />
+                <h2 className="text-xl font-bold text-white">Usuarios Activos</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={fetchUsers}
+                  className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 transition-all"
+                  title="Refrescar lista"
+                >
+                  <Loader2 className={isUsersLoading ? "animate-spin" : ""} size={18} />
+                </button>
+                <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold">
+                  {users.length} Total
+                </span>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {isUsersLoading ? (
+                <div className="flex flex-col items-center justify-center h-64 gap-4">
+                  <Loader2 className="animate-spin text-emerald-500" size={40} />
+                  <p className="text-slate-500 font-medium">Cargando usuarios...</p>
+                </div>
+              ) : users.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                  <User size={40} className="mb-4 opacity-20" />
+                  <p>No hay usuarios registrados aún.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {users.map((user) => (
+                    <div 
+                      key={user.id}
+                      className="bg-slate-950/50 border border-slate-800/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:border-emerald-500/30 transition-all group gap-4"
+                    >
+                      <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-slate-700 shrink-0">
+                          <User className="text-slate-400" size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-bold truncate">
+                            {user.firstName} {user.lastName}
+                            {!user.firstName && !user.lastName && user.email.split('@')[0]}
+                          </p>
+                          <p className="text-slate-500 text-xs truncate">{user.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t border-slate-800/50 sm:border-0 pt-3 sm:pt-0">
+                        <div className="flex flex-col items-start sm:items-end sm:mr-4">
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md mb-1 ${
+                            user.role === 'admin' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          }`}>
+                            {user.role}
+                          </span>
+                          <p className="text-[10px] text-slate-600">
+                            Ingreso: {user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString() : 'Nunca'}
+                          </p>
+                        </div>
+
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handleUpdateRole(user.id, user.role === 'admin' ? 'user' : 'admin')}
+                            className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 hover:text-emerald-400 transition-all"
+                            title="Cambiar Rol"
+                          >
+                            <UserCog size={18} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete({ 
+                              id: user.id, 
+                              name: user.firstName ? `${user.firstName} ${user.lastName || ''}` : user.email.split('@')[0] 
+                            })}
+                            className="p-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 hover:text-red-400 transition-all"
+                            title="Eliminar Usuario"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6"
+            >
+              <div className="flex items-center gap-4 text-red-400">
+                <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20">
+                  <AlertCircle size={24} />
+                </div>
+                <h3 className="text-xl font-bold">¿Eliminar Usuario?</h3>
+              </div>
+              
+              <p className="text-slate-300">
+                Estás a punto de eliminar a <span className="text-white font-bold">{confirmDelete.name}</span>. 
+                Esta acción revocará permanentemente su acceso a la aplicación y no se puede deshacer.
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={isDeleting}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-2xl transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleDeleteUser(confirmDelete.id)}
+                  disabled={isDeleting}
+                  className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 text-white font-bold py-3 rounded-2xl transition-all flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="animate-spin" size={20} />
+                  ) : (
+                    <>
+                      <Trash2 size={18} />
+                      <span>Eliminar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
