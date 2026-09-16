@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { fetchAllRows, fetchRowsByDateRange, getSupabaseVal, parseSheetDate } from "../../../lib/supabase";
-
-const CACHE_TTL = 60 * 1000;
-const cache = new Map<string, { data: any; timestamp: number }>();
 
 const CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=30, s-maxage=120, stale-while-revalidate=300'
@@ -37,35 +35,8 @@ function cleanName(str: string): string {
         .replace(/[\u0300-\u036f]/g, "");
 }
 
-export async function GET(req: Request) {
-  try {
-    const { userId } = auth();
-    if (!userId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const startParam = searchParams.get("start"); 
-    const endParam = searchParams.get("end");
-
-    if (!startParam || !endParam) {
-      return NextResponse.json({ error: "Missing date params" }, { status: 400 });
-    }
-
-    const startDate = new Date(startParam + "T00:00:00");
-    const endDate = new Date(endParam + "T23:59:59");
-
-    // Calculate Month-to-Date range for despachoAcumulado (covers the entire month of the selected endDate, regardless of filter range start)
-    const mtdStartDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1, 0, 0, 0);
-    const mtdEndDate = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0, 23, 59, 59);
-
-    // Check in-memory cache
-    const cacheKey = `despachos-v2-${startParam}-${endParam}`;
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data, { headers: CACHE_HEADERS });
-    }
-
+const getCachedDespachosData = unstable_cache(
+  async (startParam: string, endParam: string, startDate: Date, endDate: Date, mtdStartDate: Date, mtdEndDate: Date) => {
     // Use MTD start as the broader date boundary to also capture month-to-date data
     const mtdStart = `${mtdStartDate.getFullYear()}-${String(mtdStartDate.getMonth() + 1).padStart(2, '0')}-01`;
     const mtdEnd = `${mtdEndDate.getFullYear()}-${String(mtdEndDate.getMonth() + 1).padStart(2, '0')}-${String(mtdEndDate.getDate()).padStart(2, '0')}`;
@@ -313,15 +284,42 @@ export async function GET(req: Request) {
         mtdTotalSum = (bolsaSum + granelSum) * (endDate.getDate() || 15) * 0.85;
     }
 
-    const responseData = {
+    return {
         despachoTotal: parseFloat(despachoTotalSum.toFixed(2)),
         bolsa: parseFloat(bolsaSum.toFixed(2)),
         granel: parseFloat(granelSum.toFixed(2)),
         despachoAcumulado: parseFloat(mtdTotalSum.toFixed(2)), // Month-To-Date Sum of all categories
         details
     };
+  },
+  ['despachos-data-v2'],
+  { revalidate: 300, tags: ['despachos'] }
+);
 
-    cache.set(cacheKey, { data: responseData, timestamp: Date.now() });
+export async function GET(req: Request) {
+  try {
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const startParam = searchParams.get("start"); 
+    const endParam = searchParams.get("end");
+
+    if (!startParam || !endParam) {
+      return NextResponse.json({ error: "Missing date params" }, { status: 400 });
+    }
+
+    const startDate = new Date(startParam + "T00:00:00");
+    const endDate = new Date(endParam + "T23:59:59");
+
+    // Calculate Month-to-Date range for despachoAcumulado (covers the entire month of the selected endDate, regardless of filter range start)
+    const mtdStartDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1, 0, 0, 0);
+    const mtdEndDate = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0, 23, 59, 59);
+
+    const responseData = await getCachedDespachosData(startParam, endParam, startDate, endDate, mtdStartDate, mtdEndDate);
+
     return NextResponse.json(responseData, { headers: CACHE_HEADERS });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

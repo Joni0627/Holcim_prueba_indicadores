@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { fetchAllRows, fetchRowsByDateRange, fetchRowsByIds, getSupabaseVal, parseSheetDate } from "../../../lib/supabase";
 
@@ -79,32 +80,8 @@ function sameDate(d1Str: any, d2Str: any): boolean {
     return date1.toISOString().split('T')[0] === date2.toISOString().split('T')[0];
 }
 
-export async function GET(req: Request) {
-  try {
-    const { userId } = auth();
-    if (!userId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const startParam = searchParams.get("start"); 
-    const endParam = searchParams.get("end");
-    const topParam = searchParams.get("top");
-
-    if (!topParam && (!startParam || !endParam)) {
-      return NextResponse.json({ error: "Missing date params" }, { status: 400 });
-    }
-
-    const startDate = startParam ? new Date(startParam + "T00:00:00") : null;
-    const endDate = endParam ? new Date(endParam + "T23:59:59") : null;
-
-    // Check in-memory cache
-    const cacheKey = `production-v2-${startParam}-${endParam}-${topParam || 'none'}`;
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data, { headers: CACHE_HEADERS });
-    }
-
+const getCachedProductionData = unstable_cache(
+  async (startParam: string | null, endParam: string | null, topParam: string | null, startDate: Date | null, endDate: Date | null) => {
     // Reference tables are small — fetch in full; date-sensitive tables use server-side filter
     let rowsCabecera: any[];
     let rowsLista: any[];
@@ -213,10 +190,7 @@ export async function GET(req: Request) {
             }
         });
 
-        const finalRecords = combined.sort((a, b) => b.valueTn - a.valueTn);
-
-        cache.set(cacheKey, { data: finalRecords, timestamp: Date.now() });
-        return NextResponse.json(finalRecords, { headers: CACHE_HEADERS });
+        return combined.sort((a, b) => b.valueTn - a.valueTn);
     }
 
     // rowsCabecera is already filtered by date from Supabase (fetchRowsByDateRange).
@@ -516,7 +490,7 @@ export async function GET(req: Request) {
         };
     });
 
-    const result = {
+    return {
         totalBags,
         totalTn,
         byShift,
@@ -525,8 +499,32 @@ export async function GET(req: Request) {
         details,
         productionByShiftProduct
     };
+  },
+  ['production-data-v2'],
+  { revalidate: 300, tags: ['production'] }
+);
 
-    cache.set(cacheKey, { data: result, timestamp: Date.now() });
+export async function GET(req: Request) {
+  try {
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const startParam = searchParams.get("start"); 
+    const endParam = searchParams.get("end");
+    const topParam = searchParams.get("top");
+
+    if (!topParam && (!startParam || !endParam)) {
+      return NextResponse.json({ error: "Missing date params" }, { status: 400 });
+    }
+
+    const startDate = startParam ? new Date(startParam + "T00:00:00") : null;
+    const endDate = endParam ? new Date(endParam + "T23:59:59") : null;
+
+    const result = await getCachedProductionData(startParam, endParam, topParam, startDate, endDate);
+
     return NextResponse.json(result, { headers: CACHE_HEADERS });
 
   } catch (error: any) {
@@ -534,4 +532,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

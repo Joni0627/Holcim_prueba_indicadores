@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import { auth } from "@clerk/nextjs/server";
 import { fetchAllRows, fetchRowsByDateRange, fetchRowsByIds, getSupabaseVal, parseSheetDate } from "../../../lib/supabase";
 
@@ -39,31 +40,8 @@ function cleanName(str: string): string {
         .replace(/[\u0300-\u036f]/g, "");
 }
 
-export async function GET(req: Request) {
-  try {
-    const { userId } = auth();
-    if (!userId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const startParam = searchParams.get("start"); 
-    const endParam = searchParams.get("end");
-
-    if (!startParam || !endParam) {
-      return NextResponse.json({ error: "Missing date params" }, { status: 400 });
-    }
-
-    const startDate = new Date(startParam + "T00:00:00");
-    const endDate = new Date(endParam + "T23:59:59");
-
-    // Check in-memory cache
-    const cacheKey = `stocks-v2-${startParam}-${endParam}`;
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data, { headers: CACHE_HEADERS });
-    }
-
+const getCachedStocksData = unstable_cache(
+  async (startParam: string, endParam: string, startDate: Date, endDate: Date) => {
     // Reference tables (small, static) — fetch full
     const [rowsTurnos, rowsMateriales] = await Promise.all([
         fetchAllRows("turnosv2"),
@@ -303,12 +281,36 @@ export async function GET(req: Request) {
         lastUpdated: stats.date
     }));
 
-    const result = {
+    return {
         date: items[0]?.lastUpdated || startParam,
         items
     };
+  },
+  ['stocks-data-v2'],
+  { revalidate: 300, tags: ['stocks'] }
+);
 
-    cache.set(cacheKey, { data: result, timestamp: Date.now() });
+export async function GET(req: Request) {
+  try {
+    const { userId } = auth();
+    if (!userId) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const startParam = searchParams.get("start"); 
+    const endParam = searchParams.get("end");
+
+    if (!startParam || !endParam) {
+      return NextResponse.json({ error: "Missing date params" }, { status: 400 });
+    }
+
+    const startDate = new Date(startParam + "T00:00:00");
+    const endDate = new Date(endParam + "T23:59:59");
+
+    // Fetch cached data via unstable_cache (Next.js Data Cache)
+    const result = await getCachedStocksData(startParam, endParam, startDate, endDate);
+
     return NextResponse.json(result, { headers: CACHE_HEADERS });
 
   } catch (error: any) {
